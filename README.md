@@ -37,17 +37,23 @@
 ### For End Users
 
 1. **Get the Template**
-   - Copy the College Tools Template Sheet (link coming soon) to your Google Drive
-   - Or follow our setup guide for detailed instructions
+   - Copy the [College Tools Template Sheet](https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy) to your Google Drive
+   - The template comes **pre-configured** with all sheets and features ready to use
 
-2. **Add Your API Key**
+2. **Run Quick Start**
+   - Open your copied sheet and go to **College Tools → 🚀 Quick Start (API Key Check)**
+   - This will check your setup status and guide you to the next steps (takes < 5 seconds)
+
+3. **Add Your API Key** (if needed)
    - Get your free API key from [https://api.data.gov/signup/](https://api.data.gov/signup/)
    - Create a sheet named "ScorecardAPIKey"
    - Paste your API key in cell A1
+   - Run Quick Start again to confirm
 
-3. **Start Using College Tools**
-   - Use the "College Tools" menu to access all features
-   - Begin with "Setup Financial Intelligence" for personalized analysis
+4. **Start Using College Tools**
+   - Fill out your Personal Profile for personalized analysis
+   - Use **College Tools → 🎓 For Students & Parents → Fill current row** to get college data
+   - All tracker sheets, dashboard, and scoring are already set up!
 
 ## Code Quality
 

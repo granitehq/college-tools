@@ -1,6 +1,6 @@
 /**
  * Instructions and Help System
- * @version 1.2.1
+ * @version 1.2.3
  * @author College Tools
  * @description Creates comprehensive user instructions and help documentation
  */
@@ -33,23 +33,40 @@ CollegeTools.Instructions = (function() {
     sheet.getRange(row, col).setValue('Welcome to College Tools! This comprehensive system helps you research, compare, and track your college applications.');
     sheet.getRange(row, col).setFontSize(12).setBackground('#e8f0fe');
     sheet.getRange(row, col, 1, 6).merge();
-    row += 3;
+    row += 2;
+
+    sheet.getRange(row, col).setValue('🔗 Get the latest template: https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy');
+    sheet.getRange(row, col).setFontSize(10).setBackground('#f8f9fa').setFontColor('#6c757d');
+    sheet.getRange(row, col, 1, 6).merge();
+    row += 2;
 
     // Quick Start Section
-    addSectionHeader(sheet, row, '🚀 Quick Start (First Time Setup)');
+    addSectionHeader(sheet, row, '🚀 Quick Start (New User Setup)');
     row += 2;
 
     var quickStartSteps = [
-      '1. Get your FREE College Scorecard API key (see API Setup section below)',
-      '2. Run "📋 Complete Setup (One-Time)" from the College Tools menu',
-      '3. Fill out your Personal Profile sheet with your academic info',
-      '4. Start adding colleges to research using "Fill current row"',
-      '5. Use the trackers to manage your applications and deadlines',
+      '1. Run "🚀 Quick Start (API Key Check)" from the College Tools menu (takes < 5 seconds)',
+      '2. If needed, get your FREE API key from https://api.data.gov/signup/',
+      '3. Create "ScorecardAPIKey" sheet and paste your key in cell A1',
+      '4. Run Quick Start again to confirm - you\'re ready to go!',
+      '5. Fill out your Personal Profile sheet with your academic info',
+      '6. Start researching colleges using "Fill current row"',
+      '',
+      '✅ This spreadsheet comes PRE-CONFIGURED with all features ready!',
+      '✅ No need to run the long "Complete Setup" unless troubleshooting',
     ];
 
     quickStartSteps.forEach(function(step) {
+      if (step === '') {
+        row++;
+        return;
+      }
       sheet.getRange(row, col).setValue(step);
       sheet.getRange(row, col).setFontSize(11);
+      if (step.startsWith('✅')) {
+        sheet.getRange(row, col).setBackground('#d4edda').setFontWeight('bold');
+      }
+      sheet.getRange(row, col, 1, 6).merge();
       row++;
     });
     row += 2;
@@ -175,8 +192,7 @@ CollegeTools.Instructions = (function() {
       '   • Fill selected rows: Get data for multiple colleges (batch)',
       '   • Search College Names: Find colleges by name',
       '',
-      '🔧 SETUP & CUSTOMIZATION (Run separately as needed):',
-      '   • Complete Setup (One-Time): Sets up everything you need',
+      '🔧 SETUP & CUSTOMIZATION (For customizing pre-configured features):',
       '   • Add/Update Trackers: Create/update all tracking sheets',
       '   • Setup Dashboard: Create summary dashboard',
       '   • Setup Financial Intelligence: Advanced financial analysis',
@@ -189,10 +205,13 @@ CollegeTools.Instructions = (function() {
       '   • Fill Regions (all rows): Auto-populate US regions',
       '',
       '🛠️ DEVELOPER & DEBUG:',
+      '   • Complete Setup (Re-run): Re-run full setup if troubleshooting',
       '   • DEBUG: Fill row (verbose): Detailed diagnostic information',
       '   • Show API Quota Status: Check your API usage',
       '   • Clear API Cache: Reset cached responses',
       '   • Test College Name Validation: Check name matching',
+      '',
+      'ℹ️ ABOUT:',
       '   • Show version: Current College Tools version',
     ];
 
@@ -203,7 +222,8 @@ CollegeTools.Instructions = (function() {
       }
       sheet.getRange(row, col).setValue(instruction);
       if (instruction.startsWith('🎓') || instruction.startsWith('🔧') ||
-          instruction.startsWith('⚡') || instruction.startsWith('🛠️')) {
+          instruction.startsWith('⚡') || instruction.startsWith('🛠️') ||
+          instruction.startsWith('ℹ️')) {
         sheet.getRange(row, col).setFontWeight('bold').setBackground('#d4edda');
       }
       sheet.getRange(row, col, 1, 6).merge();

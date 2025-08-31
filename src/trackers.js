@@ -1,6 +1,6 @@
 /**
  * Tracker sheet management
- * @version 1.2.1
+ * @version 1.2.3
  * @author College Tools
  * @description Creates and manages Financial Aid, Campus Visit, Application, and Scholarship trackers
  */

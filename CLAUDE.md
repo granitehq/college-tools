@@ -88,10 +88,13 @@ Per `Refactor.md`, planned improvements include:
 ## API Key Setup
 
 **For End Users** (when you get a copy of this spreadsheet):
-1. Get your free College Scorecard API key at: https://api.data.gov/signup/
-2. Create a sheet named "ScorecardAPIKey" 
-3. Paste your API key in cell A1
-4. You're ready to use College Tools!
+🔗 Get template: https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy
+
+1. Run "🚀 Quick Start (API Key Check)" from College Tools menu
+2. If needed, get your free College Scorecard API key at: https://api.data.gov/signup/
+3. Create a sheet named "ScorecardAPIKey" 
+4. Paste your API key in cell A1
+5. You're ready to use College Tools!
 
 **For Developers**:
 - Never commit real API keys to version control

@@ -1,6 +1,6 @@
 /**
  * One-time setup and optimization
- * @version 1.2.1
+ * @version 1.2.3
  * @author College Tools
  * @description Consolidated setup functions for optimal performance
  */
@@ -113,9 +113,52 @@ CollegeTools.Setup = (function() {
     }
   }
 
+  /**
+   * Quick Start - Fast API key check and basic guidance.
+   * Shows users what they need to do without the long setup process.
+   */
+  function quickStart() {
+    var ui = SpreadsheetApp.getUi();
+    
+    try {
+      // Check if API key exists
+      var apiKey = CollegeTools.Scorecard.getApiKey();
+      var hasApiKey = apiKey && apiKey !== 'your_api_key_here' && apiKey.trim() !== '';
+      
+      var message = '🚀 College Tools Quick Start\n\n';
+      
+      if (hasApiKey) {
+        message += '✅ API Key: Found and ready!\n';
+        message += '✅ Spreadsheet: Pre-configured\n';
+        message += '✅ All Features: Ready to use\n\n';
+        message += '🎯 You\'re all set! Next steps:\n';
+        message += '• Read Instructions (📖 menu)\n';
+        message += '• Fill out Personal Profile\n';
+        message += '• Start adding colleges!\n\n';
+        message += '💡 Use "Fill current row" to get college data';
+      } else {
+        message += '⚠️ API Key: Missing\n';
+        message += '✅ Spreadsheet: Pre-configured\n';
+        message += '✅ All Features: Ready (need API key)\n\n';
+        message += '🔑 Get your FREE API key:\n';
+        message += '1. Visit: https://api.data.gov/signup/\n';
+        message += '2. Create sheet named "ScorecardAPIKey"\n';
+        message += '3. Paste key in cell A1\n';
+        message += '4. Run Quick Start again\n\n';
+        message += '📖 Full instructions in the Instructions menu';
+      }
+      
+      ui.alert('Quick Start', message, ui.ButtonSet.OK);
+      
+    } catch (error) {
+      ui.alert('Quick Start Error', 'Error checking setup: ' + error.toString(), ui.ButtonSet.OK);
+    }
+  }
+
   // Public API
   return {
     completeSetup: completeSetup,
     optimizePerformance: optimizePerformance,
+    quickStart: quickStart,
   };
 })();

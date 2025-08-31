@@ -1,6 +1,6 @@
 /**
  * Menu system and global adapters
- * @version 1.2.1
+ * @version 1.2.3
  * @author College Tools
  * @description Google Sheets menu setup and global adapter functions
  */
@@ -15,15 +15,14 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('College Tools')
     .addItem('📖 Instructions & Help', 'createInstructionsSheet')
-    .addItem('📋 Complete Setup (One-Time)', 'completeSetup')
+    .addItem('🚀 Quick Start (API Key Check)', 'quickStart')
     .addSeparator()
     .addSubMenu(SpreadsheetApp.getUi().createMenu('🎓 For Students & Parents')
       .addItem('Fill current row', 'fillCollegeRow')
       .addItem('Fill current row (fast)', 'fillCollegeRowFast')
       .addItem('Fill selected rows', 'fillSelectedRows')
       .addSeparator()
-      .addItem('Search College Names', 'searchCollegeNames')
-      .addItem('Show version', 'showVersion'))
+      .addItem('Search College Names', 'searchCollegeNames'))
     .addSeparator()
     .addSubMenu(SpreadsheetApp.getUi().createMenu('🔧 Setup & Customization')
       .addItem('Add/Update Trackers', 'setupAllTrackers')
@@ -38,10 +37,14 @@ function onOpen() {
       .addItem('Fill Regions (all rows)', 'fillRegionsAllRows'))
     .addSeparator()
     .addSubMenu(SpreadsheetApp.getUi().createMenu('🛠️ Developer & Debug')
+      .addItem('📋 Complete Setup (Re-run)', 'completeSetup')
       .addItem('DEBUG: Fill row (verbose)', 'debugFillCollegeRow')
       .addItem('Show API Quota Status', 'showQuotaStatus')
       .addItem('Clear API Cache', 'clearApiCache')
       .addItem('Test College Name Validation', 'testCollegeNameValidation'))
+    .addSeparator()
+    .addSubMenu(SpreadsheetApp.getUi().createMenu('ℹ️ About')
+      .addItem('Show version', 'showVersion'))
     .addToUi();
 }
 
@@ -209,4 +212,12 @@ function optimizePerformance() { // eslint-disable-line no-unused-vars, no-impli
  */
 function createInstructionsSheet() { // eslint-disable-line no-unused-vars, no-implicit-globals
   return CollegeTools.Instructions.createInstructionsSheet();
+}
+
+/**
+ * Quick Start - checks API key setup and gives guidance.
+ * @return {*} Result from quick start operation
+ */
+function quickStart() { // eslint-disable-line no-unused-vars, no-implicit-globals
+  return CollegeTools.Setup.quickStart();
 }
