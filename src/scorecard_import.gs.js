@@ -1,43 +1,29 @@
 /******************************
- * College Tools (v5.2)
- * - Keeps your working v5.0 features
- * - Adds: Formats/Dropdowns enhancer + scoring for Colleges & Campus Visit
+ * College Tools (v5.5)
+ * - Namespace architecture for better encapsulation
+ * - Keeps all existing v5.x features
  * - API key: "ScorecardAPIKey"!A1
  * - Data sheet: "Colleges" (headers row 2)
  ******************************/
-var CS_VERSION = 'v5.5';
 
-/* ======================= MENU ======================= */
+/* ======================= NAMESPACE ======================= */
 /**
- * Creates the College Tools menu in Google Sheets when the spreadsheet is opened.
- * Sets up all menu items for college data management and tracking.
+ * CollegeTools namespace - encapsulates all functionality
  */
-function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu("College Tools")
-    .addItem("Fill current row", "fillCollegeRow")
-    .addItem("Fill selected rows", "fillSelectedRows") // ← NEW
-    .addItem("Test write (I3)", "testWrite")
-    .addSeparator()
-    .addItem("Add/Update Trackers", "setupAllTrackers")
-    .addItem("Enhance: Formats & Dropdowns", "enhanceFormatsDropdowns")
-    .addItem("Ensure Scoring Formulas", "ensureScoring")
-    .addSeparator()
-    .addItem("Search College Names", "searchCollegeNames")
-    .addItem("Fill Regions (all rows)", "fillRegionsAllRows")
-    .addItem("Show version", "showVersion")
-    .addToUi();
-}
-
-
-
-
-/**
- * Displays the current version of College Tools in an alert dialog.
- */
-function showVersion(){ 
-  SpreadsheetApp.getUi().alert('College Tools: '+CS_VERSION); 
-}
+var CollegeTools = (function() {
+  'use strict';
+  
+  // Private variables
+  var VERSION = 'v5.5';
+  
+  /* ======================= INTERNAL FUNCTIONS ======================= */
+  
+  /**
+   * Displays the current version of College Tools in an alert dialog.
+   */
+  function showVersion(){ 
+    SpreadsheetApp.getUi().alert('College Tools: '+VERSION); 
+  }
 
 /**
  * Test function that writes "TEST" to cell I3 in the Colleges sheet.
@@ -402,7 +388,7 @@ function fillCollegeRowCore_(row, opts) {
     }
   }
   if (!results.length) {
-    sh.getRange(row, COL.NOTES).setValue(CS_VERSION+' | no match for "'+name+'" ('+noteBits.join(' | ')+')');
+    sh.getRange(row, COL.NOTES).setValue(VERSION+' | no match for "'+name+'" ('+noteBits.join(' | ')+')');
     if(!suppressAlert) SpreadsheetApp.getUi().alert('No match for "'+name+'". See Notes.');
     return {ok:false, msg:'no match'};
   }
@@ -460,7 +446,7 @@ function fillCollegeRowCore_(row, opts) {
   if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
 
   writes.forEach(function(w){ sh.getRange(row, w[0]).setValue(w[1]); });
-  sh.getRange(row, COL.NOTES).setValue(CS_VERSION+' | '+(usedName||name));
+  sh.getRange(row, COL.NOTES).setValue(VERSION+' | '+(usedName||name));
 
   if (!suppressAlert) {
     // Highlight when run one-off
@@ -967,3 +953,56 @@ function fillSelectedRows() {
 // (already defined in enhanceFormatsDropdowns)
 
 /* ====== NOTE: The rest is your existing trackers & filler above ====== */
+  
+  // ======================= PUBLIC API =======================
+  return {
+    VERSION: VERSION,
+    fillCollegeRow: fillCollegeRow,
+    fillSelectedRows: fillSelectedRows,
+    testWrite: testWrite,
+    showVersion: showVersion,
+    setupAllTrackers: setupAllTrackers,
+    enhanceFormatsDropdowns: enhanceFormatsDropdowns,
+    ensureScoring: ensureScoring,
+    searchCollegeNames: searchCollegeNames,
+    fillRegionsAllRows: fillRegionsAllRows
+  };
+})();
+
+/* ======================= MENU ======================= */
+/**
+ * Creates the College Tools menu in Google Sheets when the spreadsheet is opened.
+ * Sets up all menu items for college data management and tracking.
+ * Must be global for Google Sheets to find it.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("College Tools")
+    .addItem("Fill current row", "fillCollegeRow")
+    .addItem("Fill selected rows", "fillSelectedRows")
+    .addItem("Test write (I3)", "testWrite")
+    .addSeparator()
+    .addItem("Add/Update Trackers", "setupAllTrackers")
+    .addItem("Enhance: Formats & Dropdowns", "enhanceFormatsDropdowns")
+    .addItem("Ensure Scoring Formulas", "ensureScoring")
+    .addSeparator()
+    .addItem("Search College Names", "searchCollegeNames")
+    .addItem("Fill Regions (all rows)", "fillRegionsAllRows")
+    .addItem("Show version", "showVersion")
+    .addToUi();
+}
+
+/* ======================= ADAPTER FUNCTIONS ======================= */
+/**
+ * Global adapter functions that forward to namespace.
+ * These allow the menu to call functions by name without changing menu configuration.
+ */
+function fillCollegeRow() { return CollegeTools.fillCollegeRow(); }
+function fillSelectedRows() { return CollegeTools.fillSelectedRows(); }
+function testWrite() { return CollegeTools.testWrite(); }
+function showVersion() { return CollegeTools.showVersion(); }
+function setupAllTrackers() { return CollegeTools.setupAllTrackers(); }
+function enhanceFormatsDropdowns() { return CollegeTools.enhanceFormatsDropdowns(); }
+function ensureScoring() { return CollegeTools.ensureScoring(); }
+function searchCollegeNames() { return CollegeTools.searchCollegeNames(); }
+function fillRegionsAllRows() { return CollegeTools.fillRegionsAllRows(); }

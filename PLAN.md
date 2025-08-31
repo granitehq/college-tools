@@ -12,7 +12,7 @@ If I step back and put on my “what else would make this genuinely useful” ha
 
 1. Batch fill
 
-Right now you click row-by-row. A “Fill all selected rows” option would iterate through every highlighted college in Colleges and fetch their data in one shot. That way if you paste 20 schools from your prospect list, you can populate them with one menu click.
+Right now you click row-by-row. A “Fill all selected rows” optio1n would iterate through every highlighted college in Colleges and fetch their data in one shot. That way if you paste 20 schools from your prospect list, you can populate them with one menu click.
 
 2. Region auto-mapping
 

@@ -1,12 +1,4 @@
 
-9. **First commit**
-\`\`\`bash
-git add .
-git commit -m "Initial import from Apps Script"
-\`\`\`
-
----
-
 ## B. Daily workflow
 
 - **Pull latest from Apps Script:**  
@@ -65,26 +57,6 @@ clasp versions
 - **Mixed accounts** → Use Incognito for `clasp login`.  
 - **No update after push** → Refresh the spreadsheet.  
 - **Root directory confusion** → Check `.clasp.json` has `"rootDir": "src"` if using subfolder.
-
----
-
-## F. Recommended repo structure
-college-tools/
-.clasp.json # points to bound script + rootDir
-appsscript.json # manifest (scopes, timezone, etc.)
-.gitignore
-README.md
-src/
-menu.js
-config.js
-utils.js
-scorecard.js
-colleges.js
-trackers.js
-formatting.js
-scoring.js
-lookup.js
-
 
 ## G. Workflow summary
 
