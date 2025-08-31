@@ -8,12 +8,16 @@
 var CS_VERSION = 'v5.3';
 
 /* ======================= MENU ======================= */
+/**
+ * Creates the College Tools menu in Google Sheets when the spreadsheet is opened.
+ * Sets up all menu items for college data management and tracking.
+ */
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("College Tools")
-    .addItem("Fill current row", "fillCollegeRow_KISS")
-    .addItem("Fill selected rows", "fillSelectedRows_KISS") // ← NEW
-    .addItem("Test write (I3)", "testWrite_KISS")
+    .addItem("Fill current row", "fillCollegeRow")
+    .addItem("Fill selected rows", "fillSelectedRows") // ← NEW
+    .addItem("Test write (I3)", "testWrite")
     .addSeparator()
     .addItem("Add/Update Trackers", "setupAllTrackers")
     .addItem("Enhance: Formats & Dropdowns", "enhanceFormatsDropdowns")
@@ -21,15 +25,25 @@ function onOpen() {
     .addSeparator()
     .addItem("Search College Names", "searchCollegeNames")
     .addItem("Fill Regions (all rows)", "fillRegionsAllRows")
-    .addItem("Show version", "showVersion_KISS")
+    .addItem("Show version", "showVersion")
     .addToUi();
 }
 
 
 
 
-function showVersion_KISS(){ SpreadsheetApp.getUi().alert('College Tools: '+CS_VERSION); }
-function testWrite_KISS() {
+/**
+ * Displays the current version of College Tools in an alert dialog.
+ */
+function showVersion(){ 
+  SpreadsheetApp.getUi().alert('College Tools: '+CS_VERSION); 
+}
+
+/**
+ * Test function that writes "TEST" to cell I3 in the Colleges sheet.
+ * Used for debugging and verifying write permissions.
+ */
+function testWrite() {
   var sh = SpreadsheetApp.getActive().getSheetByName("Colleges");
   if (!sh) { SpreadsheetApp.getUi().alert('Sheet "Colleges" not found.'); return; }
   sh.getRange(3, 9).setValue("TEST"); // I3 = Acceptance Rate in your layout
@@ -54,7 +68,20 @@ function getField(obj, nestedPathArr, flatKey) {
   if (obj && typeof obj==="object" && flatKey in obj) return obj[flatKey];
   return "";
 }
+/**
+ * Escapes special regex characters in a string for use in regex patterns.
+ * @param {string} s - String to escape
+ * @returns {string} Escaped string safe for regex
+ * @private
+ */
 function escapeRegex_(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+/**
+ * Ensures a sheet exists in the spreadsheet, creating it if necessary.
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @param {string} name - Name of the sheet to ensure exists
+ * @returns {Sheet} The existing or newly created sheet
+ * @private
+ */
 function ensureSheet_(ss, name) {
   var sh = ss.getSheetByName(name);
   return sh ? sh : ss.insertSheet(name);
@@ -98,7 +125,11 @@ function formatNumber_(sh, header, pattern) {
   sh.getRange(2, col, Math.max(1, sh.getMaxRows()-1)).setNumberFormat(pattern);
 }
 
-// Map US state → Region (simple 4-region map)
+/**
+ * Returns a mapping of US regions to their constituent states.
+ * @returns {Object} Object with region names as keys and state arrays as values
+ * @private
+ */
 function regionMap_(){
   return {
     NORTHEAST: ['CT','ME','MA','NH','NJ','NY','PA','RI','VT'],
@@ -107,6 +138,12 @@ function regionMap_(){
     WEST:      ['AK','AZ','CA','CO','HI','ID','MT','NM','NV','OR','UT','WA','WY']
   };
 }
+/**
+ * Determines the US region for a given state abbreviation.
+ * @param {string} st - Two-letter state abbreviation
+ * @returns {string} Region name (Northeast, Midwest, South, West) or empty string
+ * @private
+ */
 function getRegionForState_(st){
   if (!st) return "";
   st = (st+"").trim().toUpperCase();
@@ -120,11 +157,11 @@ function getRegionForState_(st){
 
 
 /**
- * Search College Names (Scorecard). 
- * - Prompts for a query (e.g., "unh" or "new hampshire").
- * - Writes up to 25 official matches into a sheet named "Lookup" (created/cleared).
- * - Columns: Official Name, City, State, Type, IPEDS ID, Website.
- * - Copy the "Official Name" directly into Colleges → College Name.
+ * Search College Names via the College Scorecard API.
+ * Prompts for a search query (e.g., "unh" or "new hampshire") with optional state filter.
+ * Writes up to 25 official matches into a sheet named "Lookup" (created/cleared).
+ * Results include: Official Name, City, State, Type, IPEDS ID, Website.
+ * Use the "Official Name" from results for accurate data fetching in the Colleges sheet.
  */
 function searchCollegeNames() {
   var ss = SpreadsheetApp.getActive();
@@ -267,7 +304,15 @@ function searchCollegeNames() {
 }
 
 
-// Core filler used by single-row & batch flows
+/**
+ * Core function that fills a row with college data from the Scorecard API.
+ * Used by both single-row and batch fill operations.
+ * @param {number} row - Row number to fill (1-based)
+ * @param {Object} opts - Options object
+ * @param {boolean} opts.suppressAlert - If true, suppresses UI alerts
+ * @returns {Object} Result object with {ok: boolean, msg: string}
+ * @private
+ */
 function fillCollegeRowCore_(row, opts) {
   opts = opts || {};
   var suppressAlert = !!opts.suppressAlert;
@@ -432,7 +477,12 @@ function fillCollegeRowCore_(row, opts) {
 }
 
 /* ================== COLLEGES: FILL CURRENT ROW (with Region auto-fill) ================== */
-function fillCollegeRow_KISS() {
+/**
+ * Fills the currently selected row in the Colleges sheet with data from the College Scorecard API.
+ * Automatically populates college information including city, state, type, acceptance rate, costs, etc.
+ * Also seeds tracker sheets with the college name and triggers region auto-fill.
+ */
+function fillCollegeRow() {
   var sh = SpreadsheetApp.getActive().getSheetByName("Colleges");
   if (!sh) { SpreadsheetApp.getUi().alert('Sheet "Colleges" not found.'); return; }
   var row = sh.getActiveCell().getRow();
@@ -443,6 +493,11 @@ function fillCollegeRow_KISS() {
 
 
 /* ================== TRACKERS: CREATE/ENSURE ================== */
+/**
+ * Creates or updates all tracker sheets (Financial Aid, Campus Visit, Application Timeline, Scholarships).
+ * Sets up headers, formulas, and data validation for each tracker.
+ * Safe to run multiple times - will not overwrite existing data.
+ */
 function setupAllTrackers() {
   var ss = SpreadsheetApp.getActive();
   createOrUpdate_FinAid(ss);
@@ -451,6 +506,11 @@ function setupAllTrackers() {
   createOrUpdate_Scholarships(ss);
 }
 
+/**
+ * Creates or updates the Financial Aid Tracker sheet with headers and formulas.
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @private
+ */
 function createOrUpdate_FinAid(ss) {
   var name = 'Financial Aid Tracker';
   var sh = ensureSheet_(ss, name);
@@ -481,6 +541,11 @@ function createOrUpdate_FinAid(ss) {
   sh.getRange(r2, map('4-Year Projected Cost')).setFormula(f_4yr);
 }
 
+/**
+ * Creates or updates the Campus Visit Tracker sheet with headers and validation.
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @private
+ */
 function createOrUpdate_CampusVisit(ss) {
   var name = 'Campus Visit Tracker';
   var sh = ensureSheet_(ss, name);
@@ -506,6 +571,11 @@ function createOrUpdate_CampusVisit(ss) {
   });
 }
 
+/**
+ * Creates or updates the Application Timeline sheet with headers and formulas.
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @private
+ */
 function createOrUpdate_AppTimeline(ss) {
   var name = 'Application Timeline';
   var sh = ensureSheet_(ss, name);
@@ -540,6 +610,11 @@ function createOrUpdate_AppTimeline(ss) {
   setWarn('7-Day Warning', 7);
 }
 
+/**
+ * Creates or updates the Scholarship Tracker sheet with headers and validation.
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @private
+ */
 function createOrUpdate_Scholarships(ss) {
   var name = 'Scholarship Tracker';
   var sh = ensureSheet_(ss, name);
@@ -569,6 +644,13 @@ function createOrUpdate_Scholarships(ss) {
 }
 
 /* ================== SYNC CURRENT COLLEGE → TRACKERS ================== */
+/**
+ * Synchronizes college information to all tracker sheets.
+ * @param {Object} info - College information object
+ * @param {string} info.name - College name
+ * @param {number} info.coa - Cost of attendance
+ * @private
+ */
 function syncCollegeToTrackers_(info){
   // info: { name, coa }
   var ss = SpreadsheetApp.getActive();
@@ -583,6 +665,14 @@ function syncCollegeToTrackers_(info){
   if (at) ensureCollegeRowAndSet_(at, 'College Name', info.name, { });
 }
 
+/**
+ * Ensures a college exists in a tracker sheet and updates its data.
+ * @param {Sheet} sh - The tracker sheet
+ * @param {string} collegeHeader - Header name for the college column
+ * @param {string} collegeName - Name of the college
+ * @param {Object} updatesObj - Object with column headers as keys and values to set
+ * @private
+ */
 function ensureCollegeRowAndSet_(sh, collegeHeader, collegeName, updatesObj){
   var nameCol = colIndex_(sh, collegeHeader);
   if (!nameCol) return;
@@ -605,6 +695,12 @@ function ensureCollegeRowAndSet_(sh, collegeHeader, collegeName, updatesObj){
 }
 
 /* ================== FORMATTING & DROPDOWNS (idempotent) ================== */
+/**
+ * Applies formatting and dropdown validations to all sheets.
+ * Sets number formats for percentages, currency, and scores.
+ * Creates dropdown lists for ratings, yes/no fields, and status fields.
+ * Idempotent - safe to run multiple times without side effects.
+ */
 function enhanceFormatsDropdowns(){
   var ss = SpreadsheetApp.getActive();
 
@@ -673,6 +769,12 @@ function enhanceFormatsDropdowns(){
 
 
 /* ================== SCORING (Weights + formulas) ================== */
+/**
+ * Sets up the weighted scoring system for colleges and campus visits.
+ * Creates a Weights sheet with default weight values for different criteria.
+ * Applies formulas to calculate Weighted Score in Colleges sheet and Visit Score in Campus Visit Tracker.
+ * Formulas use VLOOKUP to reference weights dynamically from the Weights sheet.
+ */
 function ensureScoring(){
   var ss = SpreadsheetApp.getActive();
   // Ensure Weights sheet with defaults
@@ -769,6 +871,11 @@ function ensureScoring(){
   SpreadsheetApp.getUi().alert('Scoring formulas ensured. Edit weights anytime on the "Weights" sheet.');
 }
 
+/**
+ * Automatically fills the Region column for all rows in the Colleges sheet based on state.
+ * Maps US states to four regions: Northeast, Midwest, South, West.
+ * Only updates rows that have a college name and where the region differs from the calculated value.
+ */
 function fillRegionsAllRows(){
   var ss = SpreadsheetApp.getActive();
   var sh = ss.getSheetByName('Colleges');
@@ -806,7 +913,12 @@ function fillRegionsAllRows(){
   SpreadsheetApp.getUi().alert('Regions updated for '+updates.length+' row(s).');
 }
 
-function fillSelectedRows_KISS() {
+/**
+ * Batch fills multiple selected rows in the Colleges sheet with data from the College Scorecard API.
+ * Processes all selected rows that contain a college name, skipping empty rows.
+ * Displays a summary of successful, skipped, and failed operations.
+ */
+function fillSelectedRows() {
   var ss = SpreadsheetApp.getActive();
   var sh = ss.getSheetByName("Colleges");
   if (!sh) { SpreadsheetApp.getUi().alert('Sheet "Colleges" not found.'); return; }
