@@ -1,6 +1,6 @@
 /**
  * Admission Chances Calculator
- * @version 1.1.0
+ * @version 1.2.0
  * @author College Tools
  * @description Calculates admission probability based on student stats vs school profile
  */

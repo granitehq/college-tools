@@ -1,6 +1,6 @@
 /**
  * Menu system and global adapters
- * @version 1.1.0
+ * @version 1.2.0
  * @author College Tools
  * @description Google Sheets menu setup and global adapter functions
  */
