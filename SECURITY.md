@@ -19,8 +19,8 @@ We take security seriously. If you discover a security vulnerability, please rep
 **DO NOT** create a public GitHub issue for security vulnerabilities.
 
 **DO** report privately by:
-1. Creating a [Security Advisory](https://github.com/your-username/college-tools/security/advisories/new)
-2. Or emailing: security@your-domain.com
+1. Creating a [Security Advisory](https://github.com/granitehq/college-tools/security/advisories/new)
+2. Or emailing: coder@granite-hq.com
 
 ### 📝 What to Include
 
@@ -93,5 +93,5 @@ This security policy covers:
 
 ## Contact
 
-For security concerns: security@your-domain.com
-For general issues: [GitHub Issues](https://github.com/your-username/college-tools/issues)
+For security concerns: coder@granite-hq.com
+For general issues: [GitHub Issues](https://github.com/granitehq/college-tools/issues)

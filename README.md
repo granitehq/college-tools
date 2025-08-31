@@ -3,7 +3,7 @@
 **A comprehensive Google Sheets-based college selection and tracking system powered by the U.S. Department of Education's College Scorecard API.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/your-username/college-tools)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/granitehq/college-tools)
 
 ## 🌟 Features
 
@@ -99,7 +99,7 @@ npm install           # Install dependencies
 
 1. **Clone and Setup**
    ```bash
-   git clone https://github.com/your-username/college-tools.git
+   git clone https://github.com/granitehq/college-tools.git
    cd college-tools
    npm install
    ```
@@ -144,7 +144,7 @@ npm run version:patch # Bump patch version
 
 ## 🐛 Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/college-tools/issues)
+- **Issues**: [GitHub Issues](https://github.com/granitehq/college-tools/issues)
 - **Security**: See [SECURITY.md](SECURITY.md)
 
 ## 📄 License
