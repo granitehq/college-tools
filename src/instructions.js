@@ -1,6 +1,6 @@
 /**
  * Instructions and Help System
- * @version 1.2.0
+ * @version 1.2.1
  * @author College Tools
  * @description Creates comprehensive user instructions and help documentation
  */
@@ -361,7 +361,8 @@ CollegeTools.Instructions = (function() {
     sheet.getRange(1, 1, row, 6).setVerticalAlignment('top');
 
     // Move Instructions sheet to be first tab
-    ss.moveSheet(sheet, 1);
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(1);
 
     SpreadsheetApp.getUi().alert('Instructions sheet created! It\'s now your first tab.');
   }

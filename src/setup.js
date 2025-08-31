@@ -1,6 +1,6 @@
 /**
  * One-time setup and optimization
- * @version 1.2.0
+ * @version 1.2.1
  * @author College Tools
  * @description Consolidated setup functions for optimal performance
  */

@@ -1,6 +1,6 @@
 /**
  * College data operations
- * @version 1.2.0
+ * @version 1.2.1
  * @author College Tools
  * @description Core college data management, filling, and region mapping
  */
