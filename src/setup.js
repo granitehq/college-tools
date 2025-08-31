@@ -1,6 +1,6 @@
 /**
  * One-time setup and optimization
- * @version 1.2.3
+ * @version 1.2.4
  * @author College Tools
  * @description Consolidated setup functions for optimal performance
  */
@@ -121,9 +121,16 @@ CollegeTools.Setup = (function() {
     var ui = SpreadsheetApp.getUi();
     
     try {
-      // Check if API key exists
-      var apiKey = CollegeTools.Scorecard.getApiKey();
-      var hasApiKey = apiKey && apiKey !== 'your_api_key_here' && apiKey.trim() !== '';
+      // Check if API key exists - access directly since getApiKey is private
+      var ss = SpreadsheetApp.getActive();
+      var keySheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.API_KEY);
+      var apiKey = '';
+      var hasApiKey = false;
+      
+      if (keySheet) {
+        apiKey = (keySheet.getRange('A1').getValue() || '').toString().trim();
+        hasApiKey = apiKey && apiKey !== 'your_api_key_here' && apiKey !== 'DEMO_KEY' && apiKey.length >= 10;
+      }
       
       var message = '🚀 College Tools Quick Start\n\n';
       
