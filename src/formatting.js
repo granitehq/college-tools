@@ -1,5 +1,8 @@
 /**
  * Sheet formatting and validation
+ * @version 5.6.2
+ * @author College Tools
+ * @description Number formats, dropdowns, and data validation for sheets
  */
 
 /**
@@ -48,7 +51,7 @@ CollegeTools.Formatting = (function() {
    * @private
    */
   function formatNumber(sh, header, pattern) {
-    var col = CollegeTools.Utils.colIndex(sh, header); 
+    var col = CollegeTools.Utils.colIndex(sh, header);
     if (!col) return;
     sh.getRange(2, col, Math.max(1, sh.getMaxRows()-1)).setNumberFormat(pattern);
   }
@@ -65,59 +68,59 @@ CollegeTools.Formatting = (function() {
     // Colleges sheet formatting
     var col = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (col) {
-      ['Acceptance Rate','First-Year Retention','Grad Rate'].forEach(function(h){ 
-        formatNumber(col, h, '0.0%'); 
+      ['Acceptance Rate', 'First-Year Retention', 'Grad Rate'].forEach(function(h) {
+        formatNumber(col, h, '0.0%');
       });
-      ['Median Earnings (10yr)','Total Cost of Attendance','Estimated Net Price','Avg Merit Aid','Avg Need-Based Aid']
-        .forEach(function(h){ 
-          formatNumber(col, h, '$#,##0'); 
+      ['Median Earnings (10yr)', 'Total Cost of Attendance', 'Estimated Net Price', 'Avg Merit Aid', 'Avg Need-Based Aid']
+        .forEach(function(h) {
+          formatNumber(col, h, '$#,##0');
         });
-      ['SAT 25%','SAT 75%','ACT 25%','ACT 75%'].forEach(function(h){ 
-        formatNumber(col, h, '0'); 
+      ['SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%'].forEach(function(h) {
+        formatNumber(col, h, '0');
       });
-      ['Distance (mi)','Travel Time (hrs)'].forEach(function(h){ 
-        formatNumber(col, h, '0.0'); 
+      ['Distance (mi)', 'Travel Time (hrs)'].forEach(function(h) {
+        formatNumber(col, h, '0.0');
       });
-      ['Weighted Score','Value Score'].forEach(function(h){ 
-        formatNumber(col, h, '0.00'); 
+      ['Weighted Score', 'Value Score'].forEach(function(h) {
+        formatNumber(col, h, '0.00');
       });
 
-      ['Program Fit (1-5)','Academic Reputation (1-5)','Research Opportunities (1-5)','Safety (1-5)',
-       'Campus Culture Fit (1-5)','Weather Fit (1-5)','Clubs/Activities (1-5)','Personal Priority (1-5)']
-       .forEach(function(h){ 
-         validateList(col, h, ['1','2','3','4','5']); 
-       });
+      ['Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)', 'Safety (1-5)',
+        'Campus Culture Fit (1-5)', 'Weather Fit (1-5)', 'Clubs/Activities (1-5)', 'Personal Priority (1-5)']
+        .forEach(function(h) {
+          validateList(col, h, ['1', '2', '3', '4', '5']);
+        });
     }
 
     // Financial Aid Tracker formatting
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
-      ['FAFSA Deadline','CSS Deadline','Priority Deadline'].forEach(function(h){ 
-        validateDate(fa, h); 
+      ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'].forEach(function(h) {
+        validateDate(fa, h);
       });
-      ['Total Cost of Attendance','Tuition & Fees','Room & Board','Books & Supplies','Personal Expenses','Travel Costs',
-       'Federal Grants','State Grants','Institutional Grants','Merit Scholarships','Need-Based Aid',
-       'Subsidized Loans','Unsubsidized Loans','Parent PLUS Loans',
-       'Net Price After Aid','Out-of-Pocket Cost','4-Year Projected Cost','Outside Scholarships Applied']
-       .forEach(function(h){ 
-         formatNumber(fa, h, '$#,##0'); 
-       });
+      ['Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies', 'Personal Expenses', 'Travel Costs',
+        'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid',
+        'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
+        'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost', 'Outside Scholarships Applied']
+        .forEach(function(h) {
+          formatNumber(fa, h, '$#,##0');
+        });
     }
 
     // Campus Visit Tracker formatting
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
       validateDate(cv, 'Visit Date');
-      ['Tour Quality (1-10)','Info Session Quality (1-10)','Campus Beauty (1-10)','Facilities Quality (1-10)',
-       'Student Happiness (1-10)','Academic Vibe (1-10)','Social Atmosphere (1-10)','Overall Gut Feeling (1-10)','Visit Score']
-       .forEach(function(h){ 
-         formatNumber(cv, h, '0'); 
-       });
-      validateList(cv, 'Visit Type (In-Person/Virtual/College Fair)', 
-        ['In-Person','Virtual','College Fair','Regional Event']);
-      ['Thank You Email Sent','Connected on Social Media','Added to Mailing List','Additional Info Requested']
-        .forEach(function(h){ 
-          validateList(cv, h, ['Y','N']); 
+      ['Tour Quality (1-10)', 'Info Session Quality (1-10)', 'Campus Beauty (1-10)', 'Facilities Quality (1-10)',
+        'Student Happiness (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
+        .forEach(function(h) {
+          formatNumber(cv, h, '0');
+        });
+      validateList(cv, 'Visit Type (In-Person/Virtual/College Fair)',
+        ['In-Person', 'Virtual', 'College Fair', 'Regional Event']);
+      ['Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested']
+        .forEach(function(h) {
+          validateList(cv, h, ['Y', 'N']);
         });
     }
 
@@ -125,25 +128,25 @@ CollegeTools.Formatting = (function() {
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
       // Date columns (any header ending with Deadline/Opens/Due/Date)
-      var atHdrs = at.getRange(1,1,1,at.getLastColumn()).getValues()[0];
-      for (var i=0;i<atHdrs.length;i++){
+      var atHdrs = at.getRange(1, 1, 1, at.getLastColumn()).getValues()[0];
+      for (var i=0; i<atHdrs.length; i++) {
         var h = (atHdrs[i]||'').toString().trim();
         if (/(Deadline|Opens|Due|Date)$/i.test(h)) formatNumber(at, h, 'yyyy-mm-dd');
       }
       formatNumber(at, 'Days Until Deadline (App)', '0');
-      validateList(at, 'Application Type (ED/ED2/EA/REA/RD)', ['ED','ED2','EA','REA','RD']);
-      validateList(at, 'Priority Level', ['High','Medium','Low']);
+      validateList(at, 'Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD']);
+      validateList(at, 'Priority Level', ['High', 'Medium', 'Low']);
     }
 
     // Scholarship Tracker formatting
     var sc = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     if (sc) {
-      ['Amount','Amount Awarded'].forEach(function(h){ 
-        formatNumber(sc, h, '$#,##0'); 
+      ['Amount', 'Amount Awarded'].forEach(function(h) {
+        formatNumber(sc, h, '$#,##0');
       });
-      ['Deadline','Application Started Date','Application Submitted Date','Interview Scheduled','Interview Completed','Decision Date']
-        .forEach(function(h){ 
-          formatNumber(sc, h, 'yyyy-mm-dd'); 
+      ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Interview Scheduled', 'Interview Completed', 'Decision Date']
+        .forEach(function(h) {
+          formatNumber(sc, h, 'yyyy-mm-dd');
         });
     }
 
@@ -155,6 +158,6 @@ CollegeTools.Formatting = (function() {
     enhanceFormatsDropdowns: enhanceFormatsDropdowns,
     validateList: validateList,
     validateDate: validateDate,
-    formatNumber: formatNumber
+    formatNumber: formatNumber,
   };
 })();

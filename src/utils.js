@@ -1,5 +1,8 @@
 /**
  * Utility functions for College Tools
+ * @version 5.6.2
+ * @author College Tools
+ * @description Helper functions for sheets, formatting, and data manipulation
  */
 
 /**
@@ -16,9 +19,13 @@ CollegeTools.Utils = (function() {
    */
   function highlight(ranges) {
     var bg = '#FFF3CD';
-    ranges.forEach(function(r){ r.setBackground(bg); });
+    ranges.forEach(function(r) {
+      r.setBackground(bg);
+    });
     Utilities.sleep(350);
-    ranges.forEach(function(r){ r.setBackground(null); });
+    ranges.forEach(function(r) {
+      r.setBackground(null);
+    });
   }
 
   /**
@@ -29,11 +36,11 @@ CollegeTools.Utils = (function() {
    */
   function getPath(obj, pathArr) {
     var cur = obj;
-    for (var i=0;i<pathArr.length;i++){ 
-      if (cur==null) return ""; 
-      cur = cur[pathArr[i]]; 
+    for (var i=0; i<pathArr.length; i++) {
+      if (cur==null) return '';
+      cur = cur[pathArr[i]];
     }
-    return (cur==null ? "" : cur);
+    return (cur==null ? '' : cur);
   }
 
   /**
@@ -45,9 +52,9 @@ CollegeTools.Utils = (function() {
    */
   function getField(obj, nestedPathArr, flatKey) {
     var v = getPath(obj, nestedPathArr);
-    if (v!=="" && v!=null) return v;
-    if (obj && typeof obj==="object" && flatKey in obj) return obj[flatKey];
-    return "";
+    if (v!=='' && v!=null) return v;
+    if (obj && typeof obj==='object' && flatKey in obj) return obj[flatKey];
+    return '';
   }
 
   /**
@@ -55,8 +62,8 @@ CollegeTools.Utils = (function() {
    * @param {string} s - String to escape
    * @returns {string} Escaped string safe for regex
    */
-  function escapeRegex(s) { 
-    return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); 
+  function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**
@@ -76,10 +83,10 @@ CollegeTools.Utils = (function() {
    * @param {string[]} headers - Array of header names
    */
   function setHeaders(sh, headers) {
-    sh.getRange(1,1,1,headers.length).setValues([headers]);
-    sh.getRange(1,1,1,headers.length).setFontWeight('bold').setBackground('#f1f3f4');
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sh.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f3f4');
     sh.setFrozenRows(1);
-    for (var c=1;c<=headers.length;c++) sh.autoResizeColumn(c);
+    for (var c=1; c<=headers.length; c++) sh.autoResizeColumn(c);
   }
 
   /**
@@ -90,8 +97,8 @@ CollegeTools.Utils = (function() {
    */
   function colIndex(sh, header) {
     var last = Math.max(1, sh.getLastColumn());
-    var hdrs = sh.getRange(1,1,1,last).getValues()[0];
-    for (var i=0;i<hdrs.length;i++) {
+    var hdrs = sh.getRange(1, 1, 1, last).getValues()[0];
+    for (var i=0; i<hdrs.length; i++) {
       if ((hdrs[i]||'').toString().trim() === header) return i+1;
     }
     return null;
@@ -103,7 +110,7 @@ CollegeTools.Utils = (function() {
    * @returns {string} Column letter(s)
    */
   function columnToLetter(column) {
-    var temp, letter = '';
+    var temp; var letter = '';
     while (column > 0) {
       temp = (column - 1) % 26;
       letter = String.fromCharCode(temp + 65) + letter;
@@ -118,8 +125,8 @@ CollegeTools.Utils = (function() {
    * @param {number} col - Column number (1-based)
    * @returns {string} A1 notation address (e.g., "B3")
    */
-  function addr(row, col) { 
-    return columnToLetter(col) + row; 
+  function addr(row, col) {
+    return columnToLetter(col) + row;
   }
 
   /**
@@ -128,14 +135,14 @@ CollegeTools.Utils = (function() {
    * @returns {string} Region name (Northeast, Midwest, South, West) or empty string
    */
   function getRegionForState(st) {
-    if (!st) return "";
-    st = (st+"").trim().toUpperCase();
+    if (!st) return '';
+    st = (st+'').trim().toUpperCase();
     var m = CollegeTools.Config.REGION_MAP;
     if (m.NORTHEAST.indexOf(st) !== -1) return 'Northeast';
-    if (m.MIDWEST.indexOf(st)   !== -1) return 'Midwest';
-    if (m.SOUTH.indexOf(st)     !== -1) return 'South';
-    if (m.WEST.indexOf(st)      !== -1) return 'West';
-    return ""; // unknown / territory
+    if (m.MIDWEST.indexOf(st) !== -1) return 'Midwest';
+    if (m.SOUTH.indexOf(st) !== -1) return 'South';
+    if (m.WEST.indexOf(st) !== -1) return 'West';
+    return ''; // unknown / territory
   }
 
   /**
@@ -151,20 +158,20 @@ CollegeTools.Utils = (function() {
     var last = Math.max(2, sh.getLastRow());
     var foundRow = null;
     var vals = sh.getRange(2, nameCol, last-1, 1).getValues();
-    for (var i=0;i<vals.length;i++){
-      if ((vals[i][0]||'').toString().trim().toLowerCase() === collegeName.toString().trim().toLowerCase()){
-        foundRow = i+2; 
+    for (var i=0; i<vals.length; i++) {
+      if ((vals[i][0]||'').toString().trim().toLowerCase() === collegeName.toString().trim().toLowerCase()) {
+        foundRow = i+2;
         break;
       }
     }
-    if (!foundRow) { 
-      foundRow = last+1; 
-      sh.getRange(foundRow, nameCol).setValue(collegeName); 
+    if (!foundRow) {
+      foundRow = last+1;
+      sh.getRange(foundRow, nameCol).setValue(collegeName);
     }
-    if (updatesObj && Object.keys(updatesObj).length){
-      for (var key in updatesObj){
+    if (updatesObj && Object.keys(updatesObj).length) {
+      for (var key in updatesObj) {
         if (!updatesObj.hasOwnProperty(key)) continue;
-        var c = colIndex(sh, key); 
+        var c = colIndex(sh, key);
         if (!c) continue;
         sh.getRange(foundRow, c).setValue(updatesObj[key]);
       }
@@ -183,6 +190,6 @@ CollegeTools.Utils = (function() {
     columnToLetter: columnToLetter,
     addr: addr,
     getRegionForState: getRegionForState,
-    ensureCollegeRowAndSet: ensureCollegeRowAndSet
+    ensureCollegeRowAndSet: ensureCollegeRowAndSet,
   };
 })();
