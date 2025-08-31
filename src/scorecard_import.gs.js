@@ -5,7 +5,7 @@
  * - API key: "ScorecardAPIKey"!A1
  * - Data sheet: "Colleges" (headers row 2)
  ******************************/
-var CS_VERSION = 'v5.2';
+var CS_VERSION = 'v5.3';
 
 /* ======================= MENU ======================= */
 function onOpen() {
