@@ -1,0 +1,12 @@
+{
+  "name": "college-tools-tests",
+  "version": "1.0.0",
+  "description": "Regression tests for College Tools",
+  "private": true,
+  "scripts": {
+    "test": "node regression-tests.js",
+    "test:verbose": "node regression-tests.js --verbose"
+  },
+  "author": "College Tools",
+  "license": "MIT"
+}

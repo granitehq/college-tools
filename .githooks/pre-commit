@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Pre-commit hook to run ESLint
+# To install: ln -s ../../.githooks/pre-commit .git/hooks/pre-commit
+# To bypass: git commit --no-verify
+#
+
+echo "Running ESLint pre-commit hook..."
+
+# Check if npm is available
+if ! command -v npm >/dev/null 2>&1; then
+    echo "Warning: npm not found. Skipping ESLint check."
+    exit 0
+fi
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    echo "Warning: node_modules not found. Run 'npm install' first."
+    echo "Skipping ESLint check."
+    exit 0
+fi
+
+# Run ESLint with zero tolerance for warnings
+npm run lint:check
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ ESLint found issues. Commit blocked."
+    echo "Fix issues with: npm run lint:fix"
+    echo "Or bypass with: git commit --no-verify"
+    exit 1
+fi
+
+echo "✅ ESLint passed. Proceeding with commit."
+exit 0

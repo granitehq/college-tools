@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Original monolithic file (can be removed after migration)
+src/scorecard_import.gs.js
+
+# Documentation
+*.md
+*.pdf
+
+# Configuration files
+.clasp.json
+appsscript.json
+src/appsscript.json
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

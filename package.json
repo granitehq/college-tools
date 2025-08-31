@@ -1,0 +1,43 @@
+{
+  "name": "college-tools",
+  "version": "1.1.0",
+  "description": "Google Apps Script project for college selection and tracking",
+  "main": "src/menu.js",
+  "scripts": {
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "lint:check": "eslint src/**/*.js --max-warnings 0",
+    "precommit": "npm run lint:check",
+    "prepush": "npm run lint:check && echo 'Linting passed - ready for clasp push'",
+    "push": "npm run lint:check && clasp push",
+    "pull": "clasp pull",
+    "clasp:version": "clasp version",
+    "version:update": "node scripts/update-version.js",
+    "version:patch": "npm run version:update $(node -p \"require('./package.json').version.replace(/(.+\\\\.)?(\\\\d+)$/, (_, p, n) => p + (+n + 1))\")",
+    "version:minor": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+\\\\.)(\\\\d+)(\\\\..+)/, (_, maj, min, patch) => maj + (+min + 1) + '.0')\")",
+    "version:major": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+)(\\\\..+)/, (_, maj) => (+maj + 1) + '.0.0')\")",
+    "version:show": "node -p \"'Current version: ' + require('./package.json').version\"",
+    "release": "npm run version:patch && npm run push"
+  },
+  "keywords": [
+    "google-apps-script",
+    "college-scorecard",
+    "education",
+    "spreadsheet"
+  ],
+  "author": "College Tools",
+  "license": "MIT",
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "eslint": "^8.50.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-googleappsscript": "^1.0.4"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  }
+}
