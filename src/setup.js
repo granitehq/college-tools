@@ -1,6 +1,6 @@
 /**
  * One-time setup and optimization
- * @version 1.2.4
+ * @version 1.2.5
  * @author College Tools
  * @description Consolidated setup functions for optimal performance
  */
@@ -129,7 +129,16 @@ CollegeTools.Setup = (function() {
       
       if (keySheet) {
         apiKey = (keySheet.getRange('A1').getValue() || '').toString().trim();
-        hasApiKey = apiKey && apiKey !== 'your_api_key_here' && apiKey !== 'DEMO_KEY' && apiKey.length >= 10;
+        // Use same validation as scorecard module
+        hasApiKey = apiKey && 
+                   apiKey !== 'your_api_key_here' && 
+                   apiKey !== 'DEMO_KEY' && 
+                   apiKey !== '<your-key-here>' &&
+                   !apiKey.includes('your') &&
+                   !apiKey.includes('key') &&
+                   !apiKey.includes('<') &&
+                   !apiKey.includes('>') &&
+                   apiKey.length >= 10;
       }
       
       var message = '🚀 College Tools Quick Start\n\n';
