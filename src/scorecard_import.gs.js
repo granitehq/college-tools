@@ -14,7 +14,7 @@ var CollegeTools = (function() {
   'use strict';
   
   // Private variables
-  var VERSION = 'v5.5';
+  var VERSION = 'v5.6';
   
   /* ======================= INTERNAL FUNCTIONS ======================= */
   
