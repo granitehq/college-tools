@@ -1,6 +1,6 @@
 /**
  * College data operations
- * @version 5.6.2
+ * @version 5.6.3
  * @author College Tools
  * @description Core college data management, filling, and region mapping
  */
@@ -53,6 +53,12 @@ CollegeTools.Colleges = (function() {
         return (x||'').toString().trim();
       });
 
+    /**
+     * Gets column index for header name.
+     * @param {string} h - Header name to find
+     * @return {number} Column index (1-based)
+     * @private
+     */
     function col(h) {
       var i = hdrs.indexOf(h);
       if (i===-1) throw new Error('Missing header: '+h);
@@ -108,6 +114,12 @@ CollegeTools.Colleges = (function() {
     var coa = CollegeTools.Utils.getField(r, ['latest', 'cost', 'attendance', 'academic_year'], 'latest.cost.attendance.academic_year');
     var netPrice = CollegeTools.Utils.getField(r, ['latest', 'cost', 'avg_net_price', 'overall'], 'latest.cost.avg_net_price.overall');
 
+    /**
+     * Converts value to number or null if empty.
+     * @param {*} x - Value to convert
+     * @return {number|null} Number or null
+     * @private
+     */
     function n(x) {
       return (x===null||x===undefined||x==='') ? null : Number(x);
     }
@@ -206,6 +218,13 @@ CollegeTools.Colleges = (function() {
         return (x||'').toString().trim();
       });
 
+    /**
+     * Gets column index for required header name.
+     * @param {string} h - Header name to find
+     * @return {number} Column index (1-based)
+     * @throws {Error} If header not found
+     * @private
+     */
     function mustCol(h) {
       var i = hdrs.indexOf(h);
       if (i===-1) throw new Error('Missing header: '+h);

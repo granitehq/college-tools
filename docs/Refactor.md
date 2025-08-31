@@ -35,27 +35,10 @@ Pin scopes in appsscript.json (no broad https://www.googleapis.com/auth/script.e
 
 8) Migration plan (no breakage)
 
-Phase 0 – Labels & docs
-
-Rename menu labels (“Fill current row” stays; remove KISS in code).
-
-Add JSDoc headers; keep function bodies unchanged.
-
-Phase 1 – Namespace shim
-
-Wrap current code into CollegeTools.* with minimal changes; keep current menu calls by forwarding to namespace functions (adapters). No logic change.
-
-Phase 2 – File split
-
-Move code into the file layout above. Validate that menu items still call the same exports.
 
 Phase 3 – Config & secrets
 
 Add Settings sheet (optional) + Script Properties migration for API key (still read ScorecardAPIKey!A1 as fallback to avoid surprises).
-
-Phase 4 – API client
-
-Move all fetch logic into Scorecard; add retry/backoff + small cache.
 
 Phase 5 – I/O batching
 
@@ -65,4 +48,3 @@ Phase 6 – Testing & clasp
 
 Initialize clasp, pin manifest, add README with commands. Optional TS conversion.
 
-Each phase is standalone; you can stop after any phase and everything still works.

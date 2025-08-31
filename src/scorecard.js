@@ -1,6 +1,6 @@
 /**
  * College Scorecard API client with hardening features
- * @version 5.6.2
+ * @version 5.6.3
  * @author College Tools
  * @description Hardened API client with retry logic, caching, and quota management
  */
@@ -472,7 +472,7 @@ CollegeTools.Scorecard = (function() {
    */
   function clearCache() {
     try {
-      var cache = CacheService.getScriptCache();
+      var _cache = CacheService.getScriptCache();
       // Apps Script doesn't have a clear all method, but we can document this limitation
       SpreadsheetApp.getUi().alert('Note: Apps Script cache clearing is limited. ' +
         'Cache entries will expire after ' + (CollegeTools.Config.API_CONFIG.CACHE_DURATION / 60) + ' minutes.');

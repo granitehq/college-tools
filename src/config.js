@@ -1,6 +1,6 @@
 /**
  * Configuration and constants for College Tools
- * @version 5.6.2
+ * @version 5.6.3
  * @author College Tools
  * @description Central configuration module with constants, settings, and shared data
  */
@@ -14,7 +14,7 @@ CollegeTools.Config = (function() {
   'use strict';
 
   // Version information
-  var VERSION = '5.6.2';
+  var VERSION = '5.6.3';
 
   // Sheet names
   var SHEET_NAMES = {
@@ -99,7 +99,8 @@ CollegeTools.Config = (function() {
       'Tour Guide Name', 'Tour Quality (1-10)', 'Info Session Presenter', 'Info Session Quality (1-10)', 'Admissions Officer Met',
       'Classes Attended', 'Professor Names/Subjects', 'Current Students Met', 'Student Names/Majors',
       'Dining Halls Visited', 'Dorms Toured', 'Athletic Facilities Seen', 'Library Visited', 'Student Center Visited',
-      'Campus Beauty (1-10)', 'Facilities Quality (1-10)', 'Student Happiness (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
+      'Campus Beauty (1-10)', 'Facilities Quality (1-10)', 'Student Happiness (1-10)',
+      'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
       'Pros', 'Cons', 'Surprises', 'Concerns', 'Best Feature', 'Worst Feature',
       'Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested', 'Next Steps',
       'Visit Score',

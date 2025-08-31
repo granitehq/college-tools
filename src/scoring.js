@@ -1,6 +1,6 @@
 /**
  * Weighted scoring system
- * @version 5.6.2
+ * @version 5.6.3
  * @author College Tools
  * @description Weighted scoring calculations and formulas for colleges and campus visits
  */
