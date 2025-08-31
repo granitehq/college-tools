@@ -3,7 +3,7 @@
 **A comprehensive Google Sheets-based college selection and tracking system powered by the U.S. Department of Education's College Scorecard API.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-username/college-tools)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/your-username/college-tools)
 
 ## 🌟 Features
 
