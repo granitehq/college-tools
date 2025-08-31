@@ -25,16 +25,6 @@ var CollegeTools = (function() {
     SpreadsheetApp.getUi().alert('College Tools: '+VERSION); 
   }
 
-/**
- * Test function that writes "TEST" to cell I3 in the Colleges sheet.
- * Used for debugging and verifying write permissions.
- */
-function testWrite() {
-  var sh = SpreadsheetApp.getActive().getSheetByName("Colleges");
-  if (!sh) { SpreadsheetApp.getUi().alert('Sheet "Colleges" not found.'); return; }
-  sh.getRange(3, 9).setValue("TEST"); // I3 = Acceptance Rate in your layout
-  SpreadsheetApp.getUi().alert('Wrote "TEST" to Colleges!I3');
-}
 
 /* ======================= UTILS ======================= */
 function highlight_(ranges) {
@@ -959,7 +949,6 @@ function fillSelectedRows() {
     VERSION: VERSION,
     fillCollegeRow: fillCollegeRow,
     fillSelectedRows: fillSelectedRows,
-    testWrite: testWrite,
     showVersion: showVersion,
     setupAllTrackers: setupAllTrackers,
     enhanceFormatsDropdowns: enhanceFormatsDropdowns,
@@ -980,7 +969,6 @@ function onOpen() {
     .createMenu("College Tools")
     .addItem("Fill current row", "fillCollegeRow")
     .addItem("Fill selected rows", "fillSelectedRows")
-    .addItem("Test write (I3)", "testWrite")
     .addSeparator()
     .addItem("Add/Update Trackers", "setupAllTrackers")
     .addItem("Enhance: Formats & Dropdowns", "enhanceFormatsDropdowns")
@@ -999,7 +987,6 @@ function onOpen() {
  */
 function fillCollegeRow() { return CollegeTools.fillCollegeRow(); }
 function fillSelectedRows() { return CollegeTools.fillSelectedRows(); }
-function testWrite() { return CollegeTools.testWrite(); }
 function showVersion() { return CollegeTools.showVersion(); }
 function setupAllTrackers() { return CollegeTools.setupAllTrackers(); }
 function enhanceFormatsDropdowns() { return CollegeTools.enhanceFormatsDropdowns(); }
