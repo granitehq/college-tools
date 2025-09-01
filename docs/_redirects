@@ -1,19 +1,6 @@
 # Cloudflare Pages Redirects
+# Note: Clean URL rewrites are handled by Pages Functions (/functions/[[path]].js)
 
-# Clean URLs - redirect to actual HTML files
-/getting-started /getting-started.html 200
-/features /features.html 200
-/privacy /privacy.html 200
-/terms /terms.html 200
-
-# Remove .html extensions from direct access
-/index.html / 301
-
-# Old screenshots URL to features
+# Legacy redirects only - Pages Functions handle clean URLs
 /screenshots /features 301
-
-# Handle trailing slashes consistently
-/getting-started/ /getting-started 301
-/features/ /features 301
-/privacy/ /privacy 301
-/terms/ /terms 301
+/index.html / 301
