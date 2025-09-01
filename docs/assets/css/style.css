@@ -56,6 +56,25 @@ body {
   background-color: white;
 }
 
+/* Skip to main content - Accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--primary);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+  font-weight: var(--font-weight-medium);
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
 /* Container */
 .container {
   max-width: var(--max-width);
