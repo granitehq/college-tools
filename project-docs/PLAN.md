@@ -134,3 +134,51 @@ MATCH(B$1,Master_Sheet_Colleges,0)),"N/A")
    - Use color scales for numeric scores
 
 5. **Test formulas** with 2-3 schools first before copying down
+
+---
+
+## Apps Directory Project (Future Phase 2)
+
+### Overview
+Multi-app ecosystem with central directory at `apps.granite-hq.com`
+
+### Architecture
+- **Separate repository**: `apps-directory`  
+- **Separate Cloudflare Pages project**
+- **URL**: `apps.granite-hq.com`
+- **Purpose**: Professional landing page for all Granite HQ tools
+- **Current apps**: College Tools (with room for expansion)
+
+### Implementation Plan
+1. **Create new repository** for apps directory
+2. **Simple landing page** design:
+   ```
+   apps-directory/
+   ├── index.html              # Main directory page
+   ├── assets/
+   │   ├── css/style.css      # Minimal, clean styling
+   │   ├── images/logo.png    # Granite HQ branding
+   │   └── icons/             # App icons
+   └── _headers               # Cloudflare configuration
+   ```
+
+3. **Content structure**:
+   - Hero: "Granite HQ Apps - Professional Tools"
+   - App grid with cards for each tool
+   - Links to individual app sites
+   - Contact/about information
+
+4. **Future apps** can be added as new cards:
+   - College Tools → `college-tools.granite-hq.com`
+   - [Future Tool] → `[tool].granite-hq.com`
+
+### Benefits
+- ✅ Professional app ecosystem feel
+- ✅ Room to grow with more tools  
+- ✅ Better SEO with separate domains
+- ✅ Clean separation of projects
+- ✅ Independent deployment cycles
+
+### Timeline
+- **After** College Tools website is complete and deployed
+- Estimated: 1-2 days to implement once College Tools is live

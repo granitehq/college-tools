@@ -1,0 +1,26 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified grid (fewer lines for small size) -->
+  <g stroke="#F1F3F4" stroke-width="0.5" fill="none" opacity="0.5">
+    <line x1="10" y1="4" x2="10" y2="28" />
+    <line x1="22" y1="4" x2="22" y2="28" />
+    <line x1="4" y1="12" x2="28" y2="12" />
+    <line x1="4" y1="20" x2="28" y2="20" />
+  </g>
+  
+  <!-- Larger, simplified graduation cap for visibility at small size -->
+  <g transform="translate(16, 16)">
+    <!-- Cap top (mortarboard) - larger for favicon -->
+    <path d="M -11 -3 L 0 -9 L 11 -3 L 11 1 L 0 7 L -11 1 Z" 
+          fill="#4285F4"/>
+    
+    <!-- Cap button (larger) -->
+    <circle cx="0" cy="-3" r="2" fill="#1565C0"/>
+    
+    <!-- Simplified tassel (thicker for visibility) -->
+    <line x1="0" y1="-3" x2="7" y2="3" 
+          stroke="#1565C0" 
+          stroke-width="1.5" 
+          stroke-linecap="round"/>
+    <circle cx="7" cy="3" r="1.5" fill="#FFC107"/>
+  </g>
+</svg>

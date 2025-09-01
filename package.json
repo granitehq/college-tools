@@ -4,6 +4,8 @@
   "description": "Google Apps Script project for college selection and tracking",
   "main": "src/menu.js",
   "scripts": {
+    "build": "node scripts/build-website.js",
+    "dev": "npm run build && python3 -m http.server 8080 --directory docs",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
     "lint:check": "eslint src/**/*.js --max-warnings 0",

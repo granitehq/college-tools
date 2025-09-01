@@ -1,6 +1,7 @@
 # Terms of Service for College Tools
 
-*Last Updated: [Date]*
+*Last Updated: September 1, 2025*  
+*Version: 1.0*
 
 ## 1. Acceptance of Terms
 By using College Tools ("the Add-on"), you agree to these Terms of Service. If you do not agree, please do not use the Add-on.
@@ -24,64 +25,75 @@ You agree to:
 - Not use the Add-on for any illegal or unauthorized purpose
 - Not attempt to reverse engineer or harm the Add-on
 
-## 5. Intellectual Property
-- College Tools is open source software
+## 5. Prohibited Uses
+You may not use College Tools for:
+- Scraping or mass downloading college data
+- Using the tool for commercial purposes without permission
+- Attempting to overload the College Scorecard API
+- Any activity that violates applicable laws or regulations
+- Sharing or selling access to the tool without authorization
+
+## 6. Intellectual Property
+- College Tools source code is available for review
 - College data comes from the U.S. Department of Education
 - You retain ownership of your spreadsheet data
 
-## 6. Disclaimers
+## 7. Disclaimers
 THE ADD-ON IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
 - Accuracy of college data (provided by College Scorecard API)
 - Fitness for college selection decisions
 - Uninterrupted or error-free operation
 
-## 7. Limitation of Liability
+## 8. Limitation of Liability
 IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY:
 - Direct, indirect, incidental, or consequential damages
 - Loss of data or profits
 - College application outcomes or decisions
 
-## 8. College Data Accuracy
+## 9. College Data Accuracy
 - College data is provided by the U.S. Department of Education via College Scorecard API
 - We do not guarantee the accuracy, completeness, or timeliness of this data
 - Always verify important information directly with colleges
 
-## 9. No Professional Advice
+## 10. No Professional Advice
 College Tools does not provide:
 - Professional college counseling
 - Financial aid advice
 - Admissions consulting
 - Educational planning services
 
-## 10. Modifications to Service
+## 11. Modifications to Service
 We reserve the right to:
 - Modify or discontinue the Add-on at any time
 - Update these Terms of Service
 - Change features or functionality
 
-## 11. Privacy
+## 12. Privacy
 Your use of College Tools is subject to our Privacy Policy. Please review it for information about how we handle data.
 
-## 12. Termination
+## 13. Termination
 You may stop using the Add-on at any time by:
 - Removing it from your Google Sheets
 - Deleting your spreadsheet
 
-## 13. Support
+## 14. Support
 Support is provided on a best-effort basis through:
-- GitHub Issues: https://github.com/[your-username]/college-tools/issues
+- GitHub Issues: https://github.com/granitehq/college-tools/issues
 - Documentation in the repository
 
-## 14. Governing Law
-These Terms shall be governed by the laws of [Your State/Country], without regard to conflict of law principles.
+## 15. Governing Law
+These Terms shall be governed by the laws of the United States, without regard to conflict of law principles.
 
-## 15. Entire Agreement
-These Terms constitute the entire agreement between you and the developers regarding College Tools.
+## 16. Age Restrictions
+This service is intended for users 13 years and older. Users under 18 should have parental consent.
 
-## 16. Contact Information
+## 17. Entire Agreement
+These Terms constitute the entire agreement between you and Granite HQ, LLC regarding College Tools.
+
+## 18. Contact Information
 For questions about these Terms:
-- GitHub Issues: https://github.com/[your-username]/college-tools/issues
-- Email: [your-email]
+- GitHub Issues: https://github.com/granitehq/college-tools/issues
+- Email: support@granite-hq.com
 
-## 17. Google Relationship
+## 19. Google Relationship
 College Tools is not sponsored, endorsed, or administered by Google. Google is a trademark of Google LLC.
