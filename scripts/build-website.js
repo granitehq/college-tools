@@ -7,14 +7,27 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 // File paths
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
 const PRIVACY_MD = path.join(__dirname, '..', 'PRIVACY.md');
 const TERMS_MD = path.join(__dirname, '..', 'TERMS.md');
 
+// Get git commit hash
+function getGitHash() {
+    try {
+        return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    } catch (error) {
+        console.warn('Could not get git hash:', error.message);
+        return 'dev';
+    }
+}
+
 // HTML template
-const HTML_TEMPLATE = (title, content, currentPage = '') => `<!DOCTYPE html>
+const HTML_TEMPLATE = (title, content, currentPage = '') => {
+    const gitHash = getGitHash();
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -72,16 +85,17 @@ const HTML_TEMPLATE = (title, content, currentPage = '') => `<!DOCTYPE html>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Granite HQ, LLC.</p>
+                <p>&copy; 2025 Granite HQ, LLC. • v${gitHash}</p>
             </div>
         </div>
     </footer>
 
     <!-- Cloudflare Analytics -->
     <script defer src='https://static.cloudflareinsights.com/beacon.min.js' 
-            data-cf-beacon='{"token": "YOUR_TOKEN_HERE"}'></script>
+            data-cf-beacon='{"token": "0f22649b14ab493abfdd0ea2190f4bca"}'></script>
 </body>
 </html>`;
+};
 
 /**
  * Convert markdown to basic HTML
