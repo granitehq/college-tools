@@ -1,11 +1,13 @@
 # Cloudflare Pages Redirects
 
-# Remove .html extensions
+# Clean URLs - redirect to actual HTML files
+/getting-started /getting-started.html 200
+/features /features.html 200
+/privacy /privacy.html 200
+/terms /terms.html 200
+
+# Remove .html extensions from direct access
 /index.html / 301
-/getting-started.html /getting-started 301
-/features.html /features 301
-/privacy.html /privacy 301
-/terms.html /terms 301
 
 # Old screenshots URL to features
 /screenshots /features 301
