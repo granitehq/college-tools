@@ -90,6 +90,7 @@
     </script>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header class="header">
         <div class="container">
             <nav class="nav">
@@ -101,13 +102,13 @@
                     <li><a href="/" class="active">Home</a></li>
                     <li><a href="/getting-started" class="">Get Started</a></li>
                     <li><a href="/features" class="">Features</a></li>
-                    <li><a href="https://github.com/granitehq/college-tools" target="_blank">GitHub</a></li>
+                    <li><a href="https://github.com/granitehq/college-tools" target="_blank" rel="noopener">GitHub</a></li>
                 </ul>
             </nav>
         </div>
     </header>
 
-    <main class="main">
+    <main class="main" id="main-content">
         
         <section class="hero">
             <div class="container">
@@ -116,12 +117,12 @@
                     <p>Professional tools for managing your college search and application process in Google Sheets</p>
                     <div class="cta-buttons">
                         <a href="https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy" 
-                           class="btn btn-primary" target="_blank">Get Started Free</a>
+                           class="btn btn-primary" target="_blank" rel="noopener">Get Started Free</a>
                         <a href="/getting-started" class="btn btn-secondary">View Guide</a>
                     </div>
                 </div>
                 <div class="hero-image">
-                    <img src="assets/images/screenshots/college-data.png" alt="College Tools - Data Import Feature" class="screenshot">
+                    <img src="assets/images/screenshots/college-data.png" alt="Screenshot of College Tools spreadsheet showing automated college data import with SAT scores, costs, acceptance rates, and comprehensive college information from Department of Education APIs" class="screenshot">
                 </div>
             </div>
         </section>
@@ -133,12 +134,12 @@
                     <div class="feature-card">
                         <div class="feature-icon">📊</div>
                         <h3>College Data Import</h3>
-                        <p>Automatically fetch college data from the Department of Education's College Scorecard API</p>
+                        <p>Automatically fetch college data from the Department of Education's College Scorecard API. <a href="/features">See how it works</a></p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">📋</div>
                         <h3>Application Tracking</h3>
-                        <p>Track deadlines, requirements, and application status across all your target schools</p>
+                        <p>Track deadlines, requirements, and application status across all your target schools. <a href="/features">View screenshots</a></p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">💰</div>
@@ -185,6 +186,30 @@
                 </div>
             </div>
         </section>
+
+        <section class="faq">
+            <div class="container">
+                <h2>Frequently Asked Questions</h2>
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <h3>Is College Tools really free?</h3>
+                        <p>Yes, College Tools is currently completely free to use. You just need a Google account to copy the spreadsheet template.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>Do I need programming knowledge?</h3>
+                        <p>No programming knowledge is required. College Tools works through simple menu commands in Google Sheets.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>How do I get a College Scorecard API key?</h3>
+                        <p>Visit <a href="https://api.data.gov/signup/" target="_blank" rel="noopener">api.data.gov/signup</a> to get your free API key. It takes less than a minute and requires only your email address. <a href="/getting-started">See full setup guide</a></p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>Is my college data secure?</h3>
+                        <p>Yes, all your data stays in your own Google Sheets document. College Tools doesn't store any of your information on external servers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
     
     </main>
 
@@ -211,7 +236,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Granite HQ, LLC. • vc8d90b7</p>
+                <p>&copy; 2025 Granite HQ, LLC. • v43335af</p>
             </div>
         </div>
     </footer>
