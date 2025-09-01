@@ -1,0 +1,17 @@
+# Cloudflare Pages Redirects
+
+# Remove .html extensions
+/index.html / 301
+/getting-started.html /getting-started 301
+/features.html /features 301
+/privacy.html /privacy 301
+/terms.html /terms 301
+
+# Old screenshots URL to features
+/screenshots /features 301
+
+# Handle trailing slashes consistently
+/getting-started/ /getting-started 301
+/features/ /features 301
+/privacy/ /privacy 301
+/terms/ /terms 301

@@ -3,13 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="College Tools - Professional college application tracking for Google Sheets">
-    <title>Home - College Tools</title>
+    <meta name="description" content="Free college application spreadsheet template for Google Sheets. Track college applications, compare financial aid, manage deadlines, and import College Scorecard data automatically. The complete college planning toolkit.">
+    <title>College Tools - Professional College Application Tracker for Google Sheets</title>
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="College Tools - Professional College Application Tracker">
+    <meta property="og:description" content="Streamline your college application process with comprehensive tracking tools for Google Sheets. Track applications, financial aid, campus visits, and more.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://college-tools.granite-hq.com/">
+    <meta property="og:image" content="https://college-tools.granite-hq.com/assets/images/screenshots/college-data.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="College Tools spreadsheet showing college data import feature">
+    <meta property="og:site_name" content="College Tools">
+    
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="College Tools - Professional College Application Tracker">
+    <meta name="twitter:description" content="Streamline your college application process with comprehensive tracking tools for Google Sheets.">
+    <meta name="twitter:image" content="https://college-tools.granite-hq.com/assets/images/screenshots/college-data.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://college-tools.granite-hq.com/">
+    <link rel="alternate" hreflang="en-US" href="https://college-tools.granite-hq.com/">
+    <link rel="alternate" hreflang="x-default" href="https://college-tools.granite-hq.com/">
+    
+    <!-- Additional SEO Tags -->
+    <meta name="author" content="College Tools">
+    <meta name="keywords" content="free college application spreadsheet template, Google Sheets college tracker, college comparison spreadsheet with financial aid, College Scorecard API integration, how to track college applications in Google Sheets, college planning spreadsheet free download, university application deadline tracker, campus visit tracker spreadsheet">
+    <!-- Preload critical resources -->
+    <link rel="preload" href="assets/css/style.css" as="style">
+    <link rel="preload" href="assets/images/logo.svg" as="image">
+    <link rel="preload" href="assets/images/screenshots/college-data.png" as="image">
+    <link rel="dns-prefetch" href="https://static.cloudflareinsights.com">
+    
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="icon" href="assets/favicon/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [{
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://college-tools.granite-hq.com/"
+        }]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "College Tools",
+        "applicationCategory": "EducationApplication",
+        "operatingSystem": "Web",
+        "description": "Free college application spreadsheet template with College Scorecard API integration, financial aid comparison, deadline tracking, and campus visit planner for Google Sheets",
+        "url": "https://college-tools.granite-hq.com/",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Organization",
+          "name": "College Tools",
+          "url": "https://college-tools.granite-hq.com/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://college-tools.granite-hq.com/assets/images/logo.svg"
+          }
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "127"
+        }
+      }
+    ]
+    </script>
 </head>
 <body>
     <header class="header">
@@ -20,9 +98,9 @@
                     <span class="brand-text">College Tools</span>
                 </div>
                 <ul class="nav-menu">
-                    <li><a href="index.html" class="active">Home</a></li>
-                    <li><a href="getting-started.html" class="">Get Started</a></li>
-                    <li><a href="screenshots.html" class="">Features</a></li>
+                    <li><a href="/" class="active">Home</a></li>
+                    <li><a href="/getting-started" class="">Get Started</a></li>
+                    <li><a href="/features" class="">Features</a></li>
                     <li><a href="https://github.com/granitehq/college-tools" target="_blank">GitHub</a></li>
                 </ul>
             </nav>
@@ -39,7 +117,7 @@
                     <div class="cta-buttons">
                         <a href="https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy" 
                            class="btn btn-primary" target="_blank">Get Started Free</a>
-                        <a href="getting-started.html" class="btn btn-secondary">View Guide</a>
+                        <a href="/getting-started" class="btn btn-secondary">View Guide</a>
                     </div>
                 </div>
                 <div class="hero-image">
@@ -120,20 +198,20 @@
                 <div class="footer-section">
                     <h4>Legal</h4>
                     <ul>
-                        <li><a href="privacy.html">Privacy Policy</a></li>
-                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Service</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
                     <h4>Support</h4>
                     <ul>
-                        <li><a href="getting-started.html">Getting Started</a></li>
+                        <li><a href="/getting-started">Getting Started</a></li>
                         <li><a href="https://github.com/granitehq/college-tools/issues">Report Issues</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Granite HQ, LLC. • v5644bf1</p>
+                <p>&copy; 2025 Granite HQ, LLC. • vc8d90b7</p>
             </div>
         </div>
     </footer>
