@@ -188,39 +188,6 @@ CollegeTools.Utils = (function() {
   }
 
   /**
-   * Ensures a college exists in a tracker sheet and updates its data.
-   * @param {Sheet} sh - The tracker sheet
-   * @param {string} collegeHeader - Header name for the college column
-   * @param {string} collegeName - Name of the college
-   * @param {Object} updatesObj - Object with column headers as keys and values to set
-   */
-  function ensureCollegeRowAndSet(sh, collegeHeader, collegeName, updatesObj) {
-    var nameCol = colIndex(sh, collegeHeader);
-    if (!nameCol) return;
-    var last = Math.max(2, sh.getLastRow());
-    var foundRow = null;
-    var vals = sh.getRange(2, nameCol, last-1, 1).getValues();
-    for (var i=0; i<vals.length; i++) {
-      if ((vals[i][0]||'').toString().trim().toLowerCase() === collegeName.toString().trim().toLowerCase()) {
-        foundRow = i+2;
-        break;
-      }
-    }
-    if (!foundRow) {
-      foundRow = last+1;
-      sh.getRange(foundRow, nameCol).setValue(collegeName);
-    }
-    if (updatesObj && Object.keys(updatesObj).length) {
-      for (var key in updatesObj) {
-        if (!updatesObj.hasOwnProperty(key)) continue;
-        var c = colIndex(sh, key);
-        if (!c) continue;
-        sh.getRange(foundRow, c).setValue(updatesObj[key]);
-      }
-    }
-  }
-
-  /**
    * Sanitizes college name input to prevent injection and abuse.
    * @param {string} collegeName - Raw college name from user input
    * @returns {string} Sanitized college name
@@ -245,114 +212,6 @@ CollegeTools.Utils = (function() {
     return sanitized.trim();
   }
 
-  /**
-   * Validates and sanitizes SAT score input.
-   * @param {*} score - Raw SAT score input
-   * @returns {number|null} Valid SAT score or null if invalid
-   */
-  function validateSATScore(score) {
-    if (score === null || score === undefined || score === '') return null;
-
-    var num = Number(score);
-    if (isNaN(num)) return null;
-
-    // SAT scores range from 400-1600 (after 2016 redesign)
-    if (num < 400 || num > 1600) return null;
-
-    return Math.round(num);
-  }
-
-  /**
-   * Validates and sanitizes ACT score input.
-   * @param {*} score - Raw ACT score input
-   * @returns {number|null} Valid ACT score or null if invalid
-   */
-  function validateACTScore(score) {
-    if (score === null || score === undefined || score === '') return null;
-
-    var num = Number(score);
-    if (isNaN(num)) return null;
-
-    // ACT scores range from 1-36
-    if (num < 1 || num > 36) return null;
-
-    return Math.round(num);
-  }
-
-  /**
-   * Validates and sanitizes GPA input.
-   * @param {*} gpa - Raw GPA input
-   * @returns {number|null} Valid GPA or null if invalid
-   */
-  function validateGPA(gpa) {
-    if (gpa === null || gpa === undefined || gpa === '') return null;
-
-    var num = Number(gpa);
-    if (isNaN(num)) return null;
-
-    // GPA typically ranges from 0.0-4.0 (some schools go to 5.0+ with weighted)
-    if (num < 0.0 || num > 5.0) return null;
-
-    return Math.round(num * 100) / 100; // Round to 2 decimal places
-  }
-
-  /**
-   * Validates and sanitizes cost input (tuition, room & board, etc.).
-   * @param {*} cost - Raw cost input
-   * @returns {number|null} Valid cost or null if invalid
-   */
-  function validateCost(cost) {
-    if (cost === null || cost === undefined || cost === '') return null;
-
-    var num = Number(cost);
-    if (isNaN(num)) return null;
-
-    // Reasonable cost range: $0 - $250,000 per year (covers highest private colleges)
-    if (num < 0 || num > 250000) return null;
-
-    return Math.round(num);
-  }
-
-  /**
-   * Validates and sanitizes family income input.
-   * @param {*} income - Raw income input
-   * @returns {number|null} Valid income or null if invalid
-   */
-  function validateFamilyIncome(income) {
-    if (income === null || income === undefined || income === '') return null;
-
-    var num = Number(income);
-    if (isNaN(num)) return null;
-
-    // Reasonable income range: $0 - $1,000,000 per year
-    if (num < 0 || num > 1000000) return null;
-
-    return Math.round(num);
-  }
-
-  /**
-   * General string sanitization for user inputs.
-   * @param {string} input - Raw string input
-   * @param {number} maxLength - Maximum allowed length (default: 100)
-   * @returns {string} Sanitized string
-   */
-  function sanitizeString(input, maxLength) {
-    if (!input) return '';
-
-    maxLength = maxLength || 100;
-    var sanitized = input.toString().trim();
-
-    // Length limit
-    if (sanitized.length > maxLength) {
-      sanitized = sanitized.substring(0, maxLength);
-    }
-
-    // Remove control characters and very dangerous chars
-    sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F<>\"']/g, '');
-
-    return sanitized.trim();
-  }
-
   // Public API
   return {
     highlight: highlight,
@@ -365,14 +224,7 @@ CollegeTools.Utils = (function() {
     columnToLetter: columnToLetter,
     addr: addr,
     getRegionForState: getRegionForState,
-    ensureCollegeRowAndSet: ensureCollegeRowAndSet,
     trimAllSheets: trimAllSheets,
     sanitizeCollegeName: sanitizeCollegeName,
-    validateSATScore: validateSATScore,
-    validateACTScore: validateACTScore,
-    validateGPA: validateGPA,
-    validateCost: validateCost,
-    validateFamilyIncome: validateFamilyIncome,
-    sanitizeString: sanitizeString,
   };
 })();

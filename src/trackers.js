@@ -14,6 +14,63 @@ CollegeTools.Trackers = (function() {
   'use strict';
 
   /**
+   * Returns the tracker row corresponding to a Colleges sheet row.
+   * Colleges starts data on row 3, trackers on row 2.
+   * @param {number} sourceRow - Row number in Colleges
+   * @returns {number} Row number in tracker sheets
+   * @private
+   */
+  function getTrackerRowForCollegeRow_(sourceRow) {
+    return Math.max(2, sourceRow - 1);
+  }
+
+  /**
+   * Synchronizes a single canonical Colleges row into a tracker sheet.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {number} sourceRow - Row number from Colleges
+   * @param {string} collegeName - Canonical college name for that row
+   * @param {Object} updatesObj - Optional header/value updates to write
+   * @private
+   */
+  function syncCollegeRowToSheet_(sh, sourceRow, collegeName, updatesObj) {
+    if (!sh || !sourceRow) return;
+
+    var trackerRow = getTrackerRowForCollegeRow_(sourceRow);
+    var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
+    if (!nameCol) return;
+
+    sh.getRange(trackerRow, nameCol).setValue(collegeName || '');
+
+    if (!updatesObj) return;
+    for (var key in updatesObj) {
+      if (!updatesObj.hasOwnProperty(key)) continue;
+      var c = CollegeTools.Utils.colIndex(sh, key);
+      if (!c) continue;
+      sh.getRange(trackerRow, c).setValue(updatesObj[key] || '');
+    }
+  }
+
+  /**
+   * Clears canonical tracker rows that no longer correspond to a college in Colleges.
+   * Only clears linked columns, not the full row, to avoid destroying user formatting.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {number} startRow - First tracker row to clear
+   * @param {Array<string>} linkedHeaders - Headers to clear
+   * @private
+   */
+  function clearTrackerRows_(sh, startRow, linkedHeaders) {
+    if (!sh) return;
+    var lastRow = sh.getLastRow();
+    if (lastRow < startRow) return;
+
+    linkedHeaders.forEach(function(header) {
+      var c = CollegeTools.Utils.colIndex(sh, header);
+      if (!c) return;
+      sh.getRange(startRow, c, lastRow - startRow + 1, 1).clearContent();
+    });
+  }
+
+  /**
    * Creates or updates the Financial Aid Tracker sheet with headers and formulas.
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -25,7 +82,7 @@ CollegeTools.Trackers = (function() {
 
     // College Name validation using dynamic range from Colleges sheet
     CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
+      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
 
     ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'].forEach(function(h) {
       CollegeTools.Formatting.validateDate(sh, h);
@@ -107,7 +164,7 @@ CollegeTools.Trackers = (function() {
 
     // College Name validation using dynamic range from Colleges sheet
     CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
+      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
 
     CollegeTools.Formatting.validateDate(sh, 'Visit Date');
     CollegeTools.Formatting.validateList(sh, 'Visit Type (In-Person/Virtual/College Fair)',
@@ -196,7 +253,7 @@ CollegeTools.Trackers = (function() {
 
     // College Name validation using dynamic range from Colleges sheet
     CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
+      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
 
     // Validation for Y/N columns
     ['Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete',
@@ -222,13 +279,10 @@ CollegeTools.Trackers = (function() {
     var testScoreCol = CollegeTools.Utils.colIndex(sh, 'Test Scores Sent');
     var recCol = CollegeTools.Utils.colIndex(sh, 'Recommendations Complete');
     var essayCol = CollegeTools.Utils.colIndex(sh, 'Essays Complete');
-    var _portfolioSubCol = CollegeTools.Utils.colIndex(sh, 'Portfolio Submitted (Date)');
 
     if (completeCol && transcriptCol && testScoreCol && recCol && essayCol) {
       var r2 = 2;
       var transcriptCell = CollegeTools.Utils.addr(r2, transcriptCol);
-      var _testScoreCell = CollegeTools.Utils.addr(r2, testScoreCol);
-      var _recCell = CollegeTools.Utils.addr(r2, recCol);
       var essayCell = CollegeTools.Utils.addr(r2, essayCol);
       var portfolioRange = transcriptCell + ':' + essayCell;
 
@@ -285,28 +339,80 @@ CollegeTools.Trackers = (function() {
    */
   function syncCollegeToTrackers(info) {
     var ss = SpreadsheetApp.getActive();
+    var sourceRow = info.sourceRow;
+    if (!sourceRow) return;
 
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
-      CollegeTools.Utils.ensureCollegeRowAndSet(fa, 'College Name', info.name, {
+      syncCollegeRowToSheet_(fa, sourceRow, info.name, {
         'Total Cost of Attendance': info.coa,
       });
     }
 
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
-      CollegeTools.Utils.ensureCollegeRowAndSet(cv, 'College Name', info.name, {});
+      syncCollegeRowToSheet_(cv, sourceRow, info.name, {});
     }
 
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
-      CollegeTools.Utils.ensureCollegeRowAndSet(at, 'College Name', info.name, {});
+      syncCollegeRowToSheet_(at, sourceRow, info.name, {});
     }
 
     var st = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     if (st) {
-      CollegeTools.Utils.ensureCollegeRowAndSet(st, 'College Name', info.name, {});
+      syncCollegeRowToSheet_(st, sourceRow, info.name, {});
     }
+  }
+
+  /**
+   * Re-syncs all tracker tabs from the canonical Colleges sheet ordering.
+   * This repairs stale sample/template names in existing downloaded spreadsheets.
+   * @return {Object} Summary object with processed row count
+   */
+  function repairCollegeSync() {
+    var ss = SpreadsheetApp.getActive();
+    var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
+    if (!collegesSheet) {
+      SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
+      return {ok: false, count: 0};
+    }
+
+    var lastRow = collegesSheet.getLastRow();
+    var processed = 0;
+    var coaCol = collegesSheet.getRange(2, 1, 1, collegesSheet.getLastColumn()).getValues()[0]
+      .map(function(x) {
+        return (x || '').toString().trim();
+      }).indexOf('Total Cost of Attendance') + 1;
+
+    for (var row = 3; row <= lastRow; row++) {
+      var collegeName = (collegesSheet.getRange(row, 1).getValue() || '').toString().trim();
+      var coa = '';
+      if (collegeName) {
+        coa = coaCol > 0 ? collegesSheet.getRange(row, coaCol).getValue() : '';
+        syncCollegeToTrackers({name: collegeName, coa: coa, sourceRow: row});
+        processed++;
+      }
+    }
+
+    var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
+    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID),
+      firstClearRow, ['College Name', 'Total Cost of Attendance']);
+    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT),
+      firstClearRow, ['College Name']);
+    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE),
+      firstClearRow, ['College Name']);
+    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER),
+      firstClearRow, ['College Name']);
+
+    SpreadsheetApp.getUi().alert(
+      'Tracker Sync Repaired',
+      'Re-synced tracker college lists from the Colleges sheet.\n\n' +
+      'Updated rows: ' + processed,
+      SpreadsheetApp.getUi().ButtonSet.OK,
+    );
+
+    return {ok: true, count: processed};
   }
 
   /**
@@ -354,5 +460,6 @@ CollegeTools.Trackers = (function() {
   return {
     setupAllTrackers: setupAllTrackers,
     syncCollegeToTrackers: syncCollegeToTrackers,
+    repairCollegeSync: repairCollegeSync,
   };
 })();

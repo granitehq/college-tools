@@ -201,51 +201,6 @@ CollegeTools.Financial = (function() {
   }
 
   /**
-   * Applies Aid Requirements Complete formulas to the Financial Aid sheet.
-   * @param {Sheet} sheet - The Financial Aid sheet
-   * * @private
-   */
-  function applyAidRequirementsFormulas(sheet) {
-    var completeCol = findColumnInRow2(sheet, 'Aid Requirements Complete');
-    if (!completeCol) return;
-
-    var _fafsaReqCol = findColumnInRow2(sheet, 'CSS Profile Required (Y/N)'); // Using existing CSS as proxy
-    var fafsaSubCol = findColumnInRow2(sheet, 'FAFSA Submitted (Y/N)');
-    var cssReqCol = findColumnInRow2(sheet, 'CSS Profile Required (Y/N)');
-    var cssSubCol = findColumnInRow2(sheet, 'CSS Profile Submitted (Y/N)');
-    var idocReqCol = findColumnInRow2(sheet, 'IDOC Required (Y/N)');
-    var idocSubCol = findColumnInRow2(sheet, 'IDOC Submitted (Y/N)');
-    var verReqCol = findColumnInRow2(sheet, 'Verification Required (Y/N)');
-
-    if (!fafsaSubCol || !cssSubCol) return;
-
-    var startRow = 3;
-    var endRow = Math.max(3, sheet.getLastRow());
-
-    for (var row = startRow; row <= endRow; row++) {
-      var collegeName = sheet.getRange(row, 1).getValue();
-      if (!collegeName || collegeName === '') continue;
-
-      var fafsaSubCell = CollegeTools.Utils.addr(row, fafsaSubCol);
-      var cssReqCell = cssReqCol ? CollegeTools.Utils.addr(row, cssReqCol) : '';
-      var cssSubCell = CollegeTools.Utils.addr(row, cssSubCol);
-      var idocReqCell = idocReqCol ? CollegeTools.Utils.addr(row, idocReqCol) : '';
-      var idocSubCell = idocSubCol ? CollegeTools.Utils.addr(row, idocSubCol) : '';
-      var verReqCell = verReqCol ? CollegeTools.Utils.addr(row, verReqCol) : '';
-
-      // Aid Requirements Complete formula
-      var formula = '=IF(AND(' +
-        fafsaSubCell + '="Y",' +
-        'OR(' + cssReqCell + '="N",' + cssSubCell + '="Y")' +
-        (idocReqCol ? ',OR(' + idocReqCell + '="N",' + idocSubCell + '="Y")' : '') +
-        (verReqCol ? ',OR(' + verReqCell + '="N",' + verReqCell + '="Y")' : '') +
-        '),"✅ Complete","⚠️ Pending")';
-
-      sheet.getRange(row, completeCol).setFormula(formula);
-    }
-  }
-
-  /**
    * Enhancement function: adds formatting to Personal Profile sheet.
    * @param {Spreadsheet} ss - The spreadsheet object
    */
@@ -417,7 +372,6 @@ CollegeTools.Financial = (function() {
   // Public API
   return {
     setupFinancialIntelligence: setupFinancialIntelligence,
-    applyAidRequirementsFormulas: applyAidRequirementsFormulas,
     enhancePersonalProfileFormatting: enhancePersonalProfileFormatting,
     enhanceFinancialAidFormatting: enhanceFinancialAidFormatting,
     enhanceCollegesFormatting: enhanceCollegesFormatting,
