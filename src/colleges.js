@@ -14,6 +14,65 @@ CollegeTools.Colleges = (function() {
   'use strict';
 
   /**
+   * Returns the 1-based column index for a required header in a pre-read header array.
+   * Throws if the header is not found, making misconfigured column maps fail loudly.
+   * @param {Array<string>} hdrs - Pre-read array of header strings
+   * @param {string} h - Header text to find
+   * @returns {number} 1-based column index
+   * @throws {Error} If header not found
+   * @private
+   */
+  function requireCol_(hdrs, h) {
+    var i = hdrs.indexOf(h);
+    if (i === -1) throw new Error('Missing header: ' + h);
+    return i + 1;
+  }
+
+  var PRESERVED_HEADERS = {
+    'College Name': true,
+    'Program Fit (1-5)': true,
+    'Academic Reputation (1-5)': true,
+    'Research Opportunities (1-5)': true,
+    'Safety (1-5)': true,
+    'Campus Culture Fit (1-5)': true,
+    'Weather Fit (1-5)': true,
+    'Clubs/Activities (1-5)': true,
+    'Personal Priority (1-5)': true,
+    'Weighted Score': true,
+    'Value Score': true,
+    'Admission Chances': true,
+    'Academic Index Match': true,
+    'Merit Aid Likelihood': true,
+  };
+
+  /**
+   * Returns whether a Colleges header should be preserved when refreshing a row.
+   * User-entered rating columns and formula columns should survive replacing a college.
+   * @param {string} header - Header text from row 2
+   * @returns {boolean} True if the column should not be cleared during refresh
+   * @private
+   */
+  function shouldPreserveHeader(header) {
+    return !!PRESERVED_HEADERS[(header || '').toString().trim()];
+  }
+
+  /**
+   * Clears stale college-specific values from a Colleges row while preserving user-owned
+   * rating columns and formula columns.
+   * @param {Sheet} sh - Colleges sheet
+   * @param {number} row - Absolute row number
+   * @param {Array<string>} headers - Header row 2 values
+   * @private
+   */
+  function clearStaleCollegeData_(sh, row, headers) {
+    var lastCol = Math.min(headers.length, sh.getLastColumn());
+    for (var c = 1; c <= lastCol; c++) {
+      if (shouldPreserveHeader(headers[c - 1])) continue;
+      sh.getRange(row, c).clearContent();
+    }
+  }
+
+  /**
    * Displays the current version of College Tools in an alert dialog.
    */
   function showVersion() {
@@ -144,6 +203,7 @@ CollegeTools.Colleges = (function() {
     // Performance optimization: Use pre-computed column indexes for batch operations
     var COL; var idxRegion0;
 
+    var hdrs;
     if (columnIndexes) {
       // Use pre-computed indexes from batch operation
       COL = {
@@ -165,42 +225,31 @@ CollegeTools.Colleges = (function() {
         NOTES: columnIndexes.NOTES,
       };
       idxRegion0 = columnIndexes.REGION !== -1 ? columnIndexes.REGION - 1 : -1;
+      hdrs = columnIndexes.HEADERS || [];
     } else {
       // Read headers for single-row operations (backward compatibility)
-      var hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
+      hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
         .map(function(x) {
           return (x||'').toString().trim();
         });
 
-      /**
-       * Gets column index for header name.
-       * @param {string} h - Header name to find
-       * @return {number} Column index (1-based)
-       * @private
-       */
-      function col(h) {
-        var i = hdrs.indexOf(h);
-        if (i===-1) throw new Error('Missing header: '+h);
-        return i+1;
-      }
-
       COL = {
-        NAME: col('College Name'),
-        CITY: col('City'),
-        STATE: col('State'),
-        TYPE: col('Type (Public/Private)'),
-        ACC: col('Acceptance Rate'),
-        RET: col('First-Year Retention'),
-        GRAD: col('Grad Rate'),
-        EARN: col('Median Earnings (10yr)'),
-        COA: col('Total Cost of Attendance'),
-        NET: col('Estimated Net Price'),
-        LINK: col('Link'),
-        SAT25: col('SAT 25%'),
-        SAT75: col('SAT 75%'),
-        ACT25: col('ACT 25%'),
-        ACT75: col('ACT 75%'),
-        NOTES: col('Notes'),
+        NAME: requireCol_(hdrs, 'College Name'),
+        CITY: requireCol_(hdrs, 'City'),
+        STATE: requireCol_(hdrs, 'State'),
+        TYPE: requireCol_(hdrs, 'Type (Public/Private)'),
+        ACC: requireCol_(hdrs, 'Acceptance Rate'),
+        RET: requireCol_(hdrs, 'First-Year Retention'),
+        GRAD: requireCol_(hdrs, 'Grad Rate'),
+        EARN: requireCol_(hdrs, 'Median Earnings (10yr)'),
+        COA: requireCol_(hdrs, 'Total Cost of Attendance'),
+        NET: requireCol_(hdrs, 'Estimated Net Price'),
+        LINK: requireCol_(hdrs, 'Link'),
+        SAT25: requireCol_(hdrs, 'SAT 25%'),
+        SAT75: requireCol_(hdrs, 'SAT 75%'),
+        ACT25: requireCol_(hdrs, 'ACT 25%'),
+        ACT75: requireCol_(hdrs, 'ACT 75%'),
+        NOTES: requireCol_(hdrs, 'Notes'),
       };
       idxRegion0 = hdrs.indexOf('Region');
     }
@@ -211,6 +260,10 @@ CollegeTools.Colleges = (function() {
     // Sanitize college name to prevent injection and abuse
     var sanitizedName = CollegeTools.Utils.sanitizeCollegeName(name);
     if (!sanitizedName) return {ok: false, msg: 'invalid name after sanitization'};
+
+    // Replace stale sample/template data but keep user-owned ratings and formulas.
+    clearStaleCollegeData_(sh, row, hdrs);
+    sh.getRange(row, COL.NAME).setValue(sanitizedName);
 
     // Fetch college data via API
     var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName);
@@ -264,7 +317,7 @@ CollegeTools.Colleges = (function() {
     regionVal = (regionVal || '').toString();
 
 
-    // Write data to sheet
+    // Write data to sheet without overwriting unrelated cells or formulas
     var writes = [
       [COL.CITY, city],
       [COL.STATE, state],
@@ -282,30 +335,10 @@ CollegeTools.Colleges = (function() {
       [COL.ACT75, act75],
     ];
     if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
-
-    // Performance optimization: Use batch setValues instead of individual setValue calls
-    var lastCol = sh.getLastColumn();
-    var rowData = new Array(lastCol);
-
-    // Initialize with empty strings
-    for (var i = 0; i < lastCol; i++) {
-      rowData[i] = '';
-    }
-
-    // Preserve existing College Name only
-    var existingName = sh.getRange(row, COL.NAME).getValue();
-    rowData[COL.NAME - 1] = existingName || '';
-
-    // Fill with new API data
     writes.forEach(function(w) {
-      if (w[0] > 0 && w[0] <= lastCol) {
-        rowData[w[0] - 1] = w[1] || '';
-      }
+      sh.getRange(row, w[0]).setValue(w[1] || '');
     });
-    rowData[COL.NOTES - 1] = CollegeTools.Config.VERSION + ' | ' + (usedName||name);
-
-    // Write all data in one batch operation
-    sh.getRange(row, 1, 1, lastCol).setValues([rowData]);
+    sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + (usedName||name));
 
     if (!suppressAlert && !skipHighlight) {
       // Highlight when run one-off (skip highlighting for performance)
@@ -318,7 +351,11 @@ CollegeTools.Colleges = (function() {
 
     // Only sync college data to existing trackers (don't run full setup every time)
     if (!opts.skipTrackerSetup) {
-      CollegeTools.Trackers.syncCollegeToTrackers({name: (usedName||name), coa: coa});
+      CollegeTools.Trackers.syncCollegeToTrackers({
+        name: (usedName||name),
+        coa: coa,
+        sourceRow: row,
+      });
     }
 
     return {ok: true, msg: 'ok'};
@@ -354,7 +391,6 @@ CollegeTools.Colleges = (function() {
     var res = fillCollegeRowCore(row, {
       suppressAlert: false,
       skipHighlight: true,
-      skipTrackerSetup: true,
     });
     if (res.ok) SpreadsheetApp.getUi().alert('Updated row ' + row + ' (fast mode).');
   }
@@ -384,20 +420,8 @@ CollegeTools.Colleges = (function() {
         return (x||'').toString().trim();
       });
 
-    /**
-     * Gets column index for required header name.
-     * @param {string} h - Header name to find
-     * @return {number} Column index (1-based)
-     * @throws {Error} If header not found
-     * @private
-     */
-    function mustCol(h) {
-      var i = hdrs.indexOf(h);
-      if (i===-1) throw new Error('Missing header: '+h);
-      return i+1;
-    }
-    var colName = mustCol('College Name');
-    var colState = mustCol('State');
+    var colName = requireCol_(hdrs, 'College Name');
+    var colState = requireCol_(hdrs, 'State');
     var idxRegion = hdrs.indexOf('Region');
 
     if (idxRegion === -1) {
@@ -483,37 +507,26 @@ CollegeTools.Colleges = (function() {
         return (x||'').toString().trim();
       });
 
-    /**
-     * Gets column index for header name (batch version).
-     * @param {string} h - Header name to find
-     * @return {number} Column index (1-based)
-     * @private
-     */
-    function batchCol(h) {
-      var i = hdrs.indexOf(h);
-      if (i===-1) throw new Error('Missing header: '+h);
-      return i+1;
-    }
-
     // Pre-compute all column indexes for batch operation
     var columnIndexes = {
-      NAME: batchCol('College Name'),
-      CITY: batchCol('City'),
-      STATE: batchCol('State'),
-      TYPE: batchCol('Type (Public/Private)'),
-      ACC: batchCol('Acceptance Rate'),
-      RET: batchCol('First-Year Retention'),
-      GRAD: batchCol('Grad Rate'),
-      EARN: batchCol('Median Earnings (10yr)'),
-      COA: batchCol('Total Cost of Attendance'),
-      NET: batchCol('Estimated Net Price'),
-      LINK: batchCol('Link'),
-      SAT25: batchCol('SAT 25%'),
-      SAT75: batchCol('SAT 75%'),
-      ACT25: batchCol('ACT 25%'),
-      ACT75: batchCol('ACT 75%'),
-      NOTES: batchCol('Notes'),
+      NAME: requireCol_(hdrs, 'College Name'),
+      CITY: requireCol_(hdrs, 'City'),
+      STATE: requireCol_(hdrs, 'State'),
+      TYPE: requireCol_(hdrs, 'Type (Public/Private)'),
+      ACC: requireCol_(hdrs, 'Acceptance Rate'),
+      RET: requireCol_(hdrs, 'First-Year Retention'),
+      GRAD: requireCol_(hdrs, 'Grad Rate'),
+      EARN: requireCol_(hdrs, 'Median Earnings (10yr)'),
+      COA: requireCol_(hdrs, 'Total Cost of Attendance'),
+      NET: requireCol_(hdrs, 'Estimated Net Price'),
+      LINK: requireCol_(hdrs, 'Link'),
+      SAT25: requireCol_(hdrs, 'SAT 25%'),
+      SAT75: requireCol_(hdrs, 'SAT 75%'),
+      ACT25: requireCol_(hdrs, 'ACT 25%'),
+      ACT75: requireCol_(hdrs, 'ACT 75%'),
+      NOTES: requireCol_(hdrs, 'Notes'),
       REGION: hdrs.indexOf('Region') !== -1 ? hdrs.indexOf('Region') + 1 : -1,
+      HEADERS: hdrs,
     };
 
     // Process each row with enhanced quota management
@@ -538,7 +551,6 @@ CollegeTools.Colleges = (function() {
       try {
         var res = fillCollegeRowCore(row, {
           suppressAlert: true,
-          skipTrackerSetup: true,
           columnIndexes: columnIndexes,
         });
         if (res && res.ok) {

@@ -105,6 +105,22 @@ CollegeTools.Utils = (function() {
   }
 
   /**
+   * Finds the column index for a given header in row 2.
+   * Used for the Colleges sheet, which keeps headers on row 2.
+   * @param {Sheet} sh - The sheet to search
+   * @param {string} header - The header text to find
+   * @returns {number|null} 1-based column index or null if not found
+   */
+  function colIndex2(sh, header) {
+    var last = Math.max(1, sh.getLastColumn());
+    var hdrs = sh.getRange(2, 1, 1, last).getValues()[0];
+    for (var i=0; i<hdrs.length; i++) {
+      if ((hdrs[i]||'').toString().trim() === header) return i+1;
+    }
+    return null;
+  }
+
+  /**
    * Converts a column number to its letter representation (1=A, 27=AA, etc).
    * @param {number} column - 1-based column number
    * @returns {string} Column letter(s)
@@ -224,6 +240,7 @@ CollegeTools.Utils = (function() {
     columnToLetter: columnToLetter,
     addr: addr,
     getRegionForState: getRegionForState,
+    colIndex2: colIndex2,
     trimAllSheets: trimAllSheets,
     sanitizeCollegeName: sanitizeCollegeName,
   };

@@ -23,7 +23,7 @@ CollegeTools.Admissions = (function() {
     var col = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (!col) return;
 
-    var admissionCol = findColumnInRow2(col, 'Admission Chances');
+    var admissionCol = CollegeTools.Utils.colIndex2(col, 'Admission Chances');
     if (!admissionCol) return;
 
     // Apply core formulas only - no formatting for speed
@@ -33,32 +33,15 @@ CollegeTools.Admissions = (function() {
 
 
   /**
-   * Finds the column index for a given header in row 2 (where College Tools headers are).
-   * @param {Sheet} sh - The sheet to search
-   * @param {string} header - The header text to find
-   * @returns {number|null} 1-based column index or null if not found
-   * @private
-   */
-  function findColumnInRow2(sh, header) {
-    var last = Math.max(1, sh.getLastColumn());
-    var hdrs = sh.getRange(2, 1, 1, last).getValues()[0];
-    for (var i=0; i<hdrs.length; i++) {
-      if ((hdrs[i]||'').toString().trim() === header) return i+1;
-    }
-    return null;
-  }
-
-
-  /**
    * Applies admission probability formulas to the Admission Chances column (optimized for speed).
    * @param {Sheet} sheet - The Colleges sheet
    * @private
    */
   function applyAdmissionFormulas(sheet) {
-    var admissionCol = findColumnInRow2(sheet, 'Admission Chances');
-    var acceptanceCol = findColumnInRow2(sheet, 'Acceptance Rate');
-    var sat25Col = findColumnInRow2(sheet, 'SAT 25%');
-    var sat75Col = findColumnInRow2(sheet, 'SAT 75%');
+    var admissionCol = CollegeTools.Utils.colIndex2(sheet, 'Admission Chances');
+    var acceptanceCol = CollegeTools.Utils.colIndex2(sheet, 'Acceptance Rate');
+    var sat25Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 25%');
+    var sat75Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 75%');
     if (!admissionCol || !acceptanceCol || !sat25Col || !sat75Col) return;
 
     var startRow = 3;
@@ -93,9 +76,9 @@ CollegeTools.Admissions = (function() {
    * @private
    */
   function applyAcademicIndexFormulas(sheet) {
-    var academicIndexCol = findColumnInRow2(sheet, 'Academic Index Match');
-    var sat25Col = findColumnInRow2(sheet, 'SAT 25%');
-    var sat75Col = findColumnInRow2(sheet, 'SAT 75%');
+    var academicIndexCol = CollegeTools.Utils.colIndex2(sheet, 'Academic Index Match');
+    var sat25Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 25%');
+    var sat75Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 75%');
     if (!academicIndexCol || !sat25Col || !sat75Col) return;
 
     var startRow = 3;
@@ -138,7 +121,7 @@ CollegeTools.Admissions = (function() {
    * @private
    */
   function applyAcademicIndexFormatting(sheet) {
-    var academicIndexCol = findColumnInRow2(sheet, 'Academic Index Match');
+    var academicIndexCol = CollegeTools.Utils.colIndex2(sheet, 'Academic Index Match');
     if (!academicIndexCol) return;
 
     var startRow = 3;
@@ -193,7 +176,7 @@ CollegeTools.Admissions = (function() {
    * @private
    */
   function applyAdmissionFormatting(sheet) {
-    var admissionCol = findColumnInRow2(sheet, 'Admission Chances');
+    var admissionCol = CollegeTools.Utils.colIndex2(sheet, 'Admission Chances');
     if (!admissionCol) return;
 
     var startRow = 3;

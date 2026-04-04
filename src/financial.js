@@ -49,9 +49,9 @@ CollegeTools.Financial = (function() {
    * @private
    */
   function applyMeritAidFormulas(sheet) {
-    var meritCol = findColumnInRow2(sheet, 'Merit Aid Likelihood');
-    var sat25Col = findColumnInRow2(sheet, 'SAT 25%');
-    var sat75Col = findColumnInRow2(sheet, 'SAT 75%');
+    var meritCol = CollegeTools.Utils.colIndex2(sheet, 'Merit Aid Likelihood');
+    var sat25Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 25%');
+    var sat75Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 75%');
     if (!meritCol || !sat25Col || !sat75Col) return;
 
     var startRow = 3;
@@ -130,22 +130,6 @@ CollegeTools.Financial = (function() {
       sheet.getRange(startRow, safetyCol, safetyFormulas.length, 1).setFormulas(safetyFormulas);
       sheet.getRange(startRow, burdenCol, burdenFormulas.length, 1).setFormulas(burdenFormulas);
     }
-  }
-
-  /**
-   * Helper function to find column in row 2 (same as admissions.js)
-   * @param {Sheet} sh - The sheet to search
-   * @param {string} header - The header text to find
-   * @returns {number|null} 1-based column index or null if not found
-   * @private
-   */
-  function findColumnInRow2(sh, header) {
-    var last = Math.max(1, sh.getLastColumn());
-    var hdrs = sh.getRange(2, 1, 1, last).getValues()[0];
-    for (var i = 0; i < hdrs.length; i++) {
-      if ((hdrs[i] || '').toString().trim() === header) return i + 1;
-    }
-    return null;
   }
 
   /**
@@ -330,7 +314,7 @@ CollegeTools.Financial = (function() {
     if (!sheet) return;
 
     // Apply conditional formatting for Merit Aid Likelihood
-    var meritCol = findColumnInRow2(sheet, 'Merit Aid Likelihood');
+    var meritCol = CollegeTools.Utils.colIndex2(sheet, 'Merit Aid Likelihood');
     if (meritCol) {
       var startRow = 3;
       var endRow = Math.max(3, sheet.getLastRow());

@@ -119,30 +119,12 @@ CollegeTools.Setup = (function() {
    */
   function quickStart() {
     var ui = SpreadsheetApp.getUi();
-    
+
     try {
-      // Check if API key exists - access directly since getApiKey is private
-      var ss = SpreadsheetApp.getActive();
-      var keySheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.API_KEY);
-      var apiKey = '';
-      var hasApiKey = false;
-      
-      if (keySheet) {
-        apiKey = (keySheet.getRange('A1').getValue() || '').toString().trim();
-        // Use same validation as scorecard module
-        hasApiKey = apiKey && 
-                   apiKey !== 'your_api_key_here' && 
-                   apiKey !== 'DEMO_KEY' && 
-                   apiKey !== '<your-key-here>' &&
-                   !apiKey.includes('your') &&
-                   !apiKey.includes('key') &&
-                   !apiKey.includes('<') &&
-                   !apiKey.includes('>') &&
-                   apiKey.length >= 10;
-      }
-      
+      var hasApiKey = CollegeTools.Scorecard.isApiKeyConfigured();
+
       var message = '🚀 College Tools Quick Start\n\n';
-      
+
       if (hasApiKey) {
         message += '✅ API Key: Found and ready!\n';
         message += '✅ Spreadsheet: Pre-configured\n';
@@ -163,9 +145,8 @@ CollegeTools.Setup = (function() {
         message += '4. Run Quick Start again\n\n';
         message += '📖 Full instructions in the Instructions menu';
       }
-      
+
       ui.alert('Quick Start', message, ui.ButtonSet.OK);
-      
     } catch (error) {
       ui.alert('Quick Start Error', 'Error checking setup: ' + error.toString(), ui.ButtonSet.OK);
     }

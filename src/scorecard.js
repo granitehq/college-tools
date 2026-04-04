@@ -522,6 +522,25 @@ CollegeTools.Scorecard = (function() {
     }
   }
 
+  /**
+   * Returns true if the API key sheet exists and contains a plausible key.
+   * Does not make a network call; useful for quick setup checks without
+   * triggering the full getApiKey() alert flow.
+   * @returns {boolean}
+   */
+  function isApiKeyConfigured() {
+    var ss = SpreadsheetApp.getActive();
+    var keySheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.API_KEY);
+    if (!keySheet) return false;
+    var apiKey = (keySheet.getRange('A1').getValue() || '').toString().trim();
+    return !!(apiKey &&
+      apiKey !== 'your_api_key_here' &&
+      apiKey !== 'DEMO_KEY' &&
+      !apiKey.includes('your') &&
+      !apiKey.includes('<') &&
+      apiKey.length >= 10);
+  }
+
   // Public API
   return {
     searchColleges: searchColleges,
@@ -529,5 +548,6 @@ CollegeTools.Scorecard = (function() {
     typeFromOwnership: typeFromOwnership,
     getQuotaStatus: getQuotaStatus,
     clearCache: clearCache,
+    isApiKeyConfigured: isApiKeyConfigured,
   };
 })();

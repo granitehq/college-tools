@@ -186,15 +186,7 @@ CollegeTools.Trackers = (function() {
    */
   function createOrUpdateAppTimeline(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
-    var headers = [
-      'College Name', 'Application Type (ED/ED2/EA/REA/RD)',
-      'Application Opens', 'Application Deadline', 'Test Score Deadline', 'Transcript Deadline', 'Counselor Rec Deadline', 'Teacher Rec Deadline',
-      'FAFSA Opens', 'FAFSA Priority Deadline', 'CSS Profile Deadline', 'Merit Scholarship Deadline', 'Honors Program Deadline', 'Portfolio/Audition Due',
-      'Mid-Year Report Due', 'Decision Release Date',
-      'Student Visit Day', 'Housing Application Opens', 'Housing Deposit Due', 'Enrollment Deposit Deadline', 'Orientation Registration Opens',
-      'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)',
-      '60-Day Warning', '30-Day Warning', '14-Day Warning', '7-Day Warning',
-    ];
+    var headers = CollegeTools.Config.HEADERS.APPLICATION_TIMELINE;
     CollegeTools.Utils.setHeaders(sh, headers);
 
     // Optimize: Skip dynamic validation during setup for speed - can be added later if needed
@@ -300,15 +292,7 @@ CollegeTools.Trackers = (function() {
    */
   function createOrUpdateScholarships(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
-    var headers = [
-      'Scholarship Name', 'Provider/Organization', 'Type (Merit/Need/Field/Local/National)', 'Amount', 'Award Type (One-time/Renewable)',
-      'GPA Requirement', 'Test Score Requirement', 'Financial Need Required', 'Special Criteria', 'Geographic Restrictions',
-      'Deadline', 'Application Portal/Link', 'Essays Required (#)', 'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types',
-      'Transcript Required', 'FAFSA Required', 'Portfolio/Work Samples', 'Interview Required',
-      'Application Started Date', 'Application Submitted Date', 'Confirmation Received', 'Interview Scheduled', 'Interview Completed',
-      'Decision Date', 'Award Status (Pending/Awarded/Declined)', 'Amount Awarded', 'Thank You Note Sent',
-      'Renewable for # Years', 'GPA to Maintain', 'Credit Hours Required', 'Other Renewal Requirements', 'Notes/Strategy',
-    ];
+    var headers = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
     CollegeTools.Utils.setHeaders(sh, headers);
 
     CollegeTools.Formatting.validateList(sh, 'Type (Merit/Need/Field/Local/National)',
