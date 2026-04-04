@@ -56,6 +56,10 @@ suite.test('repair menu item is present', () => {
     'Repair College Sync menu item should be exposed');
   suite.assert(menuSource.includes("function repairCollegeSync()"),
     'Repair College Sync adapter should exist');
+  suite.assert(menuSource.includes("Repair Entire Workbook"),
+    'Repair Entire Workbook menu item should be exposed');
+  suite.assert(menuSource.includes("Repair Validations & Dropdowns"),
+    'Repair Validations & Dropdowns menu item should be exposed');
 });
 
 const success = suite.summary();

@@ -32,6 +32,47 @@ CollegeTools.Admissions = (function() {
   }
 
   /**
+   * Removes prior rules for the exact target range that match a known admission formatter.
+   * This keeps the formatting additive for unrelated columns while avoiding duplicate rules.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {string[]} markers - Text markers used by our admission rules
+   * @returns {ConditionalFormatRule[]} Filtered rules
+   * @private
+   */
+  function removeAdmissionTextRules_(rules, markers) {
+    return (rules || []).filter(function(rule) {
+      var text = '';
+      try {
+        var boolCondition = rule.getBooleanCondition && rule.getBooleanCondition();
+        var values = boolCondition && boolCondition.getCriteriaValues && boolCondition.getCriteriaValues();
+        text = values && values.length ? String(values[0]) : '';
+      } catch (e) {
+        text = '';
+      }
+      return markers.indexOf(text) === -1;
+    });
+  }
+
+  /**
+   * Removes prior numeric academic-index rules for this formatter.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @returns {ConditionalFormatRule[]} Filtered rules
+   * @private
+   */
+  function removeAcademicIndexRules_(rules) {
+    return (rules || []).filter(function(rule) {
+      try {
+        var condition = rule.getBooleanCondition && rule.getBooleanCondition();
+        if (!condition || !condition.getCriteriaType) return true;
+        var type = String(condition.getCriteriaType());
+        return ['NUMBER_GREATER_THAN', 'NUMBER_BETWEEN', 'NUMBER_LESS_THAN'].indexOf(type) === -1;
+      } catch (e) {
+        return true;
+      }
+    });
+  }
+
+  /**
    * Sets up the Admission Chances calculator with formulas only (optimized for speed).
    * Integrates with Personal Profile sheet for centralized student configuration.
    * Applies formulas to calculate admission probability for each college.
@@ -156,8 +197,8 @@ CollegeTools.Admissions = (function() {
     var endRow = Math.max(3, sheet.getLastRow());
     var range = sheet.getRange(startRow, academicIndexCol, endRow - startRow + 1, 1);
 
-    // Get existing rules to append to them
-    var rules = sheet.getConditionalFormatRules();
+    // Replace only the rules owned by this module, keep unrelated rules.
+    var rules = removeAcademicIndexRules_(sheet.getConditionalFormatRules());
 
     // Rule for >100 (Overqualified) - Dark Green
     var overqualifiedRule = SpreadsheetApp.newConditionalFormatRule()
@@ -211,7 +252,8 @@ CollegeTools.Admissions = (function() {
     var endRow = Math.max(3, sheet.getLastRow());
     var range = sheet.getRange(startRow, admissionCol, endRow - startRow + 1, 1);
 
-    var rules = sheet.getConditionalFormatRules();
+    var rules = removeAdmissionTextRules_(sheet.getConditionalFormatRules(),
+      ['Strong', 'Match', 'Reach', 'High Reach']);
 
     pushTextRule_(rules, range, 'Strong', '#d4edda', '#155724');
     pushTextRule_(rules, range, 'Match', '#fff3cd', '#856404');
