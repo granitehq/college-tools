@@ -59,6 +59,8 @@ CollegeTools.Colleges = (function() {
   /**
    * Clears stale college-specific values from a Colleges row while preserving user-owned
    * rating columns and formula columns.
+   * Builds contiguous runs of clearable columns and issues one clearContent() per run,
+   * instead of one API call per cell.
    * @param {Sheet} sh - Colleges sheet
    * @param {number} row - Absolute row number
    * @param {Array<string>} headers - Header row 2 values
@@ -66,9 +68,15 @@ CollegeTools.Colleges = (function() {
    */
   function clearStaleCollegeData_(sh, row, headers) {
     var lastCol = Math.min(headers.length, sh.getLastColumn());
-    for (var c = 1; c <= lastCol; c++) {
-      if (shouldPreserveHeader(headers[c - 1])) continue;
-      sh.getRange(row, c).clearContent();
+    var runStart = null;
+    for (var c = 1; c <= lastCol + 1; c++) {
+      var clearable = c <= lastCol && !shouldPreserveHeader(headers[c - 1]);
+      if (clearable && runStart === null) {
+        runStart = c;
+      } else if (!clearable && runStart !== null) {
+        sh.getRange(row, runStart, 1, c - runStart).clearContent();
+        runStart = null;
+      }
     }
   }
 

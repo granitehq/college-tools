@@ -22,50 +22,43 @@ CollegeTools.Scoring = (function() {
    * @private
    */
   function normalizeValueScores(sheet, scoreCol, startRow, endRow) {
-    // Read all raw scores
     var numRows = endRow - startRow + 1;
+    // Read values and formulas in two bulk calls
     var rawScores = sheet.getRange(startRow, scoreCol, numRows, 1).getValues();
+    var rawFormulas = sheet.getRange(startRow, scoreCol, numRows, 1).getFormulas();
 
-    // Find min and max for normalization (excluding empty values)
+    // Find min/max from non-empty numeric values
     var validScores = [];
     for (var i = 0; i < rawScores.length; i++) {
       var score = rawScores[i][0];
-      if (score && !isNaN(score) && score !== '') {
+      if (score !== '' && score !== null && !isNaN(Number(score))) {
         validScores.push(Number(score));
       }
     }
-
     if (validScores.length === 0) return;
 
     var minScore = Math.min.apply(null, validScores);
     var maxScore = Math.max.apply(null, validScores);
 
-    // If all scores are the same, set them all to 50
-    if (minScore === maxScore) {
-      for (var r = startRow; r <= endRow; r++) {
-        var currentValue = sheet.getRange(r, scoreCol).getValue();
-        if (currentValue && currentValue !== '') {
-          sheet.getRange(r, scoreCol).setValue(50);
-        }
+    // Build all normalized formulas in memory, write in one call
+    var normalizedFormulas = [];
+    for (var j = 0; j < numRows; j++) {
+      var currentFormula = rawFormulas[j][0];
+      if (!currentFormula) {
+        normalizedFormulas.push(['']);
+        continue;
       }
-      return;
-    }
-
-    // Normalize each score to 0-100 scale
-    for (var r = startRow; r <= endRow; r++) {
-      var currentFormula = sheet.getRange(r, scoreCol).getFormula();
-      if (currentFormula && currentFormula !== '') {
-        // Wrap existing formula in normalization calculation
-        // Normalized = ((value - min) / (max - min)) * 100
-        var normalizedFormula = '=IFERROR(IF(' + currentFormula.substring(1) + '="",' +
-                               '"",((' + currentFormula.substring(1) + '-' + minScore + ')/(' +
-                               (maxScore - minScore) + '))*100),"")';
-        sheet.getRange(r, scoreCol).setFormula(normalizedFormula);
+      var inner = currentFormula.substring(1); // strip leading '='
+      if (minScore === maxScore) {
+        normalizedFormulas.push(['=IFERROR(IF((' + inner + ')="","",50),"")']);
+      } else {
+        normalizedFormulas.push(['=IFERROR(IF((' + inner + ')="",' +
+          '"",(((' + inner + ')-' + minScore + ')/(' +
+          (maxScore - minScore) + '))*100),"")']);
       }
     }
-
-    // Format as number with 1 decimal place
-    CollegeTools.Formatting.formatNumber(sheet, 'Value Score', '0.0');
+    sheet.getRange(startRow, scoreCol, numRows, 1).setFormulas(normalizedFormulas);
+    CollegeTools.Formatting.formatNumber(sheet, 'Value Score', '0.0', 2);
   }
 
   /**
@@ -100,59 +93,61 @@ CollegeTools.Scoring = (function() {
       ];
 
       // Build formula using SUMPRODUCT with weights looked up via VLOOKUP
-      var cScore = CollegeTools.Utils.colIndex(col, 'Weighted Score');
-      var nameCol = CollegeTools.Utils.colIndex(col, 'College Name');
+      var cScore = CollegeTools.Utils.colIndex2(col, 'Weighted Score');
+      var nameCol = CollegeTools.Utils.colIndex2(col, 'College Name');
 
       if (cScore && nameCol) {
-        for (var r=rStart; r<=rEnd; r++) {
-          var name = (col.getRange(r, nameCol).getValue()||'').toString().trim();
-          if (!name) continue;
+        // Read all college names in one call, then build formulas in memory
+        var nameVals = col.getRange(rStart, nameCol, rEnd - rStart + 1, 1).getValues();
 
+        // Pre-compute the weight lookups once — they're the same for every row
+        var pieceCols = [];
+        pieces.forEach(function(header) {
+          var c = CollegeTools.Utils.colIndex2(col, header);
+          if (c) pieceCols.push({header: header, col: c});
+        });
+
+        var weightFormulas = [];
+        for (var r = rStart; r <= rEnd; r++) {
+          var name = (nameVals[r - rStart][0] || '').toString().trim();
+          if (!name) {
+            weightFormulas.push(['']);
+            continue;
+          }
           var num = []; var den = [];
-          pieces.forEach(function(header) {
-            var c = CollegeTools.Utils.colIndex(col, header);
-            if (c) {
-              var cell = CollegeTools.Utils.addr(r, c);
-              var weightLookup = 'IFERROR(VLOOKUP("' + header + '",' +
-                                CollegeTools.Config.SHEET_NAMES.WEIGHTS + '!A:B,2,false),0)';
-              num.push(cell + '*' + weightLookup);
-              den.push(weightLookup);
-            }
+          pieceCols.forEach(function(pc) {
+            var cell = CollegeTools.Utils.addr(r, pc.col);
+            var weightLookup = 'IFERROR(VLOOKUP("' + pc.header + '",' +
+                              CollegeTools.Config.SHEET_NAMES.WEIGHTS + '!A:B,2,false),0)';
+            num.push(cell + '*' + weightLookup);
+            den.push(weightLookup);
           });
-
-          var formula = '=IFERROR((' + num.join('+') + ')/(' + den.join('+') + '), "")';
-          col.getRange(r, cScore).setFormula(formula);
+          weightFormulas.push(['=IFERROR((' + num.join('+') + ')/(' + den.join('+') + '), "")']);
         }
-        CollegeTools.Formatting.formatNumber(col, 'Weighted Score', '0.00');
+        col.getRange(rStart, cScore, weightFormulas.length, 1).setFormulas(weightFormulas);
+        CollegeTools.Formatting.formatNumber(col, 'Weighted Score', '0.00', 2);
       }
 
       // Add Value Score calculation
-      var cValueScore = CollegeTools.Utils.colIndex(col, 'Value Score');
-      var cGradRate = CollegeTools.Utils.colIndex(col, 'Grad Rate');
-      var cRetention = CollegeTools.Utils.colIndex(col, 'First-Year Retention');
-      var cEarnings = CollegeTools.Utils.colIndex(col, 'Median Earnings (10yr)');
-      var cNetPrice = CollegeTools.Utils.colIndex(col, 'Estimated Net Price');
+      var cValueScore = CollegeTools.Utils.colIndex2(col, 'Value Score');
+      var cGradRate = CollegeTools.Utils.colIndex2(col, 'Grad Rate');
+      var cRetention = CollegeTools.Utils.colIndex2(col, 'First-Year Retention');
+      var cEarnings = CollegeTools.Utils.colIndex2(col, 'Median Earnings (10yr)');
+      var cNetPrice = CollegeTools.Utils.colIndex2(col, 'Estimated Net Price');
 
       if (cValueScore && cGradRate && cRetention && cEarnings && cNetPrice) {
-        // First pass: Calculate raw value scores
-        for (var r=rStart; r<=rEnd; r++) {
-          var name = (col.getRange(r, nameCol).getValue()||'').toString().trim();
-          if (!name) continue;
-
-          // Formula: (GradRate × Retention × Median Earnings) ÷ NetPrice
-          // Convert percentages to decimals, handle missing data
-          var gradCell = CollegeTools.Utils.addr(r, cGradRate);
-          var retCell = CollegeTools.Utils.addr(r, cRetention);
-          var earnCell = CollegeTools.Utils.addr(r, cEarnings);
-          var netCell = CollegeTools.Utils.addr(r, cNetPrice);
-
-          var formula = '=IFERROR(IF(AND(' + netCell + '>0,' + gradCell + '>0,' + retCell + '>0,' + earnCell + '>0),' +
-                       '(' + gradCell + '*' + retCell + '*' + earnCell + ')/' + netCell + ',""),"")';
-
-          col.getRange(r, cValueScore).setFormula(formula);
+        var valueFormulas = [];
+        for (var rv = rStart; rv <= rEnd; rv++) {
+          var namev = (nameVals[rv - rStart][0] || '').toString().trim();
+          if (!namev) { valueFormulas.push(['']); continue; }
+          var gradCell = CollegeTools.Utils.addr(rv, cGradRate);
+          var retCell = CollegeTools.Utils.addr(rv, cRetention);
+          var earnCell = CollegeTools.Utils.addr(rv, cEarnings);
+          var netCell = CollegeTools.Utils.addr(rv, cNetPrice);
+          valueFormulas.push(['=IFERROR(IF(AND(' + netCell + '>0,' + gradCell + '>0,' + retCell + '>0,' + earnCell + '>0),' +
+            '(' + gradCell + '*' + retCell + '*' + earnCell + ')/' + netCell + ',""),"")']);
         }
-
-        // Second pass: Normalize the scores (0-100 scale)
+        col.getRange(rStart, cValueScore, valueFormulas.length, 1).setFormulas(valueFormulas);
         normalizeValueScores(col, cValueScore, rStart, rEnd);
       }
     }

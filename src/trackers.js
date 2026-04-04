@@ -364,16 +364,29 @@ CollegeTools.Trackers = (function() {
 
     var lastRow = collegesSheet.getLastRow();
     var processed = 0;
-    var coaCol = collegesSheet.getRange(2, 1, 1, collegesSheet.getLastColumn()).getValues()[0]
-      .map(function(x) {
-        return (x || '').toString().trim();
-      }).indexOf('Total Cost of Attendance') + 1;
 
-    for (var row = 3; row <= lastRow; row++) {
-      var collegeName = (collegesSheet.getRange(row, 1).getValue() || '').toString().trim();
+    if (lastRow < 3) {
+      SpreadsheetApp.getUi().alert(
+        'Tracker Sync Repaired',
+        'No data rows found in the Colleges sheet.',
+        SpreadsheetApp.getUi().ButtonSet.OK,
+      );
+      return {ok: true, count: 0};
+    }
+
+    // Read all header and data in two bulk reads instead of per-row calls
+    var lastCol = collegesSheet.getLastColumn();
+    var hdrs = collegesSheet.getRange(2, 1, 1, lastCol).getValues()[0]
+      .map(function(x) { return (x || '').toString().trim(); });
+    var coaIdx = hdrs.indexOf('Total Cost of Attendance');
+    var data = collegesSheet.getRange(3, 1, lastRow - 2, lastCol).getValues();
+
+    for (var i = 0; i < data.length; i++) {
+      var row = i + 3;
+      var collegeName = (data[i][0] || '').toString().trim();
       var coa = '';
       if (collegeName) {
-        coa = coaCol > 0 ? collegesSheet.getRange(row, coaCol).getValue() : '';
+        coa = coaIdx >= 0 ? data[i][coaIdx] : '';
         syncCollegeToTrackers({name: collegeName, coa: coa, sourceRow: row});
         processed++;
       }
