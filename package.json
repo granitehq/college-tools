@@ -1,6 +1,6 @@
 {
   "name": "college-tools",
-  "version": "1.2.6",
+  "version": "2.0.1",
   "description": "Google Apps Script project for college selection and tracking",
   "main": "src/menu.js",
   "scripts": {
@@ -21,9 +21,9 @@
     "lint:check": "eslint src/**/*.js --max-warnings 0",
     "precommit": "npm run lint:check",
     "prepush": "npm run check && echo 'Checks passed - ready for clasp push'",
-    "push": "npm run check && clasp push",
-    "pull": "clasp pull",
-    "clasp:version": "clasp version",
+    "push": "npm run check && npx clasp push",
+    "pull": "npx clasp pull",
+    "clasp:version": "npx clasp version",
     "version:update": "node scripts/update-version.js",
     "version:patch": "npm run version:update $(node -p \"require('./package.json').version.replace(/(.+\\\\.)?(\\\\d+)$/, (_, p, n) => p + (+n + 1))\")",
     "version:minor": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+\\\\.)(\\\\d+)(\\\\..+)/, (_, maj, min, patch) => maj + (+min + 1) + '.0')\")",

@@ -95,8 +95,8 @@ npm run version:major # Increment major (5.6.0 → 6.0.0)
 npm run release       # Patch + lint + deploy
 
 # Apps Script
-npm run push          # Lint + clasp push
-npm run pull          # clasp pull
+npm run push          # Lint + npx clasp push
+npm run pull          # npx clasp pull
 npm run clasp:version # Create Apps Script version
 
 # Setup
@@ -115,8 +115,8 @@ npm install           # Install dependencies
 2. **Configure clasp**
    ```bash
    npm install -g @google/clasp
-   clasp login
-   clasp create --type sheets
+   npx clasp login
+   npx clasp create --type sheets
    ```
 
 3. **Deploy**
