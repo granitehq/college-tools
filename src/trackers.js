@@ -406,20 +406,17 @@ CollegeTools.Trackers = (function() {
    */
   function setupAllTrackers() {
     var ss = SpreadsheetApp.getActive();
-    var ui = SpreadsheetApp.getUi();
 
-    ui.alert('Tracker Setup', 'Setting up tracker sheets with full formatting... (1/3)', ui.ButtonSet.OK);
+    ss.toast('Setting up tracker sheets...', 'Tracker Setup', 10);
 
-    // Core tracker setup
     createOrUpdateFinAid(ss);
     createOrUpdateCampusVisit(ss);
     createOrUpdateAppTimeline(ss);
     createOrUpdateStatusTracker(ss);
     createOrUpdateScholarships(ss);
 
-    ui.alert('Tracker Setup', 'Applying Financial Intelligence enhancements... (2/3)', ui.ButtonSet.OK);
+    ss.toast('Applying formatting enhancements...', 'Tracker Setup', 10);
 
-    // Financial Intelligence enhancements
     var personalSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.PERSONAL_PROFILE);
     if (personalSheet) {
       CollegeTools.Financial.enhancePersonalProfileFormatting(ss);
@@ -436,7 +433,7 @@ CollegeTools.Trackers = (function() {
       CollegeTools.Admissions.enhanceAdmissionFormatting(collegesSheet);
     }
 
-    ui.alert('Tracker Setup', 'All trackers and enhancements complete! (3/3)', ui.ButtonSet.OK);
+    SpreadsheetApp.getUi().alert('Tracker setup complete!');
   }
 
 

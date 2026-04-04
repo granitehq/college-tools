@@ -133,6 +133,28 @@ CollegeTools.Financial = (function() {
   }
 
   /**
+   * Core setup logic shared by setupFinancialIntelligence and completeSetup.
+   * No UI prompts — callers are responsible for confirmation and error handling.
+   * @private
+   */
+  function runFinancialSetup_() {
+    var ss = SpreadsheetApp.getActive();
+
+    createPersonalProfileSheet(ss);
+
+    var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
+    if (collegesSheet) {
+      CollegeTools.Admissions.setupAdmissionChances();
+      applyMeritAidFormulas(collegesSheet);
+    }
+
+    var financialSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    if (financialSheet) {
+      applyFinancialSafetyFormulas(financialSheet);
+    }
+  }
+
+  /**
    * Sets up the Financial Intelligence suite with optimized performance.
    * Creates Personal Profile sheet and applies essential formulas only.
    */
@@ -152,24 +174,7 @@ CollegeTools.Financial = (function() {
     if (result !== ui.Button.YES) return;
 
     try {
-      var ss = SpreadsheetApp.getActive();
-
-      // Step 1: Create Personal Profile sheet (core structure only)
-      createPersonalProfileSheet(ss);
-
-      // Step 2: Set up academic analysis (formulas only)
-      var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-      if (collegesSheet) {
-        CollegeTools.Admissions.setupAdmissionChances();
-        applyMeritAidFormulas(collegesSheet);
-      }
-
-      // Step 3: Set up financial analysis (formulas only)
-      var financialSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
-      if (financialSheet) {
-        applyFinancialSafetyFormulas(financialSheet);
-      }
-
+      runFinancialSetup_();
       ui.alert(
         'Financial Intelligence Setup Complete! ✅',
         'Essential formulas have been applied.\n\n' +
@@ -356,6 +361,7 @@ CollegeTools.Financial = (function() {
   // Public API
   return {
     setupFinancialIntelligence: setupFinancialIntelligence,
+    runFinancialSetup_: runFinancialSetup_,
     enhancePersonalProfileFormatting: enhancePersonalProfileFormatting,
     enhanceFinancialAidFormatting: enhanceFinancialAidFormatting,
     enhanceCollegesFormatting: enhanceCollegesFormatting,

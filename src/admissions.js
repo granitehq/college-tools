@@ -183,8 +183,6 @@ CollegeTools.Admissions = (function() {
     var endRow = Math.max(3, sheet.getLastRow());
     var range = sheet.getRange(startRow, admissionCol, endRow - startRow + 1, 1);
 
-    // Clear existing rules
-    sheet.clearConditionalFormatRules();
     var rules = sheet.getConditionalFormatRules();
 
     // Rule for Strong (contains "Strong") - Green

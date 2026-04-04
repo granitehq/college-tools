@@ -54,8 +54,8 @@ CollegeTools.Setup = (function() {
       // 4. Set up scoring formulas
       CollegeTools.Scoring.ensureScoring();
 
-      // 5. Set up financial intelligence suite
-      CollegeTools.Financial.setupFinancialIntelligence();
+      // 5. Set up financial intelligence suite (no inner prompt — already confirmed above)
+      CollegeTools.Financial.runFinancialSetup_();
 
       // 6. Performance optimization - trim excess rows
       CollegeTools.Utils.trimAllSheets();

@@ -338,7 +338,13 @@ CollegeTools.Colleges = (function() {
     writes.forEach(function(w) {
       sh.getRange(row, w[0]).setValue(w[1] || '');
     });
-    sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + (usedName||name));
+    // Only overwrite Notes when it is empty or still holds a prior auto-stamp
+    // (auto-stamps look like "1.2.3 | School Name"). User-entered notes are preserved.
+    var existingNotes = (sh.getRange(row, COL.NOTES).getValue() || '').toString().trim();
+    var isAutoStamp = !existingNotes || /^\d+\.\d+\.\d+\s*\|/.test(existingNotes);
+    if (isAutoStamp) {
+      sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + (usedName||name));
+    }
 
     if (!suppressAlert && !skipHighlight) {
       // Highlight when run one-off (skip highlighting for performance)
