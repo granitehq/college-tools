@@ -128,6 +128,14 @@ CollegeTools.Scorecard = (function() {
     try {
       var cache = CacheService.getScriptCache();
       cache.put(cacheKey, JSON.stringify(data), CollegeTools.Config.API_CONFIG.CACHE_DURATION);
+      // Register the key so clearCache() can remove it explicitly
+      var props = PropertiesService.getScriptProperties();
+      var registry = props.getProperty('scorecard_cache_keys');
+      var keys = registry ? JSON.parse(registry) : [];
+      if (keys.indexOf(cacheKey) === -1) {
+        keys.push(cacheKey);
+        props.setProperty('scorecard_cache_keys', JSON.stringify(keys));
+      }
     } catch (e) {
       // Cache storage failed, continue without caching
     }
@@ -169,12 +177,8 @@ CollegeTools.Scorecard = (function() {
           'User-Agent': 'CollegeTools/' + CollegeTools.Config.VERSION,
         },
         muteHttpExceptions: true,
+        deadline: Math.floor(CollegeTools.Config.API_CONFIG.TIMEOUT / 1000),
       };
-
-      // Add timeout if supported (newer Apps Script versions)
-      if (typeof options.timeout !== 'undefined') {
-        options.timeout = CollegeTools.Config.API_CONFIG.TIMEOUT;
-      }
 
       var response = UrlFetchApp.fetch(url, options);
       var statusCode = response.getResponseCode();
@@ -509,14 +513,22 @@ CollegeTools.Scorecard = (function() {
   }
 
   /**
-   * Clears the API response cache (useful for testing or forcing fresh data)
+   * Clears tracked API response cache entries.
+   * Keys written by setCachedData are registered in ScriptProperties so they
+   * can be explicitly removed here.
    */
   function clearCache() {
     try {
-      var _cache = CacheService.getScriptCache();
-      // Apps Script doesn't have a clear all method, but we can document this limitation
-      SpreadsheetApp.getUi().alert('Note: Apps Script cache clearing is limited. ' +
-        'Cache entries will expire after ' + (CollegeTools.Config.API_CONFIG.CACHE_DURATION / 60) + ' minutes.');
+      var props = PropertiesService.getScriptProperties();
+      var registry = props.getProperty('scorecard_cache_keys');
+      var keys = registry ? JSON.parse(registry) : [];
+      if (keys.length) {
+        var cache = CacheService.getScriptCache();
+        cache.removeAll(keys);
+        props.deleteProperty('scorecard_cache_keys');
+      }
+      SpreadsheetApp.getUi().alert('API cache cleared (' + keys.length + ' entr' +
+        (keys.length === 1 ? 'y' : 'ies') + ' removed).');
     } catch (e) {
       SpreadsheetApp.getUi().alert('Cache clearing failed: ' + e.toString());
     }

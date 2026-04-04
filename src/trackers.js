@@ -145,7 +145,7 @@ CollegeTools.Trackers = (function() {
         fafsaSubCell + '="Y",' +
         'OR(' + cssReqCell + '="N",' + cssSubCell + '="Y")' +
         (idocReqCol ? ',OR(' + idocReqCell + '="N",' + idocSubCell + '="Y")' : '') +
-        (verReqCol ? ',OR(' + verReqCell + '="N",' + verReqCell + '="Y")' : '') +
+        (verReqCol ? ',OR(' + verReqCell + '="N",' + verReqCell + '="")' : '') +
         '),"✅ Complete","⚠️ Pending")';
 
       sh.getRange(r2, completeCol).setFormula(completeFormula);
