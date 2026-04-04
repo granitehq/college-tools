@@ -14,6 +14,24 @@ CollegeTools.Admissions = (function() {
   'use strict';
 
   /**
+   * Adds a text-contains conditional format rule to a rules array.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {Range} range - Target range
+   * @param {string} text - Text fragment to match
+   * @param {string} bg - Background color
+   * @param {string} fg - Font color
+   * @private
+   */
+  function pushTextRule_(rules, range, text, bg, fg) {
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenTextContains(text)
+      .setBackground(bg)
+      .setFontColor(fg)
+      .setRanges([range])
+      .build());
+  }
+
+  /**
    * Sets up the Admission Chances calculator with formulas only (optimized for speed).
    * Integrates with Personal Profile sheet for centralized student configuration.
    * Applies formulas to calculate admission probability for each college.
@@ -46,10 +64,16 @@ CollegeTools.Admissions = (function() {
 
     var startRow = 3;
     var endRow = Math.max(3, sheet.getLastRow());
+    var collegeNames = sheet.getRange(startRow, 1, endRow - startRow + 1, 1).getValues();
+    var formulas = [];
 
-    for (var row = startRow; row <= endRow; row++) {
-      var collegeName = sheet.getRange(row, 1).getValue();
-      if (!collegeName || collegeName === '') continue;
+    for (var i = 0; i < collegeNames.length; i++) {
+      var row = startRow + i;
+      var collegeName = collegeNames[i][0];
+      if (!collegeName || collegeName === '') {
+        formulas.push(['']);
+        continue;
+      }
 
       var acceptanceCell = CollegeTools.Utils.addr(row, acceptanceCol);
       var sat25Cell = CollegeTools.Utils.addr(row, sat25Col);
@@ -66,7 +90,11 @@ CollegeTools.Admissions = (function() {
           'MAX(10,' + acceptanceCell + '*80)&"% - Reach",' +
           'MAX(5,' + acceptanceCell + '*30)&"% - High Reach")))))';
 
-      sheet.getRange(row, admissionCol).setFormula(formula);
+      formulas.push([formula]);
+    }
+
+    if (formulas.length > 0) {
+      sheet.getRange(startRow, admissionCol, formulas.length, 1).setFormulas(formulas);
     }
   }
 
@@ -185,41 +213,10 @@ CollegeTools.Admissions = (function() {
 
     var rules = sheet.getConditionalFormatRules();
 
-    // Rule for Strong (contains "Strong") - Green
-    var strongRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Strong')
-      .setBackground('#d4edda')
-      .setFontColor('#155724')
-      .setRanges([range])
-      .build();
-    rules.push(strongRule);
-
-    // Rule for Match (contains "Match" but not "High Reach") - Yellow
-    var matchRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Match')
-      .setBackground('#fff3cd')
-      .setFontColor('#856404')
-      .setRanges([range])
-      .build();
-    rules.push(matchRule);
-
-    // Rule for Reach (contains "Reach") - Orange/Red
-    var reachRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('Reach')
-      .setBackground('#f8d7da')
-      .setFontColor('#721c24')
-      .setRanges([range])
-      .build();
-    rules.push(reachRule);
-
-    // Rule for High Reach - Dark Red
-    var highReachRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains('High Reach')
-      .setBackground('#f5c6cb')
-      .setFontColor('#721c24')
-      .setRanges([range])
-      .build();
-    rules.push(highReachRule);
+    pushTextRule_(rules, range, 'Strong', '#d4edda', '#155724');
+    pushTextRule_(rules, range, 'Match', '#fff3cd', '#856404');
+    pushTextRule_(rules, range, 'Reach', '#f8d7da', '#721c24');
+    pushTextRule_(rules, range, 'High Reach', '#f5c6cb', '#721c24');
 
     sheet.setConditionalFormatRules(rules);
   }

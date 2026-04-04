@@ -139,7 +139,10 @@ CollegeTools.Scoring = (function() {
         var valueFormulas = [];
         for (var rv = rStart; rv <= rEnd; rv++) {
           var namev = (nameVals[rv - rStart][0] || '').toString().trim();
-          if (!namev) { valueFormulas.push(['']); continue; }
+          if (!namev) {
+            valueFormulas.push(['']);
+            continue;
+          }
           var gradCell = CollegeTools.Utils.addr(rv, cGradRate);
           var retCell = CollegeTools.Utils.addr(rv, cRetention);
           var earnCell = CollegeTools.Utils.addr(rv, cEarnings);

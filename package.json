@@ -6,12 +6,22 @@
   "scripts": {
     "build": "node scripts/build-website.js",
     "dev": "npm run build && python3 -m http.server 8080 --directory docs",
+    "test": "node test/run-all-tests.js",
+    "test:regression": "node test/regression-tests.js",
+    "test:template": "node test/template-integrity-tests.js",
+    "test:repair": "node test/workbook-repair-tests.js",
+    "test:schema": "node test/config-schema-tests.js",
+    "test:menu": "node test/menu-wiring-tests.js",
+    "test:validation": "node test/validation-coverage-tests.js",
+    "test:syntax": "node test/syntax-tests.js",
+    "test:all": "npm run test",
+    "check": "npm run lint:check && npm run test",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
     "lint:check": "eslint src/**/*.js --max-warnings 0",
     "precommit": "npm run lint:check",
-    "prepush": "npm run lint:check && echo 'Linting passed - ready for clasp push'",
-    "push": "npm run lint:check && clasp push",
+    "prepush": "npm run check && echo 'Checks passed - ready for clasp push'",
+    "push": "npm run check && clasp push",
     "pull": "clasp pull",
     "clasp:version": "clasp version",
     "version:update": "node scripts/update-version.js",
@@ -19,7 +29,7 @@
     "version:minor": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+\\\\.)(\\\\d+)(\\\\..+)/, (_, maj, min, patch) => maj + (+min + 1) + '.0')\")",
     "version:major": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+)(\\\\..+)/, (_, maj) => (+maj + 1) + '.0.0')\")",
     "version:show": "node -p \"'Current version: ' + require('./package.json').version\"",
-    "release": "npm run version:patch && npm run push"
+    "release": "npm run check && npm run version:patch && npm run push"
   },
   "keywords": [
     "google-apps-script",

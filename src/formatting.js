@@ -14,32 +14,55 @@ CollegeTools.Formatting = (function() {
   'use strict';
 
   /**
+   * Finds a column by header on a configurable header row.
+   * @param {Sheet} sh - Target sheet
+   * @param {string} header - Header text
+   * @param {number=} headerRow - Header row number, defaults to 1
+   * @returns {number|null} 1-based column index or null if not found
+   * @private
+   */
+  function findColumn_(sh, header, headerRow) {
+    headerRow = headerRow || 1;
+    if (headerRow === 1) return CollegeTools.Utils.colIndex(sh, header);
+
+    var last = Math.max(1, sh.getLastColumn());
+    var hdrs = sh.getRange(headerRow, 1, 1, last).getValues()[0];
+    for (var i = 0; i < hdrs.length; i++) {
+      if ((hdrs[i] || '').toString().trim() === header) return i + 1;
+    }
+    return null;
+  }
+
+  /**
    * Applies dropdown data validation to a column.
    * @param {Sheet} sh - The sheet to apply validation to
    * @param {string} header - Column header to find
    * @param {string[]} options - Array of valid dropdown options
-   * @private
+   * @param {number=} headerRow - Header row number, defaults to 1
    */
-  function validateList(sh, header, options) {
-    var col = CollegeTools.Utils.colIndex(sh, header);
+  function validateList(sh, header, options, headerRow) {
+    var resolvedHeaderRow = headerRow || 1;
+    var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     var rule = SpreadsheetApp.newDataValidation()
       .requireValueInList(options, true)
       .setAllowInvalid(false)
       .build();
-    sh.getRange(2, col, Math.max(1, sh.getMaxRows()-1)).setDataValidation(rule);
+    sh.getRange(resolvedHeaderRow + 1, col, Math.max(1, sh.getMaxRows() - resolvedHeaderRow))
+      .setDataValidation(rule);
   }
 
   /**
-   * Applies dropdown data validation to a column using a range from another sheet.
+   * Applies dropdown validation using a source range from another sheet.
    * @param {Sheet} sh - The sheet to apply validation to
    * @param {string} header - Column header to find
-   * @param {string} sourceSheetName - Name of the source sheet containing valid values
-   * @param {string} sourceRange - Range in A1 notation (e.g., "A2:A100") containing valid values
-   * @private
+   * @param {string} sourceSheetName - Source sheet name
+   * @param {string} sourceRange - A1 notation range in the source sheet
+   * @param {number=} headerRow - Header row number, defaults to 1
    */
-  function validateListFromRange(sh, header, sourceSheetName, sourceRange) {
-    var col = CollegeTools.Utils.colIndex(sh, header);
+  function validateListFromRange(sh, header, sourceSheetName, sourceRange, headerRow) {
+    var resolvedHeaderRow = headerRow || 1;
+    var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
 
     var ss = SpreadsheetApp.getActive();
@@ -50,131 +73,96 @@ CollegeTools.Formatting = (function() {
       .requireValueInRange(sourceSheet.getRange(sourceRange), true)
       .setAllowInvalid(false)
       .build();
-    sh.getRange(2, col, Math.max(1, sh.getMaxRows()-1)).setDataValidation(rule);
+    sh.getRange(resolvedHeaderRow + 1, col, Math.max(1, sh.getMaxRows() - resolvedHeaderRow))
+      .setDataValidation(rule);
   }
 
   /**
    * Applies date validation to a column.
    * @param {Sheet} sh - The sheet to apply validation to
    * @param {string} header - Column header to find
-   * @private
+   * @param {number=} headerRow - Header row number, defaults to 1
    */
-  function validateDate(sh, header) {
-    var col = CollegeTools.Utils.colIndex(sh, header);
+  function validateDate(sh, header, headerRow) {
+    var resolvedHeaderRow = headerRow || 1;
+    var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     var rule = SpreadsheetApp.newDataValidation().requireDate().build();
-    sh.getRange(2, col, Math.max(1, sh.getMaxRows()-1)).setDataValidation(rule);
+    sh.getRange(resolvedHeaderRow + 1, col, Math.max(1, sh.getMaxRows() - resolvedHeaderRow))
+      .setDataValidation(rule);
   }
 
   /**
    * Applies number formatting to a column.
    * @param {Sheet} sh - The sheet to apply formatting to
    * @param {string} header - Column header to find
-   * @param {string} pattern - Number format pattern (e.g., "0.0%", "$#,##0")
-   * @private
+   * @param {string} pattern - Number format pattern
+   * @param {number=} headerRow - Header row number, defaults to 1
    */
-  function formatNumber(sh, header, pattern) {
-    var col = CollegeTools.Utils.colIndex(sh, header);
+  function formatNumber(sh, header, pattern, headerRow) {
+    var resolvedHeaderRow = headerRow || 1;
+    var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
-    sh.getRange(2, col, Math.max(1, sh.getMaxRows()-1)).setNumberFormat(pattern);
-  }
-
-  /**
-   * Test function to diagnose college name validation issues.
-   * Creates a simple test to verify the validateListFromRange function works.
-   */
-  function testCollegeNameValidation() {
-    var ss = SpreadsheetApp.getActive();
-    var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-
-    if (!collegesSheet) {
-      SpreadsheetApp.getUi().alert('Error: Colleges sheet not found');
-      return;
-    }
-
-    // Check if there's data in the expected range
-    var testRange = collegesSheet.getRange('A2:A10');
-    var values = testRange.getValues();
-    var collegeCount = 0;
-    var colleges = [];
-
-    for (var i = 0; i < values.length; i++) {
-      if (values[i][0] && values[i][0].toString().trim() !== '') {
-        collegeCount++;
-        colleges.push(values[i][0].toString());
-      }
-    }
-
-    if (collegeCount === 0) {
-      SpreadsheetApp.getUi().alert('No college names found in A2:A10 of Colleges sheet');
-      return;
-    }
-
-    // Test applying validation to Campus Visit sheet
-    var campusVisit = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
-    if (!campusVisit) {
-      SpreadsheetApp.getUi().alert('Campus Visit sheet not found');
-      return;
-    }
-
-    validateListFromRange(campusVisit, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
-
-    var message = 'Found ' + collegeCount + ' colleges: ' + colleges.slice(0, 3).join(', ') +
-      (colleges.length > 3 ? '...' : '') +
-      '\n\nValidation applied to Campus Visit sheet. Try selecting a cell in the College Name column.';
-
-    SpreadsheetApp.getUi().alert('College Name Validation Test', message, SpreadsheetApp.getUi().ButtonSet.OK);
+    sh.getRange(resolvedHeaderRow + 1, col, Math.max(1, sh.getMaxRows() - resolvedHeaderRow))
+      .setNumberFormat(pattern);
   }
 
   /**
    * Applies formatting and dropdown validations to all sheets.
    * Sets number formats for percentages, currency, and scores.
    * Creates dropdown lists for ratings, yes/no fields, and status fields.
-   * Idempotent - safe to run multiple times without side effects.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress the completion alert
+   * @returns {Object} Summary of repaired sections
    */
-  function enhanceFormatsDropdowns() {
+  function enhanceFormatsDropdowns(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
+    var sectionsApplied = [];
 
-    // Colleges sheet formatting
     var col = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (col) {
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.COLLEGES);
       ['Acceptance Rate', 'First-Year Retention', 'Grad Rate'].forEach(function(h) {
-        formatNumber(col, h, '0.0%');
+        formatNumber(col, h, '0.0%', 2);
       });
-      ['Median Earnings (10yr)', 'Total Cost of Attendance', 'Estimated Net Price', 'Avg Merit Aid', 'Avg Need-Based Aid']
+      ['Median Earnings (10yr)', 'Total Cost of Attendance', 'Estimated Net Price']
         .forEach(function(h) {
-          formatNumber(col, h, '$#,##0');
+          formatNumber(col, h, '$#,##0', 2);
         });
       ['SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%'].forEach(function(h) {
-        formatNumber(col, h, '0');
-      });
-      ['Distance (mi)', 'Travel Time (hrs)'].forEach(function(h) {
-        formatNumber(col, h, '0.0');
+        formatNumber(col, h, '0', 2);
       });
       ['Weighted Score', 'Value Score'].forEach(function(h) {
-        formatNumber(col, h, '0.00');
+        formatNumber(col, h, '0.00', 2);
       });
 
       ['Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)', 'Safety (1-5)',
         'Campus Culture Fit (1-5)', 'Weather Fit (1-5)', 'Clubs/Activities (1-5)', 'Personal Priority (1-5)']
         .forEach(function(h) {
-          validateList(col, h, ['1', '2', '3', '4', '5']);
+          validateList(col, h, ['1', '2', '3', '4', '5'], 2);
         });
 
-      // Region column validation for auto-mapping compatibility
-      validateList(col, 'Region', ['Northeast', 'Midwest', 'South', 'West']);
+      validateList(col, 'Type (Public/Private)',
+        ['Public', 'Private (nonprofit)', 'Private (for-profit)', 'Other'], 2);
+      validateList(col, 'Region', ['Northeast', 'Midwest', 'South', 'West'], 2);
+      validateList(col, 'Campus Setting', ['City', 'Suburban', 'Town', 'Rural', 'Other'], 2);
     }
 
-    // Financial Aid Tracker formatting
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
-      // College Name validation using dynamic range from Colleges sheet
-      validateListFromRange(fa, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
-
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+      validateListFromRange(fa, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
       ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'].forEach(function(h) {
         validateDate(fa, h);
       });
+      ['CSS Profile Required (Y/N)', 'FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)',
+        'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)', 'Verification Required (Y/N)', 'Work-Study Offered']
+        .forEach(function(h) {
+          validateList(fa, h, ['Y', 'N']);
+        });
+      validateList(fa, 'Appeal Status',
+        ['Not Started', 'In Progress', 'Submitted', 'Approved', 'Denied', 'Other']);
       ['Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies', 'Personal Expenses', 'Travel Costs',
         'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid',
         'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
@@ -182,14 +170,13 @@ CollegeTools.Formatting = (function() {
         .forEach(function(h) {
           formatNumber(fa, h, '$#,##0');
         });
+      formatNumber(fa, '4-Year Burden', '0.0%');
     }
 
-    // Campus Visit Tracker formatting
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
-      // College Name validation using dynamic range from Colleges sheet
-      validateListFromRange(cv, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
-
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+      validateListFromRange(cv, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
       validateDate(cv, 'Visit Date');
       ['Tour Quality (1-10)', 'Info Session Quality (1-10)', 'Campus Beauty (1-10)', 'Facilities Quality (1-10)',
         'Student Happiness (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
@@ -197,56 +184,102 @@ CollegeTools.Formatting = (function() {
           formatNumber(cv, h, '0');
         });
       validateList(cv, 'Visit Type (In-Person/Virtual/College Fair)',
-        ['In-Person', 'Virtual', 'College Fair', 'Regional Event']);
+        ['In-Person', 'Virtual', 'College Fair', 'Regional Event', 'Other']);
       ['Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested']
         .forEach(function(h) {
           validateList(cv, h, ['Y', 'N']);
         });
     }
 
-    // Application Timeline formatting
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
-      // College Name validation using dynamic range from Colleges sheet
-      validateListFromRange(at, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
-
-      // Date columns (any header ending with Deadline/Opens/Due/Date)
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+      validateListFromRange(at, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
       var atHdrs = at.getRange(1, 1, 1, at.getLastColumn()).getValues()[0];
-      for (var i=0; i<atHdrs.length; i++) {
-        var h = (atHdrs[i]||'').toString().trim();
-        if (/(Deadline|Opens|Due|Date)$/i.test(h)) formatNumber(at, h, 'yyyy-mm-dd');
+      for (var i = 0; i < atHdrs.length; i++) {
+        var h = (atHdrs[i] || '').toString().trim();
+        if (/(Deadline|Opens|Due|Date)$/i.test(h)) validateDate(at, h);
       }
       formatNumber(at, 'Days Until Deadline (App)', '0');
-      validateList(at, 'Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD']);
-      validateList(at, 'Priority Level', ['High', 'Medium', 'Low']);
+      formatNumber(at, 'Completion Status (%)', '0');
+      validateList(at, 'Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']);
+      validateList(at, 'Priority Level', ['High', 'Medium', 'Low', 'Other']);
     }
 
-    // Scholarship Tracker formatting
     var sc = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     if (sc) {
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
       ['Amount', 'Amount Awarded'].forEach(function(h) {
         formatNumber(sc, h, '$#,##0');
       });
       ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Interview Scheduled', 'Interview Completed', 'Decision Date']
         .forEach(function(h) {
-          formatNumber(sc, h, 'yyyy-mm-dd');
+          validateDate(sc, h);
         });
+      validateList(sc, 'Type (Merit/Need/Field/Local/National)',
+        ['Merit', 'Need', 'Field-Specific', 'Local', 'National', 'Other']);
+      validateList(sc, 'Award Type (One-time/Renewable)', ['One-time', 'Renewable', 'Other']);
+      ['Financial Need Required', 'Transcript Required', 'FAFSA Required', 'Portfolio/Work Samples',
+        'Interview Required', 'Confirmation Received', 'Thank You Note Sent']
+        .forEach(function(h) {
+          validateList(sc, h, ['Y', 'N']);
+        });
+      validateList(sc, 'Award Status (Pending/Awarded/Declined)',
+        ['Pending', 'Awarded', 'Declined', 'Waitlisted', 'Other']);
     }
 
-    // Status Tracker formatting
     var st = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     if (st) {
-      // College Name validation using dynamic range from Colleges sheet
-      validateListFromRange(st, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+      validateListFromRange(st, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
+      ['Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete',
+        'Interview (Y/N)', 'Portfolio Required (Y/N)']
+        .forEach(function(h) {
+          validateList(st, h, ['Y', 'N']);
+        });
+      ['Application Deadline', 'Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
+        .forEach(function(h) {
+          validateDate(st, h);
+        });
+      formatNumber(st, 'Scholarship Offer ($)', '$#,##0');
+      validateList(st, 'Application Status',
+        ['Not Started', 'In Progress', 'Submitted', 'Under Review', 'Decision Received', 'Other']);
+      validateList(st, 'Decision Plan', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']);
+      validateList(st, 'Decision/Result',
+        ['Pending', 'Accepted', 'Deferred', 'Waitlisted', 'Rejected', 'Other']);
     }
 
-    SpreadsheetApp.getUi().alert('Formats & dropdowns applied.');
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert('Formats & dropdowns applied.');
+    }
+    return {ok: true, sectionsApplied: sectionsApplied};
   }
 
-  // Public API
+  /**
+   * Repairs workbook formatting and dropdown validations in one pass.
+   * Safe to run on existing downloaded spreadsheets.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress completion alert
+   * @returns {Object} Repair summary
+   */
+  function repairValidationsAndFormatting(opts) {
+    opts = opts || {};
+    var result = enhanceFormatsDropdowns({suppressAlert: true});
+
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert(
+        'Validation Repair Complete',
+        'Reapplied formatting and dropdown validations to ' + result.sectionsApplied.length +
+        ' sheet(s).\n\nThis is safe to run on existing downloaded spreadsheets.',
+        SpreadsheetApp.getUi().ButtonSet.OK,
+      );
+    }
+    return result;
+  }
+
   return {
     enhanceFormatsDropdowns: enhanceFormatsDropdowns,
-    testCollegeNameValidation: testCollegeNameValidation,
+    repairValidationsAndFormatting: repairValidationsAndFormatting,
     validateList: validateList,
     validateListFromRange: validateListFromRange,
     validateDate: validateDate,

@@ -1,110 +1,60 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Working rules and non-obvious traps for AI agents in this codebase. Trust source over any prose here if they conflict.
 
-## CRITICAL: API Response Format
+## What This Is
 
-**The College Scorecard API returns FLATTENED keys, not nested objects:**
-- Use: `r['school.city']` NOT `r.school.city`
-- Use: `r['latest.admissions.admission_rate.overall']` NOT `r.latest.admissions.admission_rate.overall`
-- This flattened structure applies to ALL API response data
+Google Apps Script project — a Google Sheets college research and application tracker. Data comes from the U.S. Department of Education College Scorecard API. Source is in `src/`, static website in `docs/`, build tooling in `scripts/`.
 
-## Project Overview
+All source modules follow the same IIFE namespace pattern: `CollegeTools.ModuleName = (function() { ... })()`. Menu entry points in `src/menu.js` are global functions that delegate into these modules.
 
-This is a Google Apps Script project for college selection and tracking in Google Sheets. It integrates with the College Scorecard API to fetch college data and provides comprehensive tracking tools for the college application process.
+## Critical: Two Header Row Conventions
 
-## Development Commands
+**`Colleges` sheet: headers on row 2, data from row 3.**
+**All other sheets: headers on row 1, data from row 2.**
 
-### clasp Workflow
+`CollegeTools.Utils.colIndex()` reads row 1 only — never use it on `Colleges`. Colleges-specific code does its own row-2 header lookups. Mixing these up is the easiest way to introduce silent bugs.
 
-- **Pull latest from Apps Script:** `clasp pull`
-- **Push changes to Apps Script:** `clasp push`
-- **Create version:** `clasp version "v5.x - description"`
-- **View versions:** `clasp versions`
-- **Check login status:** `clasp login --status`
+## Critical: Flattened API Keys
 
-### Git Workflow
+Scorecard API responses are accessed as flattened dot-notation strings:
 
-- **Commit changes:** Standard git workflow after `clasp pull`
-- **Rollback:** `git checkout <commit>` then `clasp push`
+```js
+r['school.city']
+r['latest.admissions.admission_rate.overall']
+```
 
-## Architecture
+Do not assume nested objects (`r.school.city` will be undefined). The `Lookup` module handles both forms defensively, but `src/colleges.js` is strictly flat.
 
-The project uses Google Apps Script with a bound script (ID: `1DBmIFwaYyj9eqRyUG36hrctksrCyrO_kCH7GkazqdygilKLKhsfQBOFM`) attached to a Google Sheets document.
+## Re-fill Behavior (`fillCollegeRowCore`)
 
-### Key Components
+On re-fill, the row is cleared first then API data is written back. What survives:
+- `College Name`
+- User rating columns (`Program Fit` through `Personal Priority`)
+- Formula columns (`Weighted Score`, `Value Score`, `Admission Chances`, `Academic Index Match`, `Merit Aid Likelihood`)
 
-1. **Main Script** (`src/scorecard_import.gs.js`):
-   - Menu system (`onOpen()`)
-   - College Scorecard API integration (`fillCollegeRowCore_()`)
-   - Tracker sheet management (Financial Aid, Campus Visit, Application Timeline, Scholarships)
-   - Formatting and dropdown validation
-   - Weighted scoring system
+What gets overwritten: **`Notes`** — replaced with version info and matched school name. User-entered notes are lost on re-fill.
 
-2. **API Integration**:
-   - Uses College Scorecard API (api.data.gov)
-   - API key stored in sheet "ScorecardAPIKey" cell A1
-   - Implements fallback search strategies (exact → regex)
-   - **Security**: Real API keys are excluded from version control via .gitignore
+## Other Known Risks
 
-3. **Data Sheets**:
-   - **Colleges**: Main data sheet with headers in row 2
-   - **Weights**: Scoring weights configuration
-   - **Lookup**: Search results
-   - **Trackers**: Financial Aid, Campus Visit, Application Timeline, Scholarship
+- **Dashboard formulas** in `src/dashboard.js` use hard-coded column letters. If `Colleges` header order changes, dashboard silently breaks.
+- **Admissions formatting** in `src/admissions.js` clears all conditional format rules on `Colleges` before reapplying its own — unrelated rules are lost.
+- **Setup and formatting functions** are rerunnable but several clear or rebuild sheet contents aggressively.
 
-### Column Mapping
+## Testing
 
-Critical columns in Colleges sheet (row 2 headers):
-- College Name, City, State, Region, Type (Public/Private)
-- Acceptance Rate, First-Year Retention, Grad Rate
-- SAT/ACT scores (25%/75% percentiles)
-- Financial data: Total Cost of Attendance, Estimated Net Price, Median Earnings
-- Subjective scores (1-5): Program Fit, Academic Reputation, etc.
-- Calculated: Weighted Score, Value Score
+The `test/` harness mocks Apps Script globals. It catches wiring issues and config regressions but does not validate spreadsheet behavior, formulas, or real API calls. Manual testing in a live Google Sheet is required for meaningful changes.
 
-## Current Version
+## Deploy
 
-v5.3 - Includes batch fill, region mapping, enhanced formatting/dropdowns, and weighted scoring
+- `npm run push` — runs lint check first, then `clasp push`
+- `npm run build` — only updates git hash in `docs/` HTML footers; does not compile anything
+- `npm run release` — bumps patch version then pushes
+- `scripts/update-version.js` — updates `package.json`, all source `@version` tags, and `Config.VERSION` together
 
-## Development Notes
+## Working Rules
 
-- Code follows `.clasp.json` configuration with `rootDir: "src"`
-- Uses V8 runtime (`appsscript.json`)
-- Headers are in row 2, data starts in row 3
-- Region mapping: Northeast, Midwest, South, West (based on US states)
-- API calls include retry logic for resilience
-
-## Refactoring Plans
-
-Per `Refactor.md`, planned improvements include:
-- Modular file structure (menu.js, config.js, utils.js, etc.)
-- Namespace architecture to avoid global sprawl
-- PropertiesService for API key storage
-- CacheService for API response caching
-- Batch I/O optimization
-- TypeScript migration with clasp
-
-## API Key Setup
-
-**For End Users** (when you get a copy of this spreadsheet):
-🔗 Get template: https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy
-
-1. Run "🚀 Quick Start (API Key Check)" from College Tools menu
-2. If needed, get your free College Scorecard API key at: https://api.data.gov/signup/
-3. Create a sheet named "ScorecardAPIKey" 
-4. Paste your API key in cell A1
-5. You're ready to use College Tools!
-
-**For Developers**:
-- Never commit real API keys to version control
-- Use placeholder values like "your_api_key_here" in development
-- Real keys are automatically excluded via .gitignore
-
-## Common Tasks
-
-- **Fill college data**: Select row in Colleges sheet → College Tools → Fill current/selected rows
-- **Search colleges**: College Tools → Search College Names (results in Lookup sheet)
-- **Update regions**: College Tools → Fill Regions (auto-maps states to regions)
-- **Setup trackers**: College Tools → Add/Update Trackers
-- **Apply formatting**: College Tools → Enhance: Formats & Dropdowns
+- Always check which header row convention a sheet uses before writing lookups or formulas.
+- Keep API field access as flattened keys unless refactoring the entire data path.
+- Prefer small, surgical edits. Setup/formatting functions touch a lot — be deliberate.
+- Verify formulas against `Config.HEADERS` and the actual row convention of the target sheet.

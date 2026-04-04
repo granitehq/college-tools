@@ -497,22 +497,6 @@ CollegeTools.Scorecard = (function() {
   }
 
   /**
-   * Gets current quota usage status
-   * @returns {Object} Quota status information
-   */
-  function getQuotaStatus() {
-    checkAndResetDailyQuota();
-    return {
-      dailyUsage: quotaState.dailyUsage,
-      dailyLimit: CollegeTools.Config.API_CONFIG.DAILY_QUOTA_LIMIT,
-      remaining: CollegeTools.Config.API_CONFIG.DAILY_QUOTA_LIMIT - quotaState.dailyUsage,
-      lastReset: quotaState.lastResetDate,
-      executionTimeElapsed: quotaState.executionStartTime ?
-        (new Date().getTime() - quotaState.executionStartTime) : 0,
-    };
-  }
-
-  /**
    * Clears tracked API response cache entries.
    * Keys written by setCachedData are registered in ScriptProperties so they
    * can be explicitly removed here.
@@ -558,7 +542,6 @@ CollegeTools.Scorecard = (function() {
     searchColleges: searchColleges,
     fetchCollegeData: fetchCollegeData,
     typeFromOwnership: typeFromOwnership,
-    getQuotaStatus: getQuotaStatus,
     clearCache: clearCache,
     isApiKeyConfigured: isApiKeyConfigured,
   };

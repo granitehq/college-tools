@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Pre-push hook to run the full quality gate
+# To install: ln -s ../../.githooks/pre-push .git/hooks/pre-push
+# To bypass: git push --no-verify
+#
+
+echo "Running pre-push quality checks..."
+
+if ! command -v npm >/dev/null 2>&1; then
+    echo "Warning: npm not found. Skipping pre-push checks."
+    exit 0
+fi
+
+if [ ! -d "node_modules" ]; then
+    echo "Warning: node_modules not found. Run 'npm install' first."
+    echo "Skipping pre-push checks."
+    exit 0
+fi
+
+npm run check
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Quality checks failed. Push blocked."
+    echo "Fix issues with: npm run check"
+    echo "Or bypass with: git push --no-verify"
+    exit 1
+fi
+
+echo "✅ Quality checks passed. Proceeding with push."
+exit 0

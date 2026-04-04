@@ -1,58 +1,78 @@
 # College Tools Test Suite
 
-Automated regression tests to catch errors before deployment.
+Automated checks for schema drift, menu wiring, sheet validation coverage, and row/tracker synchronization behavior.
 
-## Running Tests
+## Recommended Commands
+
+From the repo root:
 
 ```bash
-# From the test directory
-cd test
 npm test
-
-# Or directly with node
-node regression-tests.js
+npm run check
 ```
 
-## What's Tested
+Targeted suites:
 
-### Core Functionality
-- ✅ Module loading and namespace integrity
-- ✅ Configuration completeness (new sheets, headers)
-- ✅ Function existence and basic structure
-- ✅ Version validation
-- ✅ Setup functions can execute without errors
-
-### Regression Prevention
-- ✅ New Personal Profile sheet configuration
-- ✅ Financial Intelligence columns in headers
-- ✅ All required functions still exist
-- ✅ Basic utility functions work correctly
-- ✅ Setup workflow doesn't crash
-
-### NOT Tested (requires real Google Sheets)
-- Actual formula execution
-- Sheet creation in live environment  
-- API calls to College Scorecard
-- UI interactions beyond basic structure
-
-## Interpreting Results
-
+```bash
+npm run test:regression
+npm run test:template
+npm run test:schema
+npm run test:menu
+npm run test:validation
+npm run test:syntax
 ```
-✅ All tests passed! Safe to deploy.
-```
-**→ Good to push to production**
 
-```
-⚠️ Some tests failed. Review before deploying.
-```
-**→ Check failed tests, likely breaking changes**
+## What The Suites Cover
 
-## Test Structure
+### Runtime behavior with mocked Apps Script
+- `regression-tests.js`
+  - row replacement semantics in `Colleges`
+  - tracker synchronization by canonical row
+  - repair/resync behavior for downloaded sheets
 
-The tests use mock Google Apps Script objects to simulate the Sheets environment locally. This catches:
-- Missing functions
-- Configuration errors
-- Basic structural problems
-- Module loading issues
+- `template-integrity-tests.js`
+  - replacing a sample college in the same row
+  - filling the same row twice with different schools
+  - batch fill keeping tracker sync enabled
 
-For full integration testing, run manual tests in a real Google Sheet.
+- `validation-coverage-tests.js`
+  - college-name validation uses `Colleges!A3:A1000`
+  - key dropdown-backed fields keep validations
+  - `Type (Public/Private)` includes API-mapped values
+
+### Static contract checks
+- `config-schema-tests.js`
+  - sheet-name snapshot stability
+  - `Config.HEADERS` schema drift detection
+  - formula-dependent fields still exist
+
+- `menu-wiring-tests.js`
+  - every menu target has a global adapter
+  - every adapter delegates into a `CollegeTools.*` module
+
+- `syntax-tests.js`
+  - file existence
+  - module structure
+  - version tag format
+  - basic source hygiene
+
+## Quality Gate
+
+`npm run check` runs the maintained gate:
+
+1. `npm run lint:check`
+2. `npm test`
+
+This is now the intended pre-push / CI / release gate.
+
+## Limits Of Local Testing
+
+The mock harness catches a lot, but it does not prove:
+
+- real Google Sheets validation UX
+- live Apps Script execution quirks
+- real conditional formatting behavior
+- real Scorecard API responses
+- actual menu prompts and alerts in Sheets
+
+For any spreadsheet-facing change, manual validation in a real Google Sheet is still required.

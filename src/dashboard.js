@@ -41,28 +41,28 @@ CollegeTools.Dashboard = (function() {
 
     // Pre-compute column ranges from Config.HEADERS so formulas stay correct
     // even if header order changes.
-    var cHdrs  = CollegeTools.Config.HEADERS.COLLEGES;
+    var cHdrs = CollegeTools.Config.HEADERS.COLLEGES;
     var stHdrs = CollegeTools.Config.HEADERS.STATUS_TRACKER;
     var faHdrs = CollegeTools.Config.HEADERS.FINANCIAL_AID;
     var skHdrs = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
     var cn = CollegeTools.Config.SHEET_NAMES;
 
     // Colleges data starts at row 3
-    var rAcceptance  = colRange_(cHdrs, 'Acceptance Rate',           3, 1000);
-    var rTotalCost   = colRange_(cHdrs, 'Total Cost of Attendance',  3, 1000);
-    var rNetPrice    = colRange_(cHdrs, 'Estimated Net Price',       3, 1000);
-    var rWeighted    = colRange_(cHdrs, 'Weighted Score',            3, 1000);
-    var rValue       = colRange_(cHdrs, 'Value Score',               3, 1000);
-    var rCollegeName = colRange_(cHdrs, 'College Name',              3, 1000);
+    var rAcceptance = colRange_(cHdrs, 'Acceptance Rate', 3, 1000);
+    var rTotalCost = colRange_(cHdrs, 'Total Cost of Attendance', 3, 1000);
+    var rNetPrice = colRange_(cHdrs, 'Estimated Net Price', 3, 1000);
+    var rWeighted = colRange_(cHdrs, 'Weighted Score', 3, 1000);
+    var rValue = colRange_(cHdrs, 'Value Score', 3, 1000);
+    var rCollegeName = colRange_(cHdrs, 'College Name', 3, 1000);
 
     // Status Tracker / Financial Aid / Scholarship data starts at row 2
-    var rDocuments   = colRange_(stHdrs, 'Documents Complete',         2, 1000);
-    var rAidReq      = colRange_(faHdrs, 'Aid Requirements Complete',  2, 1000);
+    var rDocuments = colRange_(stHdrs, 'Documents Complete', 2, 1000);
+    var rAidReq = colRange_(faHdrs, 'Aid Requirements Complete', 2, 1000);
     var rAwardStatus = colRange_(skHdrs, 'Award Status (Pending/Awarded/Declined)', 2, 1000);
-    var rAmtAwarded  = colRange_(skHdrs, 'Amount Awarded',             2, 1000);
-    var rSkAmount    = colRange_(skHdrs, 'Amount',                     2, 1000);
-    var rStName      = colRange_(stHdrs, 'College Name',               2, 1000);
-    var rFaName      = colRange_(faHdrs, 'College Name',               2, 1000);
+    var rAmtAwarded = colRange_(skHdrs, 'Amount Awarded', 2, 1000);
+    var rSkAmount = colRange_(skHdrs, 'Amount', 2, 1000);
+    var rStName = colRange_(stHdrs, 'College Name', 2, 1000);
+    var rFaName = colRange_(faHdrs, 'College Name', 2, 1000);
 
     // Clear existing content to rebuild fresh
     sh.clear();
@@ -282,16 +282,22 @@ CollegeTools.Dashboard = (function() {
 
     if (!nameCol || !scoreCol || !priceCol) return;
 
-    // Get the data
-    var names = collegesSheet.getRange(3, nameCol, lastRow - 2).getValues();
-    var scores = collegesSheet.getRange(3, scoreCol, lastRow - 2).getValues();
-    var prices = collegesSheet.getRange(3, priceCol, lastRow - 2).getValues();
+    // Read one wide range, then index in-memory to avoid multiple API reads.
+    var startCol = Math.min(nameCol, scoreCol, priceCol);
+    var endCol = Math.max(nameCol, scoreCol, priceCol);
+    var rows = collegesSheet.getRange(3, startCol, lastRow - 2, endCol - startCol + 1).getValues();
+    var nameOffset = nameCol - startCol;
+    var scoreOffset = scoreCol - startCol;
+    var priceOffset = priceCol - startCol;
 
     // Combine and filter out empty rows
     var chartData = [];
-    for (var i = 0; i < names.length; i++) {
-      if (names[i][0] && scores[i][0] && prices[i][0]) {
-        chartData.push([names[i][0], scores[i][0], prices[i][0]]);
+    for (var i = 0; i < rows.length; i++) {
+      var name = rows[i][nameOffset];
+      var score = rows[i][scoreOffset];
+      var price = rows[i][priceOffset];
+      if (name && score && price) {
+        chartData.push([name, score, price]);
       }
     }
 
@@ -304,7 +310,7 @@ CollegeTools.Dashboard = (function() {
     chartData = chartData.slice(0, 20);
 
     // Write to dashboard
-    var startCol = 5; // Column E
+    startCol = 5; // Column E
     var startRow = 6;
 
     // Clear existing data

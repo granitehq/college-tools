@@ -114,6 +114,56 @@ CollegeTools.Setup = (function() {
   }
 
   /**
+   * Repairs the workbook by re-syncing colleges, reapplying validations/formatting,
+   * refreshing derived regions, and refreshing the dashboard when present.
+   * Safe to run on existing downloaded spreadsheets.
+   * @return {Object|undefined} Repair summary
+   */
+  function repairEntireWorkbook() {
+    var ui = SpreadsheetApp.getUi();
+    var result = ui.alert(
+      'Repair Entire Workbook',
+      'This will repair the current spreadsheet by:\n\n' +
+      '• Re-syncing tracker college lists from the Colleges tab\n' +
+      '• Reapplying dropdowns and formatting\n' +
+      '• Refilling Regions from State values\n' +
+      '• Refreshing dashboard data when present\n\n' +
+      'Continue?',
+      ui.ButtonSet.YES_NO,
+    );
+
+    if (result !== ui.Button.YES) return;
+
+    try {
+      var syncResult = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+      var formattingResult = CollegeTools.Formatting.repairValidationsAndFormatting({suppressAlert: true});
+      var regionResult = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
+
+      if (SpreadsheetApp.getActive().getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD)) {
+        CollegeTools.Dashboard.refreshDashboard();
+      }
+
+      ui.alert(
+        'Workbook Repair Complete',
+        'Tracker rows updated: ' + syncResult.count + '\n' +
+        'Formatted sheets repaired: ' + formattingResult.sectionsApplied.length + '\n' +
+        'Regions refreshed: ' + regionResult.count + '\n\n' +
+        'This is safe to run again if needed.',
+        ui.ButtonSet.OK,
+      );
+
+      return {
+        ok: true,
+        trackerRows: syncResult.count,
+        formattedSheets: formattingResult.sectionsApplied.length,
+        regionRows: regionResult.count,
+      };
+    } catch (error) {
+      ui.alert('Repair Error', 'An error occurred during repair: ' + error.toString(), ui.ButtonSet.OK);
+    }
+  }
+
+  /**
    * Quick Start - Fast API key check and basic guidance.
    * Shows users what they need to do without the long setup process.
    */
@@ -156,6 +206,7 @@ CollegeTools.Setup = (function() {
   return {
     completeSetup: completeSetup,
     optimizePerformance: optimizePerformance,
+    repairEntireWorkbook: repairEntireWorkbook,
     quickStart: quickStart,
   };
 })();

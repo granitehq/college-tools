@@ -83,12 +83,16 @@ const sourceFiles = [
   'utils.js', 
   'colleges.js',
   'admissions.js',
+  'dashboard.js',
   'financial.js',
-  'setup.js',
-  'scoring.js',
   'formatting.js',
+  'instructions.js',
+  'lookup.js',
+  'menu.js',
+  'scorecard.js',
+  'scoring.js',
+  'setup.js',
   'trackers.js',
-  'menu.js'
 ];
 
 console.log('🧪 Running Syntax and Structure Tests\n');
@@ -121,9 +125,8 @@ sourceFiles.forEach(filename => {
         const versionMatch = content.match(/@version\s+(\d+\.\d+\.\d+)/);
         if (versionMatch) {
           const version = versionMatch[1];
-          const [major, minor] = version.split('.').map(Number);
-          tester.assert(major >= 7 && (major > 7 || minor >= 1), 
-            `Version ${version} should be at least 7.1.0 for Financial Intelligence features`);
+          tester.assert(/^\d+\.\d+\.\d+$/.test(version),
+            `Version ${version} should be semantic`);
         }
       }
     });

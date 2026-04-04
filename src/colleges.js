@@ -105,6 +105,30 @@ CollegeTools.Colleges = (function() {
   }
 
   /**
+   * Maps College Scorecard locale codes to a coarse campus setting.
+   * Locale families are grouped as City, Suburban, Town, and Rural.
+   * @param {*} localeCode - Raw school.locale value
+   * @returns {string} Campus setting or empty string when unavailable
+   * @private
+   */
+  function campusSettingFromLocale_(localeCode) {
+    if (localeCode === null || localeCode === undefined || localeCode === '') return '';
+
+    var code = Number(localeCode);
+    if (isNaN(code)) return '';
+
+    if (code >= 11 && code <= 13) return 'City';
+    if (code >= 21 && code <= 23) return 'Suburban';
+    if (code >= 31 && code <= 33) return 'Town';
+    if (code >= 41 && code <= 43) return 'Rural';
+    if (code === 1) return 'City';
+    if (code === 2) return 'Suburban';
+    if (code === 3) return 'Town';
+    if (code === 4) return 'Rural';
+    return '';
+  }
+
+  /**
    * Debug version of fillCollegeRow that shows detailed information about what's happening.
    */
   function debugFillCollegeRow() {
@@ -230,6 +254,7 @@ CollegeTools.Colleges = (function() {
         SAT75: columnIndexes.SAT75,
         ACT25: columnIndexes.ACT25,
         ACT75: columnIndexes.ACT75,
+        CAMPUS_SETTING: columnIndexes.CAMPUS_SETTING,
         NOTES: columnIndexes.NOTES,
       };
       idxRegion0 = columnIndexes.REGION !== -1 ? columnIndexes.REGION - 1 : -1;
@@ -257,6 +282,7 @@ CollegeTools.Colleges = (function() {
         SAT75: requireCol_(hdrs, 'SAT 75%'),
         ACT25: requireCol_(hdrs, 'ACT 25%'),
         ACT75: requireCol_(hdrs, 'ACT 75%'),
+        CAMPUS_SETTING: hdrs.indexOf('Campus Setting') !== -1 ? requireCol_(hdrs, 'Campus Setting') : -1,
         NOTES: requireCol_(hdrs, 'Notes'),
       };
       idxRegion0 = hdrs.indexOf('Region');
@@ -289,7 +315,9 @@ CollegeTools.Colleges = (function() {
     var state = r['school.state'] || '';
     var link = r['school.school_url'] || '';
     var ownCode = r['school.ownership'];
+    var localeCode = r['school.locale'];
     var typeText = CollegeTools.Scorecard.typeFromOwnership(ownCode);
+    var campusSetting = campusSettingFromLocale_(localeCode);
 
     var acc = r['latest.admissions.admission_rate.overall'] || '';
     var retention = r['latest.student.retention_rate.four_year.full_time'] || '';
@@ -342,6 +370,7 @@ CollegeTools.Colleges = (function() {
       [COL.ACT25, act25],
       [COL.ACT75, act75],
     ];
+    if (COL.CAMPUS_SETTING !== -1) writes.push([COL.CAMPUS_SETTING, campusSetting]);
     if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
     writes.forEach(function(w) {
       sh.getRange(row, w[0]).setValue(w[1] || '');
@@ -387,45 +416,36 @@ CollegeTools.Colleges = (function() {
       return;
     }
     var row = sh.getActiveCell().getRow();
-    var res = fillCollegeRowCore(row, {suppressAlert: false});
-    if (res.ok) SpreadsheetApp.getUi().alert('Updated row ' + row + '.');
-  }
-
-  /**
-   * Fast version of fillCollegeRow that skips highlighting and tracker setup for better performance.
-   * Use this when speed is more important than visual feedback.
-   */
-  function fillCollegeRowFast() {
-    var sh = SpreadsheetApp.getActive().getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-    if (!sh) {
-      SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
-      return;
-    }
-    var row = sh.getActiveCell().getRow();
     var res = fillCollegeRowCore(row, {
       suppressAlert: false,
       skipHighlight: true,
     });
-    if (res.ok) SpreadsheetApp.getUi().alert('Updated row ' + row + ' (fast mode).');
+    if (res.ok) SpreadsheetApp.getUi().alert('Updated row ' + row + '.');
   }
 
   /**
    * Automatically fills the Region column for all rows in the Colleges sheet based on state.
    * Maps US states to four regions: Northeast, Midwest, South, West.
    * Only updates rows that have a college name and where the region differs from the calculated value.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress user alerts
+   * @returns {Object} Result summary with updated row count
    */
-  function fillRegionsAllRows() {
+  function fillRegionsAllRows(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
     var sh = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (!sh) {
-      SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
-      return;
+      if (!opts.suppressAlert) {
+        SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
+      }
+      return {ok: false, count: 0};
     }
 
     var lastRow = sh.getLastRow();
     if (lastRow < 3) {
-      SpreadsheetApp.getUi().alert('No data rows to process.');
-      return;
+      if (!opts.suppressAlert) SpreadsheetApp.getUi().alert('No data rows to process.');
+      return {ok: true, count: 0};
     }
 
     // Read header row 2
@@ -439,9 +459,11 @@ CollegeTools.Colleges = (function() {
     var idxRegion = hdrs.indexOf('Region');
 
     if (idxRegion === -1) {
-      SpreadsheetApp.getUi().alert('No "Region" column found on ' +
-        CollegeTools.Config.SHEET_NAMES.COLLEGES + ' sheet.');
-      return;
+      if (!opts.suppressAlert) {
+        SpreadsheetApp.getUi().alert('No "Region" column found on ' +
+          CollegeTools.Config.SHEET_NAMES.COLLEGES + ' sheet.');
+      }
+      return {ok: false, count: 0};
     }
     var colRegion = idxRegion + 1;
 
@@ -464,7 +486,10 @@ CollegeTools.Colleges = (function() {
     updates.forEach(function(u) {
       sh.getRange(u.r, u.c).setValue(u.v);
     });
-    SpreadsheetApp.getUi().alert('Regions updated for ' + updates.length + ' row(s).');
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert('Regions updated for ' + updates.length + ' row(s).');
+    }
+    return {ok: true, count: updates.length};
   }
 
   /**
@@ -538,6 +563,7 @@ CollegeTools.Colleges = (function() {
       SAT75: requireCol_(hdrs, 'SAT 75%'),
       ACT25: requireCol_(hdrs, 'ACT 25%'),
       ACT75: requireCol_(hdrs, 'ACT 75%'),
+      CAMPUS_SETTING: hdrs.indexOf('Campus Setting') !== -1 ? requireCol_(hdrs, 'Campus Setting') : -1,
       NOTES: requireCol_(hdrs, 'Notes'),
       REGION: hdrs.indexOf('Region') !== -1 ? hdrs.indexOf('Region') + 1 : -1,
       HEADERS: hdrs,
@@ -592,13 +618,10 @@ CollegeTools.Colleges = (function() {
       }
     }
 
-    // Get quota status for final report
-    var quotaStatus = CollegeTools.Scorecard.getQuotaStatus();
     var quotaMessage = quotaExceeded ? '\\n⚠️ Stopped due to quota/time limits.' : '';
 
     SpreadsheetApp.getUi().alert('Batch fill complete.' + quotaMessage +
-      '\\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed +
-      '\\nQuota used: ' + quotaStatus.dailyUsage + '/' + quotaStatus.dailyLimit);
+      '\\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed);
   }
 
   // Public API
@@ -606,7 +629,6 @@ CollegeTools.Colleges = (function() {
     showVersion: showVersion,
     debugFillCollegeRow: debugFillCollegeRow,
     fillCollegeRow: fillCollegeRow,
-    fillCollegeRowFast: fillCollegeRowFast,
     fillSelectedRows: fillSelectedRows,
     fillRegionsAllRows: fillRegionsAllRows,
   };

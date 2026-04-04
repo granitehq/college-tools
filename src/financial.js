@@ -14,6 +14,24 @@ CollegeTools.Financial = (function() {
   'use strict';
 
   /**
+   * Adds a text-contains conditional format rule to a rules array.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {Range} range - Target range
+   * @param {string} text - Text fragment to match
+   * @param {string} bg - Background color
+   * @param {string} fg - Font color
+   * @private
+   */
+  function pushTextRule_(rules, range, text, bg, fg) {
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenTextContains(text)
+      .setBackground(bg)
+      .setFontColor(fg)
+      .setRanges([range])
+      .build());
+  }
+
+  /**
    * Creates Personal Profile sheet with essential structure only (optimized for speed).
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -271,41 +289,10 @@ CollegeTools.Financial = (function() {
 
       var rules = sheet.getConditionalFormatRules();
 
-      // Green for Comfortable
-      var comfortableRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🟢 Comfortable')
-        .setBackground('#d4edda')
-        .setFontColor('#155724')
-        .setRanges([range])
-        .build();
-      rules.push(comfortableRule);
-
-      // Yellow for Manageable
-      var manageableRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🟡 Manageable')
-        .setBackground('#fff3cd')
-        .setFontColor('#856404')
-        .setRanges([range])
-        .build();
-      rules.push(manageableRule);
-
-      // Orange for Stretch
-      var stretchRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🟠 Stretch')
-        .setBackground('#ffeaa7')
-        .setFontColor('#b95000')
-        .setRanges([range])
-        .build();
-      rules.push(stretchRule);
-
-      // Red for Reconsider
-      var reconsiderRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🔴 Reconsider')
-        .setBackground('#f8d7da')
-        .setFontColor('#721c24')
-        .setRanges([range])
-        .build();
-      rules.push(reconsiderRule);
+      pushTextRule_(rules, range, '🟢 Comfortable', '#d4edda', '#155724');
+      pushTextRule_(rules, range, '🟡 Manageable', '#fff3cd', '#856404');
+      pushTextRule_(rules, range, '🟠 Stretch', '#ffeaa7', '#b95000');
+      pushTextRule_(rules, range, '🔴 Reconsider', '#f8d7da', '#721c24');
 
       sheet.setConditionalFormatRules(rules);
     }
@@ -327,32 +314,9 @@ CollegeTools.Financial = (function() {
 
       var rules = sheet.getConditionalFormatRules();
 
-      // High merit aid likelihood - green
-      var highRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🟢')
-        .setBackground('#d4edda')
-        .setFontColor('#155724')
-        .setRanges([range])
-        .build();
-      rules.push(highRule);
-
-      // Moderate merit aid likelihood - yellow
-      var moderateRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🟡')
-        .setBackground('#fff3cd')
-        .setFontColor('#856404')
-        .setRanges([range])
-        .build();
-      rules.push(moderateRule);
-
-      // Low merit aid likelihood - red
-      var lowRule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextContains('🔴')
-        .setBackground('#f8d7da')
-        .setFontColor('#721c24')
-        .setRanges([range])
-        .build();
-      rules.push(lowRule);
+      pushTextRule_(rules, range, '🟢', '#d4edda', '#155724');
+      pushTextRule_(rules, range, '🟡', '#fff3cd', '#856404');
+      pushTextRule_(rules, range, '🔴', '#f8d7da', '#721c24');
 
       sheet.setConditionalFormatRules(rules);
     }

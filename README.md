@@ -55,6 +55,8 @@
    - Use **College Tools → 🎓 For Students & Parents → Fill current row** to get college data
    - All tracker sheets, dashboard, and scoring are already set up!
 
+# For Developers wanting to contribute/modify
+
 ## Code Quality
 
 - **ESLint Integration** - Automated code style and syntax checking

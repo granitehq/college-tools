@@ -11,6 +11,21 @@
   "jsonExtensions": [
     ".json"
   ],
-  "filePushOrder": [],
+  "filePushOrder": [
+    "src/config.js",
+    "src/utils.js",
+    "src/scorecard.js",
+    "src/instructions.js",
+    "src/trackers.js",
+    "src/dashboard.js",
+    "src/financial.js",
+    "src/formatting.js",
+    "src/scoring.js",
+    "src/lookup.js",
+    "src/colleges.js",
+    "src/admissions.js",
+    "src/setup.js",
+    "src/menu.js"
+  ],
   "skipSubdirectories": false
 }

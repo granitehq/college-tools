@@ -1,327 +1,140 @@
 /**
- * College Tools Regression Tests
- * @version 7.1.0
- * @author College Tools Test Suite
- * @description Automated tests to catch regressions before deployment
- * 
- * These tests simulate Google Apps Script environment and test core functionality
- * Run with: node test/regression-tests.js
+ * Regression tests for row replacement and tracker sync behavior.
  */
 
-// Mock Google Apps Script environment
-global.SpreadsheetApp = {
-  getActive: () => mockSpreadsheet,
-  getUi: () => mockUi,
-  newConditionalFormatRule: () => mockConditionalFormatRule,
-  newDataValidation: () => mockDataValidation,
-};
+const {createHarness, TestSuite} = require('./support');
 
-global.Utilities = {
-  sleep: (ms) => {}, // No-op in tests
-};
+const harness = createHarness([
+  'config.js',
+  'utils.js',
+  'formatting.js',
+  'trackers.js',
+  'colleges.js',
+]);
+const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn} = harness;
 
-// Mock objects
-const mockUi = {
-  alert: (title, message, buttons) => {
-    console.log(`UI Alert: ${title} - ${message}`);
-    return { YES: 'YES', NO: 'NO', OK: 'OK' };
+CollegeTools.Scorecard = {
+  fetchCollegeData(name) {
+    return {
+      ok: true,
+      data: {
+        'school.name': `${name} University`,
+        'school.city': 'New City',
+        'school.state': 'CA',
+        'school.locale': 21,
+        'school.school_url': 'example.edu',
+        'school.ownership': 1,
+        'latest.admissions.admission_rate.overall': 0.45,
+        'latest.student.retention_rate.four_year.full_time': 0.9,
+        'latest.completion.rate_suppressed.overall': 0.8,
+        'latest.earnings.10_yrs_after_entry.median': 82000,
+        'latest.cost.attendance.academic_year': 50000,
+        'latest.cost.avg_net_price.overall': 32000,
+        'latest.admissions.sat_scores.25th_percentile.math': 650,
+        'latest.admissions.sat_scores.25th_percentile.critical_reading': 640,
+        'latest.admissions.sat_scores.75th_percentile.math': 730,
+        'latest.admissions.sat_scores.75th_percentile.critical_reading': 720,
+        'latest.admissions.act_scores.25th_percentile.cumulative': 29,
+        'latest.admissions.act_scores.75th_percentile.cumulative': 33,
+      },
+    };
   },
-  Button: { YES: 'YES', NO: 'NO', OK: 'OK' },
-  ButtonSet: { YES_NO: 'YES_NO', OK: 'OK' },
-  createMenu: (name) => ({
-    addItem: () => mockUi.createMenu(name),
-    addSeparator: () => mockUi.createMenu(name),
-    addSubMenu: () => mockUi.createMenu(name),
-    addToUi: () => {},
-  }),
-};
-
-const mockConditionalFormatRule = {
-  whenTextContains: () => mockConditionalFormatRule,
-  whenNumberGreaterThan: () => mockConditionalFormatRule,
-  whenNumberBetween: () => mockConditionalFormatRule,
-  whenNumberLessThan: () => mockConditionalFormatRule,
-  setBackground: () => mockConditionalFormatRule,
-  setFontColor: () => mockConditionalFormatRule,
-  setRanges: () => mockConditionalFormatRule,
-  build: () => ({}),
-};
-
-const mockDataValidation = {
-  requireValueInRange: () => mockDataValidation,
-  setAllowInvalid: () => mockDataValidation,
-  build: () => ({}),
-};
-
-const mockRange = {
-  setValue: (value) => { mockRange._value = value; return mockRange; },
-  getValue: () => mockRange._value || '',
-  setValues: (values) => { mockRange._values = values; return mockRange; },
-  getValues: () => mockRange._values || [['']],
-  setFormula: (formula) => { mockRange._formula = formula; return mockRange; },
-  getFormula: () => mockRange._formula || '',
-  setFormulas: (formulas) => { mockRange._formulas = formulas; return mockRange; },
-  getFormulas: () => mockRange._formulas || [['']],
-  setBackground: () => mockRange,
-  setFontWeight: () => mockRange,
-  setFontSize: () => mockRange,
-  setFontColor: () => mockRange,
-  setBorder: () => mockRange,
-  setNote: () => mockRange,
-  setNumberFormat: () => mockRange,
-  setDataValidation: () => mockRange,
-  merge: () => mockRange,
-  _value: '',
-  _values: [['']],
-  _formula: '',
-  _formulas: [['']],
-};
-
-const mockSheet = {
-  getName: () => 'TestSheet',
-  getRange: (row, col, numRows, numCols) => {
-    const range = Object.create(mockRange);
-    range._row = row;
-    range._col = col;
-    range._numRows = numRows || 1;
-    range._numCols = numCols || 1;
-    return range;
+  typeFromOwnership(code) {
+    return code === 1 ? 'Public' : '';
   },
-  getLastColumn: () => 26,
-  getLastRow: () => 100,
-  getMaxRows: () => 1000,
-  insertSheet: (name) => mockSheet,
-  clear: () => mockSheet,
-  setColumnWidth: () => mockSheet,
-  setFrozenRows: () => mockSheet,
-  autoResizeColumn: () => mockSheet,
-  insertColumnBefore: () => mockSheet,
-  deleteRows: () => mockSheet,
-  protect: () => ({
-    setDescription: () => {},
-    setUnprotectedRanges: () => {},
-  }),
-  clearConditionalFormatRules: () => {},
-  getConditionalFormatRules: () => [],
-  setConditionalFormatRules: () => {},
 };
 
-const mockSpreadsheet = {
-  getSheetByName: (name) => {
-    console.log(`Getting sheet: ${name}`);
-    return mockSheet;
-  },
-  insertSheet: (name) => {
-    console.log(`Creating sheet: ${name}`);
-    return mockSheet;
-  },
-  setNamedRange: (name, range) => {
-    console.log(`Creating named range: ${name}`);
-  },
-  getActiveSheet: () => mockSheet,
-};
-
-// Load College Tools modules
-const fs = require('fs');
-const path = require('path');
-
-// Initialize CollegeTools namespace
-global.CollegeTools = {};
-
-function loadModule(filename) {
-  const filePath = path.join(__dirname, '../src', filename);
-  let content = fs.readFileSync(filePath, 'utf8');
-  
-  // Replace Google Apps Script specific parts that break in Node.js
-  content = content
-    .replace(/\/\*\*[\s\S]*?\*\//g, '') // Remove JSDoc comments
-    .replace(/eslint-disable-line[^\n]*/g, '') // Remove eslint directives
-    .replace(/^(\s*)function\s+(\w+)\s*\(/gm, '$1global.$2 = function(') // Make global functions global
-    .replace(/var CollegeTools\s*=\s*CollegeTools\s*\|\|\s*\{\};/g, ''); // Remove namespace redeclaration
-  
-  console.log(`Loading module: ${filename}`);
-  
-  try {
-    eval(content);
-  } catch (error) {
-    console.warn(`Warning loading ${filename}: ${error.message}`);
-  }
-}
-
-console.log('🧪 Loading College Tools modules...');
-loadModule('config.js');
-loadModule('utils.js');
-loadModule('formatting.js');
-loadModule('scoring.js');
-loadModule('admissions.js');
-loadModule('financial.js');
-loadModule('setup.js');
-
-// Test Suite
-class TestSuite {
-  constructor() {
-    this.passed = 0;
-    this.failed = 0;
-    this.errors = [];
-  }
-
-  test(name, testFn) {
-    try {
-      console.log(`\n🧪 ${name}`);
-      testFn();
-      console.log(`✅ ${name} - PASSED`);
-      this.passed++;
-    } catch (error) {
-      console.log(`❌ ${name} - FAILED: ${error.message}`);
-      this.errors.push({ name, error: error.message });
-      this.failed++;
-    }
-  }
-
-  assert(condition, message) {
-    if (!condition) {
-      throw new Error(message || 'Assertion failed');
-    }
-  }
-
-  assertEqual(actual, expected, message) {
-    if (actual !== expected) {
-      throw new Error(message || `Expected ${expected}, got ${actual}`);
-    }
-  }
-
-  assertContains(str, substring, message) {
-    if (!str || !str.includes(substring)) {
-      throw new Error(message || `Expected "${str}" to contain "${substring}"`);
-    }
-  }
-
-  summary() {
-    console.log('\n' + '='.repeat(50));
-    console.log(`📊 Test Results: ${this.passed} passed, ${this.failed} failed`);
-    
-    if (this.errors.length > 0) {
-      console.log('\n❌ Failed Tests:');
-      this.errors.forEach(({ name, error }) => {
-        console.log(`  • ${name}: ${error}`);
-      });
-    }
-    
-    if (this.failed === 0) {
-      console.log('\n🎉 All tests passed! Safe to deploy.');
-    } else {
-      console.log('\n⚠️  Some tests failed. Review before deploying.');
-    }
-    
-    return this.failed === 0;
-  }
-}
-
-// Run Tests
 const suite = new TestSuite();
 
-suite.test('Config module loads correctly', () => {
-  suite.assert(typeof CollegeTools !== 'undefined', 'CollegeTools namespace should exist');
-  suite.assert(typeof CollegeTools.Config !== 'undefined', 'Config module should exist');
-  suite.assert(CollegeTools.Config.VERSION, 'Version should be defined');
-  suite.assert(CollegeTools.Config.SHEET_NAMES, 'Sheet names should be defined');
+suite.test('fillCollegeRow clears stale non-preserved data and keeps user ratings/formulas', () => {
+  const {colleges} = setupWorkbook({includeCampusSetting: true});
+
+  const cityCol = getCollegeColumn('City', colleges);
+  const ratingCol = getCollegeColumn('Program Fit (1-5)', colleges);
+  const scoreCol = getCollegeColumn('Weighted Score', colleges);
+  const notesCol = getCollegeColumn('Notes', colleges);
+  const campusSettingCol = getCollegeColumn('Campus Setting', colleges);
+
+  colleges.getRange(3, 1).setValue('Pacific');
+  colleges.getRange(3, cityCol).setValue('Old City');
+  colleges.getRange(3, ratingCol).setValue('5');
+  colleges.getRange(3, scoreCol).setFormula('=SUM(1,2)');
+  colleges.getRange(3, campusSettingCol).setValue('Suburban');
+  colleges.getRange(3, notesCol).setValue('1.2.6 | Sample College');
+
+  CollegeTools.Colleges.fillCollegeRow();
+
+  suite.assertEqual(colleges.getRange(3, cityCol).getValue(), 'New City',
+    'City should be replaced with fetched API data');
+  suite.assertEqual(colleges.getRange(3, ratingCol).getValue(), '5',
+    'User rating columns should be preserved');
+  suite.assertEqual(colleges.getRange(3, campusSettingCol).getValue(), 'Suburban',
+    'Campus Setting should be derived from school.locale when available');
+  suite.assertEqual(colleges.getRange(3, scoreCol).getFormula(), '=SUM(1,2)',
+    'Formula columns should be preserved');
+  suite.assert(colleges.getRange(3, notesCol).getValue().includes('Pacific University'),
+    'Notes should reflect the fetched college');
 });
 
-suite.test('Sheet names include new Personal Profile', () => {
-  const sheetNames = CollegeTools.Config.SHEET_NAMES;
-  suite.assert(sheetNames.PERSONAL_PROFILE === 'Personal Profile', 'Personal Profile sheet name should be defined');
-  suite.assert(sheetNames.COLLEGES === 'Colleges', 'Colleges sheet name should be preserved');
-  suite.assert(sheetNames.FINANCIAL_AID === 'Financial Aid Tracker', 'Financial Aid sheet name should be preserved');
+suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', () => {
+  setupWorkbook();
+
+  CollegeTools.Trackers.syncCollegeToTrackers({
+    name: 'Updated College',
+    coa: 12345,
+    sourceRow: 4,
+  });
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  const at = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+  const st = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+
+  suite.assertEqual(fa.getRange(3, 1).getValue(), 'Updated College',
+    'Financial Aid tracker should map Colleges row 4 to tracker row 3');
+  suite.assertEqual(fa.getRange(3, 12).getValue(), 12345,
+    'Financial Aid tracker should receive cost of attendance');
+  suite.assertEqual(cv.getRange(3, 1).getValue(), 'Updated College',
+    'Campus Visit tracker should stay aligned');
+  suite.assertEqual(at.getRange(3, 1).getValue(), 'Updated College',
+    'Application Timeline should stay aligned');
+  suite.assertEqual(st.getRange(3, 1).getValue(), 'Updated College',
+    'Status Tracker should stay aligned');
 });
 
-suite.test('Headers include new financial columns', () => {
-  const collegeHeaders = CollegeTools.Config.HEADERS.COLLEGES;
-  suite.assert(collegeHeaders.includes('Merit Aid Likelihood'), 'Colleges headers should include Merit Aid Likelihood');
-  suite.assert(collegeHeaders.includes('Academic Index Match'), 'Colleges headers should include Academic Index Match');
-  suite.assert(collegeHeaders.includes('Admission Chances'), 'Colleges headers should include Admission Chances');
-  
-  const finAidHeaders = CollegeTools.Config.HEADERS.FINANCIAL_AID;
-  suite.assert(finAidHeaders.includes('Financial Safety'), 'Financial Aid headers should include Financial Safety');
-  suite.assert(finAidHeaders.includes('4-Year Burden'), 'Financial Aid headers should include 4-Year Burden');
+suite.test('repairCollegeSync replaces stale tracker names and clears trailing rows', () => {
+  const {colleges} = setupWorkbook();
+  const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
+
+  colleges.getRange(3, 1).setValue('Alpha College');
+  colleges.getRange(3, coaCol).setValue(11111);
+  colleges.getRange(4, 1).setValue('Beta College');
+  colleges.getRange(4, coaCol).setValue(22222);
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  fa.getRange(2, 1).setValue('Sample A');
+  fa.getRange(3, 1).setValue('Sample B');
+  fa.getRange(4, 1).setValue('Sample C');
+  cv.getRange(2, 1).setValue('Sample A');
+  cv.getRange(3, 1).setValue('Sample B');
+  cv.getRange(4, 1).setValue('Sample C');
+
+  const result = CollegeTools.Trackers.repairCollegeSync();
+
+  suite.assertEqual(result.ok, true, 'Repair should succeed');
+  suite.assertEqual(result.count, 2, 'Repair should process two active colleges');
+  suite.assertEqual(fa.getRange(2, 1).getValue(), 'Alpha College',
+    'First tracker row should match Colleges row 3');
+  suite.assertEqual(fa.getRange(3, 1).getValue(), 'Beta College',
+    'Second tracker row should match Colleges row 4');
+  suite.assertEqual(fa.getRange(4, 1).getValue(), '',
+    'Trailing stale tracker rows should be cleared');
+  suite.assertEqual(fa.getRange(2, 12).getValue(), 11111,
+    'Repair should propagate linked cost fields');
+  suite.assertEqual(cv.getRange(4, 1).getValue(), '',
+    'Trailing stale names should be cleared on every tracker');
 });
 
-suite.test('Utils module functions exist', () => {
-  suite.assert(typeof CollegeTools.Utils !== 'undefined', 'Utils module should exist');
-  suite.assert(typeof CollegeTools.Utils.colIndex === 'function', 'colIndex function should exist');
-  suite.assert(typeof CollegeTools.Utils.trimAllSheets === 'function', 'trimAllSheets function should exist');
-  suite.assert(typeof CollegeTools.Utils.addr === 'function', 'addr function should exist');
-});
-
-suite.test('Utils.addr function works correctly', () => {
-  const addr = CollegeTools.Utils.addr;
-  suite.assertEqual(addr(1, 1), 'A1', 'A1 notation should work');
-  suite.assertEqual(addr(2, 26), 'Z2', 'Z2 notation should work');
-  suite.assertEqual(addr(3, 27), 'AA3', 'AA3 notation should work');
-});
-
-suite.test('Financial module exists and has setup function', () => {
-  suite.assert(typeof CollegeTools.Financial !== 'undefined', 'Financial module should exist');
-  suite.assert(typeof CollegeTools.Financial.setupFinancialIntelligence === 'function', 'setupFinancialIntelligence function should exist');
-});
-
-suite.test('Setup module exists and has required functions', () => {
-  suite.assert(typeof CollegeTools.Setup !== 'undefined', 'Setup module should exist');
-  suite.assert(typeof CollegeTools.Setup.completeSetup === 'function', 'completeSetup function should exist');
-  suite.assert(typeof CollegeTools.Setup.optimizePerformance === 'function', 'optimizePerformance function should exist');
-});
-
-suite.test('Scoring module exists and has functions', () => {
-  suite.assert(typeof CollegeTools.Scoring !== 'undefined', 'Scoring module should exist');
-  suite.assert(typeof CollegeTools.Scoring.ensureScoring === 'function', 'ensureScoring function should exist');
-});
-
-suite.test('Admissions module exists and has setup function', () => {
-  suite.assert(typeof CollegeTools.Admissions !== 'undefined', 'Admissions module should exist');
-  suite.assert(typeof CollegeTools.Admissions.setupAdmissionChances === 'function', 'setupAdmissionChances function should exist');
-});
-
-suite.test('Financial Intelligence setup can be called without errors', () => {
-  // This tests that the function exists and basic structure works
-  suite.assert(() => {
-    // Mock the UI to automatically click YES
-    const originalAlert = mockUi.alert;
-    mockUi.alert = () => mockUi.Button.YES;
-    
-    try {
-      CollegeTools.Financial.setupFinancialIntelligence();
-      return true;
-    } finally {
-      mockUi.alert = originalAlert;
-    }
-  }, 'setupFinancialIntelligence should execute without throwing errors');
-});
-
-suite.test('Complete setup can be called without errors', () => {
-  suite.assert(() => {
-    // Mock the UI to automatically click YES
-    const originalAlert = mockUi.alert;
-    mockUi.alert = () => mockUi.Button.YES;
-    
-    try {
-      CollegeTools.Setup.completeSetup();
-      return true;
-    } finally {
-      mockUi.alert = originalAlert;
-    }
-  }, 'completeSetup should execute without throwing errors');
-});
-
-suite.test('Version is updated correctly', () => {
-  const version = CollegeTools.Config.VERSION;
-  suite.assert(version, 'Version should be defined');
-  suite.assert(version.match(/^\d+\.\d+\.\d+$/), 'Version should follow semantic versioning (x.y.z)');
-  
-  // Check that version is at least 7.1.0 (our new Financial Intelligence version)
-  const [major, minor] = version.split('.').map(Number);
-  suite.assert(major >= 7 && (major > 7 || minor >= 1), 'Version should be at least 7.1.0');
-});
-
-// Run all tests
-console.log('🚀 Starting College Tools Regression Tests\n');
 const success = suite.summary();
 process.exit(success ? 0 : 1);

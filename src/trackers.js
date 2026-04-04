@@ -352,13 +352,18 @@ CollegeTools.Trackers = (function() {
   /**
    * Re-syncs all tracker tabs from the canonical Colleges sheet ordering.
    * This repairs stale sample/template names in existing downloaded spreadsheets.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress user alerts
    * @return {Object} Summary object with processed row count
    */
-  function repairCollegeSync() {
+  function repairCollegeSync(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
     var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (!collegesSheet) {
-      SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
+      if (!opts.suppressAlert) {
+        SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
+      }
       return {ok: false, count: 0};
     }
 
@@ -366,18 +371,22 @@ CollegeTools.Trackers = (function() {
     var processed = 0;
 
     if (lastRow < 3) {
-      SpreadsheetApp.getUi().alert(
-        'Tracker Sync Repaired',
-        'No data rows found in the Colleges sheet.',
-        SpreadsheetApp.getUi().ButtonSet.OK,
-      );
+      if (!opts.suppressAlert) {
+        SpreadsheetApp.getUi().alert(
+          'Tracker Sync Repaired',
+          'No data rows found in the Colleges sheet.',
+          SpreadsheetApp.getUi().ButtonSet.OK,
+        );
+      }
       return {ok: true, count: 0};
     }
 
     // Read all header and data in two bulk reads instead of per-row calls
     var lastCol = collegesSheet.getLastColumn();
     var hdrs = collegesSheet.getRange(2, 1, 1, lastCol).getValues()[0]
-      .map(function(x) { return (x || '').toString().trim(); });
+      .map(function(x) {
+        return (x || '').toString().trim();
+      });
     var coaIdx = hdrs.indexOf('Total Cost of Attendance');
     var data = collegesSheet.getRange(3, 1, lastRow - 2, lastCol).getValues();
 
@@ -402,12 +411,14 @@ CollegeTools.Trackers = (function() {
     clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER),
       firstClearRow, ['College Name']);
 
-    SpreadsheetApp.getUi().alert(
-      'Tracker Sync Repaired',
-      'Re-synced tracker college lists from the Colleges sheet.\n\n' +
-      'Updated rows: ' + processed,
-      SpreadsheetApp.getUi().ButtonSet.OK,
-    );
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert(
+        'Tracker Sync Repaired',
+        'Re-synced tracker college lists from the Colleges sheet.\n\n' +
+        'Updated rows: ' + processed,
+        SpreadsheetApp.getUi().ButtonSet.OK,
+      );
+    }
 
     return {ok: true, count: processed};
   }

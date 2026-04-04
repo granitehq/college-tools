@@ -48,7 +48,7 @@ CollegeTools.Config = (function() {
 
   // College Scorecard API field mappings
   var API_FIELDS = [
-    'id', 'school.name', 'school.city', 'school.state', 'school.ownership', 'school.school_url',
+    'id', 'school.name', 'school.city', 'school.state', 'school.ownership', 'school.school_url', 'school.locale',
     'latest.admissions.admission_rate.overall',
     'latest.student.retention_rate.four_year.full_time',
     'latest.completion.rate_suppressed.overall',
@@ -84,7 +84,8 @@ CollegeTools.Config = (function() {
       'Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)',
       'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
       'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
-      'Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match', 'Merit Aid Likelihood', 'Notes',
+      'Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match',
+      'Merit Aid Likelihood', 'Campus Setting', 'Notes',
     ],
 
     FINANCIAL_AID: [
