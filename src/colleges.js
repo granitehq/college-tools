@@ -100,20 +100,20 @@ CollegeTools.Colleges = (function() {
    * Displays the current version of College Tools in an alert dialog.
    */
   function showVersion() {
-    var versionInfo = 'College Tools Version Information\\n\\n';
-    versionInfo += '📊 Version: ' + CollegeTools.Config.VERSION + '\\n';
-    versionInfo += '🔧 Runtime: Google Apps Script V8\\n';
-    versionInfo += '🌐 API: College Scorecard (api.data.gov)\\n\\n';
+    var versionInfo = 'College Tools Version Information\n\n';
+    versionInfo += '📊 Version: ' + CollegeTools.Config.VERSION + '\n';
+    versionInfo += '🔧 Runtime: Google Apps Script V8\n';
+    versionInfo += '🌐 API: College Scorecard (api.data.gov)\n\n';
 
-    versionInfo += '✨ Key Features:\\n';
-    versionInfo += '• College data auto-fill from official sources\\n';
-    versionInfo += '• Financial intelligence with merit aid predictions\\n';
-    versionInfo += '• Application tracking with 5 specialized sheets\\n';
-    versionInfo += '• Admission chances calculator\\n';
-    versionInfo += '• Comprehensive dashboard and analytics\\n\\n';
+    versionInfo += '✨ Key Features:\n';
+    versionInfo += '• College data auto-fill from official sources\n';
+    versionInfo += '• Financial intelligence with merit aid predictions\n';
+    versionInfo += '• Application tracking with 5 specialized sheets\n';
+    versionInfo += '• Admission chances calculator\n';
+    versionInfo += '• Comprehensive dashboard and analytics\n\n';
 
-    versionInfo += '🔒 Security: Minimal OAuth scopes, input validation\\n';
-    versionInfo += '⚡ Performance: Batch operations, API caching\\n\\n';
+    versionInfo += '🔒 Security: Minimal OAuth scopes, input validation\n';
+    versionInfo += '⚡ Performance: Batch operations, API caching\n\n';
 
     versionInfo += 'Need help? Check the Instructions sheet!';
 
@@ -635,10 +635,10 @@ CollegeTools.Colleges = (function() {
       }
     }
 
-    var quotaMessage = quotaExceeded ? '\\n⚠️ Stopped due to quota/time limits.' : '';
+    var quotaMessage = quotaExceeded ? '\n⚠️ Stopped due to quota/time limits.' : '';
 
     SpreadsheetApp.getUi().alert('Batch fill complete.' + quotaMessage +
-      '\\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed);
+      '\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed);
   }
 
   // Public API

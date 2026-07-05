@@ -48,7 +48,7 @@ CollegeTools.Lookup = (function() {
     // Prompt for search query
     var resp = ui.prompt(
       'Search College Names',
-      'Enter a keyword (e.g., unh, new hampshire, georgia tech)\\nOptionally add a state after a comma (e.g., unh, NH)',
+      'Enter a keyword (e.g., unh, new hampshire, georgia tech)\nOptionally add a state after a comma (e.g., unh, NH)',
       ui.ButtonSet.OK_CANCEL,
     );
 
@@ -72,7 +72,7 @@ CollegeTools.Lookup = (function() {
     var searchResult = CollegeTools.Scorecard.searchColleges(query, state);
 
     if (!searchResult.ok || !searchResult.results.length) {
-      ui.alert('No matches found or API error.\\nDetails: ' + (searchResult.notes || searchResult.error || 'Unknown error'));
+      ui.alert('No matches found or API error.\nDetails: ' + (searchResult.notes || searchResult.error || 'Unknown error'));
       return;
     }
 
@@ -84,7 +84,7 @@ CollegeTools.Lookup = (function() {
     lookup.getRange(1, 1, 1, rows[0].length).setFontWeight('bold').setBackground('#e8f0fe');
     for (var c=1; c<=rows[0].length; c++) lookup.autoResizeColumn(c);
 
-    ui.alert('Found ' + (rows.length-1) + ' match(es) [' + searchResult.notes + '].\\nSee the "' +
+    ui.alert('Found ' + (rows.length-1) + ' match(es) [' + searchResult.notes + '].\nSee the "' +
              CollegeTools.Config.SHEET_NAMES.LOOKUP + '" sheet and copy the Official Name into ' +
              CollegeTools.Config.SHEET_NAMES.COLLEGES + ' → College Name.');
   }
