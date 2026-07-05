@@ -119,8 +119,9 @@ CollegeTools.Trackers = (function() {
     }
 
     if (fourYearCol && oopCol) {
+      // Four years of cost with 3% annual increases: year1 + year2 + year3 + year4
       var fourYearFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, oopCol) +
-                           '*(1+0.03+0.03^2+0.03^3), "")';
+                           '*(1+1.03+1.03^2+1.03^3), "")';
       sh.getRange(r2, fourYearCol).setFormula(fourYearFormula);
     }
 
