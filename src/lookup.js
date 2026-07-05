@@ -1,6 +1,6 @@
 /**
  * College search and lookup functionality
- * @version 2.0.1
+ * @version 2.0.2
  * @author College Tools
  * @description College name searching and results display in Lookup sheet
  */
