@@ -32,8 +32,7 @@ On re-fill, the row is cleared first then API data is written back. What survive
 - `College Name`
 - User rating columns (`Program Fit` through `Personal Priority`)
 - Formula columns (`Weighted Score`, `Value Score`, `Admission Chances`, `Academic Index Match`, `Merit Aid Likelihood`)
-
-What gets overwritten: **`Notes`** — replaced with version info and matched school name. User-entered notes are lost on re-fill.
+- `Notes` — but only when it holds user-entered text. Empty cells and prior auto-stamps (`"1.2.3 | ..."` pattern) are refreshed with version info and matched school name.
 
 ## Other Known Risks
 

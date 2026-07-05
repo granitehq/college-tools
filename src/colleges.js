@@ -43,7 +43,23 @@ CollegeTools.Colleges = (function() {
     'Admission Chances': true,
     'Academic Index Match': true,
     'Merit Aid Likelihood': true,
+    // Preserved so the auto-stamp check in fillCollegeRowCore can decide:
+    // user-entered notes survive a re-fill, auto-stamps get refreshed.
+    'Notes': true,
   };
+
+  /**
+   * Returns whether a Notes cell holds no user content — either empty or a
+   * prior auto-stamp written by fillCollegeRowCore (e.g. "1.2.3 | School Name"
+   * or "1.2.3 | no match for ...").
+   * @param {string} notes - Current Notes cell value
+   * @returns {boolean} True if the cell may be overwritten
+   * @private
+   */
+  function isAutoStampNotes_(notes) {
+    var trimmed = (notes || '').toString().trim();
+    return !trimmed || /^\d+\.\d+\.\d+\s*\|/.test(trimmed);
+  }
 
   /**
    * Returns whether a Colleges header should be preserved when refreshing a row.
@@ -302,7 +318,10 @@ CollegeTools.Colleges = (function() {
     // Fetch college data via API
     var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName);
     if (!apiResult.ok) {
-      sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + apiResult.error);
+      // Don't clobber user-entered notes with the error message
+      if (isAutoStampNotes_(sh.getRange(row, COL.NOTES).getValue())) {
+        sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + apiResult.error);
+      }
       if (!suppressAlert) SpreadsheetApp.getUi().alert('No match for "' + sanitizedName + '". See Notes.');
       return {ok: false, msg: 'no match'};
     }
@@ -377,9 +396,7 @@ CollegeTools.Colleges = (function() {
     });
     // Only overwrite Notes when it is empty or still holds a prior auto-stamp
     // (auto-stamps look like "1.2.3 | School Name"). User-entered notes are preserved.
-    var existingNotes = (sh.getRange(row, COL.NOTES).getValue() || '').toString().trim();
-    var isAutoStamp = !existingNotes || /^\d+\.\d+\.\d+\s*\|/.test(existingNotes);
-    if (isAutoStamp) {
+    if (isAutoStampNotes_(sh.getRange(row, COL.NOTES).getValue())) {
       sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + (usedName||name));
     }
 
