@@ -583,8 +583,8 @@ CollegeTools.Colleges = (function() {
       HEADERS: hdrs,
     };
 
-    // Process each row with enhanced quota management
-    var ok=0; var skipped=0; var failed=0; var quotaExceeded=false;
+    // Process each row, stopping early if we approach the execution time limit
+    var ok=0; var skipped=0; var failed=0; var timeLimitExceeded=false;
     var startTime = new Date().getTime();
 
     for (var i=0; i<list.length; i++) {
@@ -597,6 +597,7 @@ CollegeTools.Colleges = (function() {
       // Check execution time limit before processing each row
       var elapsed = new Date().getTime() - startTime;
       if (elapsed > CollegeTools.Config.API_CONFIG.EXECUTION_TIME_LIMIT) {
+        timeLimitExceeded = true;
         SpreadsheetApp.getUi().alert('Stopping batch processing due to execution time limit. ' +
           'Processed ' + (i) + ' of ' + list.length + ' rows.');
         break;
@@ -611,19 +612,9 @@ CollegeTools.Colleges = (function() {
           ok++;
         } else {
           failed++;
-          // Check if failure was due to quota limits
-          if (res.msg && res.msg.includes('quota')) {
-            quotaExceeded = true;
-            break;
-          }
         }
       } catch (e) {
         failed++;
-        // Check if exception was due to quota limits
-        if (e.toString().includes('quota')) {
-          quotaExceeded = true;
-          break;
-        }
       }
 
       // Use configured batch delay
@@ -632,9 +623,9 @@ CollegeTools.Colleges = (function() {
       }
     }
 
-    var quotaMessage = quotaExceeded ? '\n⚠️ Stopped due to quota/time limits.' : '';
+    var timeLimitMessage = timeLimitExceeded ? '\n⚠️ Stopped due to execution time limit.' : '';
 
-    SpreadsheetApp.getUi().alert('Batch fill complete.' + quotaMessage +
+    SpreadsheetApp.getUi().alert('Batch fill complete.' + timeLimitMessage +
       '\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed);
   }
 

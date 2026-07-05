@@ -40,7 +40,6 @@ CollegeTools.Config = (function() {
     RETRY_DELAY_BASE: 300, // Base delay in ms for exponential backoff
     RETRY_DELAY_MAX: 10000, // Maximum delay in ms
     CACHE_DURATION: 600, // Cache duration in seconds (10 minutes)
-    DAILY_QUOTA_LIMIT: 1000, // Conservative daily API quota limit
     BATCH_DELAY: 200, // Delay between batch requests in ms
     EXECUTION_TIME_LIMIT: 300000, // 5 minutes in ms (conservative under 6min limit)
   };

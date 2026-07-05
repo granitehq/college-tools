@@ -2,48 +2,25 @@
  * College Scorecard API client with hardening features
  * @version 2.5.0
  * @author College Tools
- * @description Hardened API client with retry logic, caching, and quota management
+ * @description Hardened API client with retry logic, caching, and an execution-time guard
  */
 
 /**
  * CollegeTools.Scorecard - Hardened API client module
- * Features: exponential backoff, caching, quota management, timeouts
+ * Features: exponential backoff, caching, execution-time guard
  */
 var CollegeTools = CollegeTools || {};
 CollegeTools.Scorecard = (function() {
   'use strict';
 
-  var QUOTA_PROPERTY_KEY = 'scorecard_quota_usage';
-
-  // Private state for quota tracking. dailyUsage is persisted in
-  // ScriptProperties because Apps Script executions do not share memory —
-  // an in-memory counter alone would reset on every menu invocation and
-  // never enforce the daily limit.
-  var quotaState = {
-    dailyUsage: null, // Lazily loaded from ScriptProperties
-    executionStartTime: null,
+  // Tracks when the current fill/search operation started so long-running
+  // batches stop before hitting the Apps Script execution limit. A family
+  // fills 20-60 rows against an API allowing 1,000 requests/hour, so no
+  // daily quota accounting is needed here -- the batch loop in colleges.js
+  // already stops itself well before Apps Script's own execution ceiling.
+  var executionState = {
+    startTime: null,
   };
-
-  /**
-   * Loads today's persisted quota usage into quotaState (once per execution).
-   * Usage recorded on a previous day resets to zero.
-   * @private
-   */
-  function loadDailyQuota() {
-    if (quotaState.dailyUsage !== null) return;
-    quotaState.dailyUsage = 0;
-    try {
-      var stored = PropertiesService.getScriptProperties().getProperty(QUOTA_PROPERTY_KEY);
-      if (stored) {
-        var parsed = JSON.parse(stored);
-        if (parsed && parsed.date === new Date().toDateString()) {
-          quotaState.dailyUsage = Number(parsed.count) || 0;
-        }
-      }
-    } catch (e) {
-      // Property read failed — fall back to counting this execution only
-    }
-  }
 
   /**
    * Checks if we're approaching execution time limits
@@ -51,45 +28,13 @@ CollegeTools.Scorecard = (function() {
    * @private
    */
   function checkExecutionTimeLimit() {
-    if (!quotaState.executionStartTime) {
-      quotaState.executionStartTime = new Date().getTime();
+    if (!executionState.startTime) {
+      executionState.startTime = new Date().getTime();
       return true;
     }
 
-    var elapsed = new Date().getTime() - quotaState.executionStartTime;
+    var elapsed = new Date().getTime() - executionState.startTime;
     return elapsed < CollegeTools.Config.API_CONFIG.EXECUTION_TIME_LIMIT;
-  }
-
-  /**
-   * Checks if we can make another API call within quota limits
-   * @returns {boolean} True if within limits, false otherwise
-   * @private
-   */
-  function checkQuotaLimits() {
-    loadDailyQuota();
-
-    if (quotaState.dailyUsage >= CollegeTools.Config.API_CONFIG.DAILY_QUOTA_LIMIT) {
-      return false;
-    }
-
-    return checkExecutionTimeLimit();
-  }
-
-  /**
-   * Increments quota usage counter and persists it across executions
-   * @private
-   */
-  function incrementQuotaUsage() {
-    loadDailyQuota();
-    quotaState.dailyUsage++;
-    try {
-      PropertiesService.getScriptProperties().setProperty(QUOTA_PROPERTY_KEY, JSON.stringify({
-        date: new Date().toDateString(),
-        count: quotaState.dailyUsage,
-      }));
-    } catch (e) {
-      // Persistence failed — in-memory count still limits this execution
-    }
   }
 
   /**
@@ -222,7 +167,7 @@ CollegeTools.Scorecard = (function() {
   }
 
   /**
-   * Fetches JSON data from a URL with retry logic, caching, and quota management
+   * Fetches JSON data from a URL with retry logic, caching, and an execution-time guard
    * @param {string} url - URL to fetch
    * @param {Object} options - Options object
    * @param {boolean} options.useCache - Whether to use caching (default: true for searches)
@@ -249,18 +194,17 @@ CollegeTools.Scorecard = (function() {
       }
     }
 
-    // Check quota limits before making API call
-    if (!checkQuotaLimits()) {
+    // Check execution time limit before making API call
+    if (!checkExecutionTimeLimit()) {
       return {
         ok: false,
-        error: 'API quota limit reached or execution time limit approaching',
+        error: 'Execution time limit approaching',
       };
     }
 
     // Attempt API call with retries
     for (var attempt = 0; attempt < maxRetries; attempt++) {
       var response = makeHttpRequest(url);
-      incrementQuotaUsage();
 
       if (response.success) {
         try {
@@ -383,7 +327,7 @@ CollegeTools.Scorecard = (function() {
     }
 
     // Reset execution timer for new operation
-    quotaState.executionStartTime = new Date().getTime();
+    executionState.startTime = new Date().getTime();
 
     // Shared request pieces
     var baseParams = {
@@ -431,9 +375,9 @@ CollegeTools.Scorecard = (function() {
         break;
       } else {
         notes.push(attempts[a].label + ':' + (response.statusCode || 'err'));
-        if (response.error && response.error.includes('quota')) {
-          notes.push('quota_limit');
-          break; // Don't continue if we hit quota limits
+        if (response.error && response.error.includes('time limit')) {
+          notes.push('time_limit');
+          break; // Don't continue if we're approaching the execution limit
         }
       }
     }
@@ -442,7 +386,6 @@ CollegeTools.Scorecard = (function() {
       ok: results.length > 0,
       results: results,
       notes: notes.join(' | '),
-      quotaUsed: quotaState.dailyUsage,
     };
   }
 
@@ -457,11 +400,11 @@ CollegeTools.Scorecard = (function() {
       return {ok: false, error: 'API key not found'};
     }
 
-    // Check quota before proceeding
-    if (!checkQuotaLimits()) {
+    // Check execution time limit before proceeding
+    if (!checkExecutionTimeLimit()) {
       return {
         ok: false,
-        error: 'API quota limit reached or execution time limit approaching',
+        error: 'Execution time limit approaching',
       };
     }
 
@@ -489,8 +432,8 @@ CollegeTools.Scorecard = (function() {
       noteBits.push('exact:' + (r1.statusCode || 'err'));
     }
 
-    // Regex fallback if no results and quota allows
-    if (!results.length && checkQuotaLimits()) {
+    // Regex fallback if no results and time allows
+    if (!results.length && checkExecutionTimeLimit()) {
       var q2 = JSON.parse(JSON.stringify(baseParams));
       q2['school.name'] = '~.*' + CollegeTools.Utils.escapeRegex(collegeName) + '.*';
       var url2 = buildUrl(q2);
@@ -515,7 +458,6 @@ CollegeTools.Scorecard = (function() {
       ok: true,
       data: results[0],
       notes: noteBits.join(' | '),
-      quotaUsed: quotaState.dailyUsage,
     };
   }
 
