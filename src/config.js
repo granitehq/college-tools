@@ -101,16 +101,10 @@ CollegeTools.Config = (function() {
     ],
 
     CAMPUS_VISIT: [
-      'College Name', 'Visit Date', 'Visit Type (In-Person/Virtual/College Fair)', 'Registration Confirmation #',
-      'Questions Prepared', 'Departments to Visit', 'People to Meet',
-      'Tour Guide Name', 'Tour Quality (1-10)', 'Info Session Presenter', 'Info Session Quality (1-10)', 'Admissions Officer Met',
-      'Classes Attended', 'Professor Names/Subjects', 'Current Students Met', 'Student Names/Majors',
-      'Dining Halls Visited', 'Dorms Toured', 'Athletic Facilities Seen', 'Library Visited', 'Student Center Visited',
-      'Campus Beauty (1-10)', 'Facilities Quality (1-10)', 'Student Happiness (1-10)',
-      'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
-      'Pros', 'Cons', 'Surprises', 'Concerns', 'Best Feature', 'Worst Feature',
-      'Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested', 'Next Steps',
-      'Visit Score',
+      'College Name', 'Visit Date', 'Visit Type (In-Person/Virtual/College Fair)', 'People Met',
+      'Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
+      'Pros', 'Cons', 'Concerns', 'Follow-Up Needed', 'Next Steps',
+      'Visit Score', 'Notes',
     ],
 
     APPLICATION_TIMELINE: [
@@ -143,6 +137,8 @@ CollegeTools.Config = (function() {
   };
 
   // Default scoring weights
+  // Weights only for college ratings — Campus Visit ratings use a plain
+  // average (see CollegeTools.Scoring), so they carry no weight entries.
   var DEFAULT_WEIGHTS = [
     ['Program Fit (1-5)', 2],
     ['Academic Reputation (1-5)', 1.5],
@@ -152,14 +148,6 @@ CollegeTools.Config = (function() {
     ['Weather Fit (1-5)', 0.5],
     ['Clubs/Activities (1-5)', 1],
     ['Personal Priority (1-5)', 2],
-    ['Tour Quality (1-10)', 1],
-    ['Info Session Quality (1-10)', 1],
-    ['Campus Beauty (1-10)', 1],
-    ['Facilities Quality (1-10)', 1],
-    ['Student Happiness (1-10)', 1],
-    ['Academic Vibe (1-10)', 1],
-    ['Social Atmosphere (1-10)', 1],
-    ['Overall Gut Feeling (1-10)', 1],
   ];
 
   // Public API

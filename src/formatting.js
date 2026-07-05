@@ -193,17 +193,13 @@ CollegeTools.Formatting = (function() {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
       validateListFromRange(cv, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
       validateDate(cv, 'Visit Date');
-      ['Tour Quality (1-10)', 'Info Session Quality (1-10)', 'Campus Beauty (1-10)', 'Facilities Quality (1-10)',
-        'Student Happiness (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
+      ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
         .forEach(function(h) {
           formatNumber(cv, h, '0');
         });
       validateList(cv, 'Visit Type (In-Person/Virtual/College Fair)',
         ['In-Person', 'Virtual', 'College Fair', 'Regional Event', 'Other']);
-      ['Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested']
-        .forEach(function(h) {
-          validateList(cv, h, ['Y', 'N']);
-        });
+      validateList(cv, 'Follow-Up Needed', ['Y', 'N']);
     }
 
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);

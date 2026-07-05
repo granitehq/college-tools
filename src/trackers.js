@@ -269,14 +269,11 @@ CollegeTools.Trackers = (function() {
     CollegeTools.Formatting.validateDate(sh, 'Visit Date');
     CollegeTools.Formatting.validateList(sh, 'Visit Type (In-Person/Virtual/College Fair)',
       ['In-Person', 'Virtual', 'College Fair', 'Regional Event']);
-    CollegeTools.Formatting.validateList(sh, 'Tour Quality (1-10)',
-      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
-    CollegeTools.Formatting.validateList(sh, 'Info Session Quality (1-10)',
-      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
-    ['Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested']
+    ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)']
       .forEach(function(h) {
-        CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
+        CollegeTools.Formatting.validateList(sh, h, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
       });
+    CollegeTools.Formatting.validateList(sh, 'Follow-Up Needed', ['Y', 'N']);
   }
 
   /**

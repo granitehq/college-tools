@@ -102,36 +102,36 @@ CollegeTools.Scoring = (function() {
       }
     }
 
-    // Campus Visit → Visit Score (weighted average of 1–10 ratings)
+    // Campus Visit → Visit Score (plain average of the 1-10 ratings; visit
+    // ratings don't carry the family-priority weighting that college
+    // ratings do, so a straight average loses nothing and needs no Weights
+    // sheet entries)
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
       var ratings = [
-        'Tour Quality (1-10)', 'Info Session Quality (1-10)', 'Campus Beauty (1-10)',
-        'Facilities Quality (1-10)', 'Student Happiness (1-10)', 'Academic Vibe (1-10)',
+        'Campus & Facilities (1-10)', 'Academic Vibe (1-10)',
         'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
       ];
       var cVisitScore = CollegeTools.Utils.colIndex(cv, 'Visit Score');
 
       if (cVisitScore) {
-        var rStart2 = 2; var rEnd2 = Math.max(2, cv.getLastRow());
-        for (var r2=rStart2; r2<=rEnd2; r2++) {
-          var num2 = []; var den2 = [];
-          ratings.forEach(function(header) {
-            var c = CollegeTools.Utils.colIndex(cv, header);
-            if (!c) return;
-            var cell = CollegeTools.Utils.addr(r2, c);
-            var weightLookup = 'IFERROR(VLOOKUP("' + header + '",' +
-                              CollegeTools.Config.SHEET_NAMES.WEIGHTS + '!A:B,2,false),0)';
-            num2.push('IFERROR(' + cell + ',0)*' + weightLookup);
-            // Exclude unrated criteria so blanks don't drag the score down
-            den2.push('IF(' + cell + '="",0,' + weightLookup + ')');
-          });
+        var ratingCols = ratings
+          .map(function(header) {
+            return CollegeTools.Utils.colIndex(cv, header);
+          })
+          .filter(Boolean);
 
-          var formula = '=IF(COUNTA(A' + r2 + ')=0,"",IFERROR((' +
-                       num2.join('+') + ')/(' + den2.join('+') + '), ""))';
-          cv.getRange(r2, cVisitScore).setFormula(formula);
+        if (ratingCols.length) {
+          var rStart2 = 2; var rEnd2 = Math.max(2, cv.getLastRow());
+          for (var r2 = rStart2; r2 <= rEnd2; r2++) {
+            var cells = ratingCols.map(function(c) {
+              return CollegeTools.Utils.addr(r2, c);
+            });
+            var formula = '=IF(COUNTA(A' + r2 + ')=0,"",IFERROR(AVERAGE(' + cells.join(',') + '), ""))';
+            cv.getRange(r2, cVisitScore).setFormula(formula);
+          }
+          CollegeTools.Formatting.formatNumber(cv, 'Visit Score', '0.00');
         }
-        CollegeTools.Formatting.formatNumber(cv, 'Visit Score', '0.00');
       }
     }
 
