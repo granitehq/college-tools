@@ -140,8 +140,8 @@ CollegeTools.Setup = (function() {
       var formattingResult = CollegeTools.Formatting.repairValidationsAndFormatting({suppressAlert: true});
       var regionResult = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
 
-      // Rebuild scoring formulas so Value Score normalization picks up
-      // current min/max (constants are baked in at formula-build time).
+      // Rebuild scoring formulas so newly added colleges pick up
+      // Weighted Score, not just pre-existing rows.
       CollegeTools.Scoring.ensureScoring({suppressAlert: true});
 
       if (SpreadsheetApp.getActive().getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD)) {

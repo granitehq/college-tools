@@ -46,8 +46,8 @@ suite.test('schema declares ownership boundaries for preservation-sensitive colu
     'Program Fit should be user-owned');
   suite.assert(CollegeTools.Schema.isFormulaColumn('COLLEGES', 'WEIGHTED_SCORE'),
     'Weighted Score should be formula-owned');
-  suite.assert(CollegeTools.Schema.isFormulaColumn('COLLEGES', 'VALUE_SCORE'),
-    'Value Score should be formula-owned');
+  suite.assert(CollegeTools.Schema.isFormulaColumn('COLLEGES', 'ADMISSION_FIT'),
+    'Admission Fit should be formula-owned');
   suite.assert(CollegeTools.Schema.isApiColumn('COLLEGES', 'CITY'),
     'City should be API-owned');
   suite.assert(CollegeTools.Schema.isLinkedColumn('FINANCIAL_AID', 'TOTAL_COST'),

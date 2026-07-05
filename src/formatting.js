@@ -149,9 +149,7 @@ CollegeTools.Formatting = (function() {
       ['SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%'].forEach(function(h) {
         formatNumber(col, h, '0', 2);
       });
-      ['Weighted Score', 'Value Score'].forEach(function(h) {
-        formatNumber(col, h, '0.00', 2);
-      });
+      formatNumber(col, 'Weighted Score', '0.00', 2);
 
       ['Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)', 'Safety (1-5)',
         'Campus Culture Fit (1-5)', 'Weather Fit (1-5)', 'Clubs/Activities (1-5)', 'Personal Priority (1-5)']

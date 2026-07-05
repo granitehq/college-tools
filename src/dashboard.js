@@ -55,7 +55,6 @@ CollegeTools.Dashboard = (function() {
     var rTotalCost = rangeA1_('COLLEGES', 'TOTAL_COST', collegesSheet, 1000);
     var rNetPrice = rangeA1_('COLLEGES', 'NET_PRICE', collegesSheet, 1000);
     var rWeighted = rangeA1_('COLLEGES', 'WEIGHTED_SCORE', collegesSheet, 1000);
-    var rValue = rangeA1_('COLLEGES', 'VALUE_SCORE', collegesSheet, 1000);
     var rCollegeName = rangeA1_('COLLEGES', 'COLLEGE_NAME', collegesSheet, 1000);
 
     var rDocuments = rangeA1_('STATUS_TRACKER', 'DOCUMENTS_COMPLETE', statusSheet, 1000);
@@ -146,18 +145,7 @@ CollegeTools.Dashboard = (function() {
     sh.getRange(row, 1).setValue('Top Score:');
     sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('0.00');
-    row++;
-
-    sh.getRange(row, 1).setValue('Best Value (High Score/Low Cost):');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rValue) + '),' +
-      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rValue) + ',0)), "No data")');
-    row++;
-
-    sh.getRange(row, 1).setValue('Value Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rValue) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('0.00');
-    row += 3;
+    row += 2;
 
     // Section 4: Progress Tracking
     sh.getRange(row, 1).setValue('📋 Progress Tracking').setFontWeight('bold').setFontSize(14);

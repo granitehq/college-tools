@@ -31,13 +31,12 @@ Do not assume nested objects (`r.school.city` will be undefined). The `Lookup` m
 On re-fill, the row is cleared first then API data is written back. What survives:
 - `College Name`
 - User rating columns (`Program Fit` through `Personal Priority`)
-- Formula columns (`Weighted Score`, `Value Score`, `Admission Chances`, `Academic Index Match`, `Merit Aid Likelihood`)
+- Formula columns (`Weighted Score`, `Admission Fit`)
 - `Notes` — but only when it holds user-entered text. Empty cells and prior auto-stamps (`"1.2.3 | ..."` pattern) are refreshed with version info and matched school name.
 
 ## Other Known Risks
 
 - **Dashboard formulas** in `src/dashboard.js` derive column letters from `Config.HEADERS` at build time. They are frozen into the sheet until Setup/Refresh Dashboard is rerun, so header-order changes require a dashboard rebuild.
-- **Value Score normalization** in `src/scoring.js` bakes min/max constants into formulas at build time. Rerun "Ensure Scoring Formulas" or "Repair Entire Workbook" after adding colleges.
 - **Setup and formatting functions** are rerunnable but several clear or rebuild sheet contents aggressively.
 
 ## Testing
