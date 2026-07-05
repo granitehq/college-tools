@@ -55,17 +55,30 @@ CollegeTools.Admissions = (function() {
 
   /**
    * Removes prior numeric academic-index rules for this formatter.
+   * Only removes rules that both use our numeric criteria types and target the
+   * Academic Index Match column — unrelated numeric rules elsewhere on the
+   * sheet are left intact.
    * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {number} targetCol - 1-based column of Academic Index Match
    * @returns {ConditionalFormatRule[]} Filtered rules
    * @private
    */
-  function removeAcademicIndexRules_(rules) {
+  function removeAcademicIndexRules_(rules, targetCol) {
     return (rules || []).filter(function(rule) {
       try {
         var condition = rule.getBooleanCondition && rule.getBooleanCondition();
         if (!condition || !condition.getCriteriaType) return true;
         var type = String(condition.getCriteriaType());
-        return ['NUMBER_GREATER_THAN', 'NUMBER_BETWEEN', 'NUMBER_LESS_THAN'].indexOf(type) === -1;
+        if (['NUMBER_GREATER_THAN', 'NUMBER_BETWEEN', 'NUMBER_LESS_THAN'].indexOf(type) === -1) {
+          return true;
+        }
+        var ranges = rule.getRanges ? rule.getRanges() : [];
+        for (var i = 0; i < ranges.length; i++) {
+          if (ranges[i].getColumn() <= targetCol && ranges[i].getLastColumn() >= targetCol) {
+            return false; // our rule — remove it
+          }
+        }
+        return true;
       } catch (e) {
         return true;
       }
@@ -198,7 +211,7 @@ CollegeTools.Admissions = (function() {
     var range = sheet.getRange(startRow, academicIndexCol, endRow - startRow + 1, 1);
 
     // Replace only the rules owned by this module, keep unrelated rules.
-    var rules = removeAcademicIndexRules_(sheet.getConditionalFormatRules());
+    var rules = removeAcademicIndexRules_(sheet.getConditionalFormatRules(), academicIndexCol);
 
     // Rule for >100 (Overqualified) - Dark Green
     var overqualifiedRule = SpreadsheetApp.newConditionalFormatRule()
@@ -255,10 +268,12 @@ CollegeTools.Admissions = (function() {
     var rules = removeAdmissionTextRules_(sheet.getConditionalFormatRules(),
       ['Strong', 'Match', 'Reach', 'High Reach']);
 
+    // "High Reach" must precede "Reach": the first matching rule wins and
+    // "High Reach" text also contains "Reach".
+    pushTextRule_(rules, range, 'High Reach', '#f5c6cb', '#721c24');
     pushTextRule_(rules, range, 'Strong', '#d4edda', '#155724');
     pushTextRule_(rules, range, 'Match', '#fff3cd', '#856404');
     pushTextRule_(rules, range, 'Reach', '#f8d7da', '#721c24');
-    pushTextRule_(rules, range, 'High Reach', '#f5c6cb', '#721c24');
 
     sheet.setConditionalFormatRules(rules);
   }

@@ -32,6 +32,28 @@ CollegeTools.Financial = (function() {
   }
 
   /**
+   * Removes prior text-contains rules created by this module so reruns
+   * replace them instead of accumulating duplicates.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {string[]} markers - Exact text markers used by our rules
+   * @returns {ConditionalFormatRule[]} Filtered rules
+   * @private
+   */
+  function removeTextRules_(rules, markers) {
+    return (rules || []).filter(function(rule) {
+      var text = '';
+      try {
+        var boolCondition = rule.getBooleanCondition && rule.getBooleanCondition();
+        var values = boolCondition && boolCondition.getCriteriaValues && boolCondition.getCriteriaValues();
+        text = values && values.length ? String(values[0]) : '';
+      } catch (e) {
+        text = '';
+      }
+      return markers.indexOf(text) === -1;
+    });
+  }
+
+  /**
    * Creates Personal Profile sheet with essential structure only (optimized for speed).
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -287,7 +309,8 @@ CollegeTools.Financial = (function() {
       var endRow = Math.max(2, sheet.getLastRow());
       var range = sheet.getRange(startRow, safetyCol, endRow - startRow + 1, 1);
 
-      var rules = sheet.getConditionalFormatRules();
+      var rules = removeTextRules_(sheet.getConditionalFormatRules(),
+        ['🟢 Comfortable', '🟡 Manageable', '🟠 Stretch', '🔴 Reconsider']);
 
       pushTextRule_(rules, range, '🟢 Comfortable', '#d4edda', '#155724');
       pushTextRule_(rules, range, '🟡 Manageable', '#fff3cd', '#856404');
@@ -312,7 +335,7 @@ CollegeTools.Financial = (function() {
       var endRow = Math.max(3, sheet.getLastRow());
       var range = sheet.getRange(startRow, meritCol, endRow - startRow + 1, 1);
 
-      var rules = sheet.getConditionalFormatRules();
+      var rules = removeTextRules_(sheet.getConditionalFormatRules(), ['🟢', '🟡', '🔴']);
 
       pushTextRule_(rules, range, '🟢', '#d4edda', '#155724');
       pushTextRule_(rules, range, '🟡', '#fff3cd', '#856404');
