@@ -1,105 +1,70 @@
 # College Tools Website
 
-This directory contains the professional website for College Tools, built to be deployed on Cloudflare Pages at `college-tools.granite-hq.com`.
+This directory contains the static public website for College Tools, deployed on Cloudflare Pages at `college-tools.granite-hq.com`. It explains the Google Sheets application, links to the copyable template, documents setup, and hosts the privacy and terms pages.
 
-## 🚀 Quick Start
+## Quick Start
+
+Run these commands from the repository root:
 
 ```bash
-# Build the website
 npm run build
-
-# Start local development server
 npm run dev
+node docs/validate-docs.mjs
 ```
 
-Then visit http://localhost:8080
+Then visit http://localhost:8080.
 
-## 📁 Structure
+`npm run build` stamps the current git hash into website footer text. The docs site itself is plain HTML, CSS, assets, Cloudflare Pages metadata, and a small Pages Function for clean URLs.
 
-```
+## Structure
+
+```text
 docs/
 ├── index.html              # Landing page
-├── privacy.html            # Privacy policy (generated from PRIVACY.md)
-├── terms.html              # Terms of service (generated from TERMS.md)
 ├── getting-started.html    # Setup instructions
-├── screenshots.html        # Feature gallery
+├── features.html           # Feature gallery
+├── privacy.html            # Privacy policy
+├── terms.html              # Terms of service
+├── _headers                # Cloudflare Pages response headers
+├── _redirects              # Legacy redirects
+├── functions/[[path]].js   # Clean URL rewrites
+├── validate-docs.mjs       # Dependency-free static validation
 └── assets/
-    ├── css/
-    │   └── style.css       # Main stylesheet (vanilla CSS)
-    ├── js/                 # Future JavaScript files
-    ├── images/
-    │   ├── logo.svg        # College Tools logo
-    │   ├── hero.svg        # Hero section illustration
-    │   └── screenshots/    # Feature screenshots (PNG format)
-    └── favicon/
-        └── favicon.svg     # Site favicon
+    ├── css/style.css       # Main stylesheet
+    ├── favicon/            # Manifest and browser icons
+    └── images/             # Logo and feature screenshots
 ```
 
-## 🎨 Design System
+## Design System
 
-- **Colors**: Google Material Design inspired palette
-- **Typography**: Inter font family
-- **CSS**: Modern vanilla CSS with Grid/Flexbox
-- **Responsive**: Mobile-first design
-- **Performance**: Optimized for fast loading
+- Colors: Google Material inspired palette
+- Typography: Inter font family loaded from Google Fonts
+- CSS: Vanilla CSS with Grid/Flexbox
+- Responsive: Mobile-first layout
+- Analytics: Cloudflare Web Analytics beacon
 
-## 📝 Content Management
+## URL Model
 
-Website content is generated from:
-- `PRIVACY.md` → `privacy.html`
-- `TERMS.md` → `terms.html`
-- Build script templates for other pages
+Canonical public URLs are clean URLs:
 
-## 🔧 Development
+- `/`
+- `/getting-started`
+- `/features`
+- `/privacy`
+- `/terms`
 
-### Build Process
+The HTML files remain in the folder as Cloudflare Pages assets. `functions/[[path]].js` rewrites clean URLs to the matching `.html` files without changing the browser URL. Navigation should link to clean URLs to avoid duplicate public paths.
 
-The build script (`scripts/build-website.js`) converts markdown files to HTML using a consistent template and generates all necessary files.
+## Validation
 
-### Local Development
+Run the docs-specific validation before deploying:
 
-1. Run `npm run build` to generate HTML files
-2. Run `npm run dev` to start local server
-3. Edit source files and rebuild as needed
+```bash
+node docs/validate-docs.mjs
+```
 
-### Adding New Pages
+The validation checks deploy-sensitive issues: third-party-compatible headers, manifest icon references, clean internal URLs, safe new-tab links, supported structured data, and stale maintenance notes.
 
-1. Update the build script to include new page templates
-2. Add navigation links to the HTML template
-3. Rebuild and test
+## Deployment
 
-## 🚀 Deployment
-
-Ready for Cloudflare Pages deployment:
-
-1. Connect GitHub repository to Cloudflare Pages
-2. Set build directory to `/docs`
-3. Configure custom domain: `college-tools.granite-hq.com`
-4. Enable Cloudflare Analytics
-
-## 🔄 Next Steps
-
-1. **Replace placeholder images** with actual screenshots
-2. **Update contact information** in PRIVACY.md and TERMS.md
-3. **Add Cloudflare Analytics token** in build script
-4. **Take real screenshots** of College Tools features
-5. **Deploy to Cloudflare Pages**
-
-## 🎯 Features
-
-- ✅ Professional design with Google Material colors
-- ✅ Mobile responsive layout
-- ✅ Privacy policy with Cloudflare Analytics details
-- ✅ Terms of service
-- ✅ Getting started guide
-- ✅ Feature gallery (with placeholders)
-- ✅ SEO optimized with meta tags
-- ✅ Fast loading with minimal CSS/JS
-
-## 📊 Analytics
-
-Website includes Cloudflare Analytics integration:
-- Cookieless tracking
-- Privacy-compliant data collection
-- Real-time visitor insights
-- Performance monitoring
+Cloudflare Pages should serve `docs/` as the project output directory. Keep `_headers`, `_redirects`, `functions/`, `manifest.json`, `robots.txt`, and `sitemap.xml` in this folder because they are deployment inputs.
