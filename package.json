@@ -41,9 +41,10 @@
   "license": "MIT",
   "devDependencies": {
     "@google/clasp": "^3.3.0",
-    "eslint": "^8.50.0",
-    "eslint-config-google": "^0.14.0",
-    "eslint-plugin-googleappsscript": "^1.0.4"
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-jsdoc": "^63.0.11",
+    "globals": "^17.7.0"
   },
   "engines": {
     "node": ">=14.0.0"

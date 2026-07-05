@@ -49,7 +49,7 @@ function onOpen() {
 }
 
 /* ======================= ADAPTER FUNCTIONS ======================= */
-/* eslint-disable require-jsdoc, no-implicit-globals */
+/* eslint-disable jsdoc/require-jsdoc, no-implicit-globals */
 function fillCollegeRow() {
   return CollegeTools.Colleges.fillCollegeRow();
 }
@@ -82,7 +82,7 @@ function ensureScoring() {
 }
 function setupFinancialIntelligence() {
   return CollegeTools.Financial.setupFinancialIntelligence();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
+}
 function searchCollegeNames() {
   return CollegeTools.Lookup.searchCollegeNames();
 }
@@ -91,23 +91,23 @@ function fillRegionsAllRows() {
 }
 function repairCollegeSync() {
   return CollegeTools.Trackers.repairCollegeSync();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
+}
 function repairEntireWorkbook() {
   return CollegeTools.Setup.repairEntireWorkbook();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
+}
 function clearApiCache() {
   return CollegeTools.Scorecard.clearCache();
 }
 function completeSetup() {
   return CollegeTools.Setup.completeSetup();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
+}
 function optimizePerformance() {
   return CollegeTools.Setup.optimizePerformance();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
+}
 function createInstructionsSheet() {
   return CollegeTools.Instructions.createInstructionsSheet();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
+}
 function quickStart() {
   return CollegeTools.Setup.quickStart();
-} // eslint-disable-line no-unused-vars, no-implicit-globals
-/* eslint-enable require-jsdoc, no-implicit-globals */
+}
+/* eslint-enable jsdoc/require-jsdoc, no-implicit-globals */
