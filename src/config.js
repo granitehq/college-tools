@@ -1,6 +1,6 @@
 /**
  * Configuration and constants for College Tools
- * @version 2.0.2
+ * @version 2.5.0
  * @author College Tools
  * @description Central configuration module with constants, settings, and shared data
  */
@@ -14,7 +14,7 @@ CollegeTools.Config = (function() {
   'use strict';
 
   // Version information
-  var VERSION = '2.0.2';
+  var VERSION = '2.5.0';
 
   // Sheet names
   var SHEET_NAMES = {

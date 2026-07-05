@@ -1,6 +1,6 @@
 /**
  * Dashboard creation and management
- * @version 2.0.2
+ * @version 2.5.0
  * @author College Tools
  * @description Creates and manages the Dashboard sheet with key metrics and visualizations
  */
@@ -14,21 +14,17 @@ CollegeTools.Dashboard = (function() {
   'use strict';
 
   /**
-   * Returns "COL_LETTER:COL_LETTER" for use inside a sheet reference.
-   * e.g. colRange_(Config.HEADERS.COLLEGES, 'Acceptance Rate', 3, 1000)
-   *   → "F3:F1000"
-   * @param {Array<string>} headers - The ordered header array for the sheet
-   * @param {string} name - Header to look up
-   * @param {number} startRow - First data row
-   * @param {number} endRow - Last data row
-   * @returns {string|null} Range string or null if header not found
+   * Builds a schema-backed A1 range for dashboard formula generation.
+   * @param {string} sheetKey - Stable sheet key
+   * @param {string} columnKey - Stable column key
+   * @param {Sheet|null} sheet - Sheet to inspect
+   * @param {number} endRow - Last row for the range
+   * @returns {string|null} Range string or null if the sheet/header is missing
    * @private
    */
-  function colRange_(headers, name, startRow, endRow) {
-    var idx = headers.indexOf(name);
-    if (idx < 0) return null;
-    var letter = CollegeTools.Utils.columnToLetter(idx + 1);
-    return letter + startRow + ':' + letter + endRow;
+  function rangeA1_(sheetKey, columnKey, sheet, endRow) {
+    if (!sheet) return null;
+    return CollegeTools.Schema.rangeA1(sheetKey, columnKey, sheet, endRow);
   }
 
   /**
@@ -42,19 +38,6 @@ CollegeTools.Dashboard = (function() {
   }
 
   /**
-   * Quotes a sheet name for use in A1 formula references.
-   * Sheet names containing spaces (e.g. "Application Status Tracker") must be
-   * single-quoted or the formula fails to parse — and IFERROR cannot catch
-   * parse errors. Quoting is safe for all names, so quote unconditionally.
-   * @param {string} name - Sheet name
-   * @returns {string} Quoted sheet reference (without the trailing "!")
-   * @private
-   */
-  function sheetRef_(name) {
-    return '\'' + String(name).replace(/'/g, '\'\'') + '\'';
-  }
-
-  /**
    * Creates or updates the Dashboard sheet with key metrics and visualizations.
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -62,30 +45,26 @@ CollegeTools.Dashboard = (function() {
   function createOrUpdateDashboard(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
-    // Pre-compute column ranges from Config.HEADERS so formulas stay correct
-    // even if header order changes.
-    var cHdrs = CollegeTools.Config.HEADERS.COLLEGES;
-    var stHdrs = CollegeTools.Config.HEADERS.STATUS_TRACKER;
-    var faHdrs = CollegeTools.Config.HEADERS.FINANCIAL_AID;
-    var skHdrs = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
     var cn = CollegeTools.Config.SHEET_NAMES;
+    var collegesSheet = ss.getSheetByName(cn.COLLEGES);
+    var statusSheet = ss.getSheetByName(cn.STATUS_TRACKER);
+    var financialAidSheet = ss.getSheetByName(cn.FINANCIAL_AID);
+    var scholarshipSheet = ss.getSheetByName(cn.SCHOLARSHIP_TRACKER);
 
-    // Colleges data starts at row 3
-    var rAcceptance = colRange_(cHdrs, 'Acceptance Rate', 3, 1000);
-    var rTotalCost = colRange_(cHdrs, 'Total Cost of Attendance', 3, 1000);
-    var rNetPrice = colRange_(cHdrs, 'Estimated Net Price', 3, 1000);
-    var rWeighted = colRange_(cHdrs, 'Weighted Score', 3, 1000);
-    var rValue = colRange_(cHdrs, 'Value Score', 3, 1000);
-    var rCollegeName = colRange_(cHdrs, 'College Name', 3, 1000);
+    var rAcceptance = rangeA1_('COLLEGES', 'ACCEPTANCE_RATE', collegesSheet, 1000);
+    var rTotalCost = rangeA1_('COLLEGES', 'TOTAL_COST', collegesSheet, 1000);
+    var rNetPrice = rangeA1_('COLLEGES', 'NET_PRICE', collegesSheet, 1000);
+    var rWeighted = rangeA1_('COLLEGES', 'WEIGHTED_SCORE', collegesSheet, 1000);
+    var rValue = rangeA1_('COLLEGES', 'VALUE_SCORE', collegesSheet, 1000);
+    var rCollegeName = rangeA1_('COLLEGES', 'COLLEGE_NAME', collegesSheet, 1000);
 
-    // Status Tracker / Financial Aid / Scholarship data starts at row 2
-    var rDocuments = colRange_(stHdrs, 'Documents Complete', 2, 1000);
-    var rAidReq = colRange_(faHdrs, 'Aid Requirements Complete', 2, 1000);
-    var rAwardStatus = colRange_(skHdrs, 'Award Status (Pending/Awarded/Declined)', 2, 1000);
-    var rAmtAwarded = colRange_(skHdrs, 'Amount Awarded', 2, 1000);
-    var rSkAmount = colRange_(skHdrs, 'Amount', 2, 1000);
-    var rStName = colRange_(stHdrs, 'College Name', 2, 1000);
-    var rFaName = colRange_(faHdrs, 'College Name', 2, 1000);
+    var rDocuments = rangeA1_('STATUS_TRACKER', 'DOCUMENTS_COMPLETE', statusSheet, 1000);
+    var rAidReq = rangeA1_('FINANCIAL_AID', 'AID_REQUIREMENTS_COMPLETE', financialAidSheet, 1000);
+    var rAwardStatus = rangeA1_('SCHOLARSHIP_TRACKER', 'AWARD_STATUS', scholarshipSheet, 1000);
+    var rAmtAwarded = rangeA1_('SCHOLARSHIP_TRACKER', 'AMOUNT_AWARDED', scholarshipSheet, 1000);
+    var rSkAmount = rangeA1_('SCHOLARSHIP_TRACKER', 'AMOUNT', scholarshipSheet, 1000);
+    var rStName = rangeA1_('STATUS_TRACKER', 'COLLEGE_NAME', statusSheet, 1000);
+    var rFaName = rangeA1_('FINANCIAL_AID', 'COLLEGE_NAME', financialAidSheet, 1000);
 
     // Clear existing content to rebuild fresh
     sh.clear();
@@ -101,30 +80,30 @@ CollegeTools.Dashboard = (function() {
 
     // College count
     sh.getRange(row, 1).setValue('Total Colleges:');
-    sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rCollegeName) + '), 0)');
+    sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) + '), 0)');
     row++;
 
     // Average acceptance rate
     sh.getRange(row, 1).setValue('Average Acceptance Rate:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rAcceptance) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rAcceptance) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('0.0%');
     row++;
 
     // Average total cost
     sh.getRange(row, 1).setValue('Average Total Cost:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rTotalCost) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rTotalCost) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('$#,##0');
     row++;
 
     // Average net price
     sh.getRange(row, 1).setValue('Average Net Price:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('$#,##0');
     row++;
 
     // Average weighted score
     sh.getRange(row, 1).setValue('Average Weighted Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('0.00');
     row += 2;
 
@@ -133,24 +112,24 @@ CollegeTools.Dashboard = (function() {
     row += 2;
 
     sh.getRange(row, 1).setValue('Lowest Cost College:');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MIN(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
-      sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+      ',MATCH(MIN(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
+      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")');
     row++;
 
     sh.getRange(row, 1).setValue('Lowest Net Price:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MIN(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(MIN(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('$#,##0');
     row++;
 
     sh.getRange(row, 1).setValue('Highest Cost College:');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MAX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
-      sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+      ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
+      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")');
     row++;
 
     sh.getRange(row, 1).setValue('Highest Net Price:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('$#,##0');
     row += 2;
 
@@ -159,24 +138,24 @@ CollegeTools.Dashboard = (function() {
     row += 2;
 
     sh.getRange(row, 1).setValue('Highest Weighted Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MAX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '),' +
-      sheetRef_(cn.COLLEGES) + '!' + safeRange_(rWeighted) + ',0)), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+      ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '),' +
+      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + ',0)), "No data")');
     row++;
 
     sh.getRange(row, 1).setValue('Top Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('0.00');
     row++;
 
     sh.getRange(row, 1).setValue('Best Value (High Score/Low Cost):');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MAX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rValue) + '),' +
-      sheetRef_(cn.COLLEGES) + '!' + safeRange_(rValue) + ',0)), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+      ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rValue) + '),' +
+      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rValue) + ',0)), "No data")');
     row++;
 
     sh.getRange(row, 1).setValue('Value Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + sheetRef_(cn.COLLEGES) + '!' + safeRange_(rValue) + '), "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rValue) + '), "No data")');
     sh.getRange(row, 2).setNumberFormat('0.00');
     row += 3;
 
@@ -186,22 +165,22 @@ CollegeTools.Dashboard = (function() {
 
     // Application Progress
     sh.getRange(row, 1).setValue('Application Documents:');
-    sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + sheetRef_(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
-      ',"*✅*")&"/"&COUNTA(' + sheetRef_(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) + ')&" Complete", "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
+      ',"*✅*")&"/"&COUNTA(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) + ')&" Complete", "No data")');
     row++;
 
     // Financial Aid Progress
     sh.getRange(row, 1).setValue('Financial Aid Requirements:');
-    sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + sheetRef_(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
-      ',"*✅*")&"/"&COUNTA(' + sheetRef_(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + ')&" Complete", "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
+      ',"*✅*")&"/"&COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + ')&" Complete", "No data")');
     row++;
 
     // Overall Progress Percentage
     sh.getRange(row, 1).setValue('Overall Completion:');
-    sh.getRange(row, 2).setFormula('=IFERROR(ROUND((COUNTIF(' + sheetRef_(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
-      ',"*✅*")+COUNTIF(' + sheetRef_(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
-      ',"*✅*"))/(COUNTA(' + sheetRef_(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) +
-      ')+COUNTA(' + sheetRef_(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + '))*100,0)&"%", "No data")');
+    sh.getRange(row, 2).setFormula('=IFERROR(ROUND((COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
+      ',"*✅*")+COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
+      ',"*✅*"))/(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) +
+      ')+COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + '))*100,0)&"%", "No data")');
     row += 3;
 
     // Section 5: Upcoming Deadlines (next 60 days)
@@ -224,7 +203,6 @@ CollegeTools.Dashboard = (function() {
     row += 2;
 
     // Check if scholarship tracker exists
-    var scholarshipSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     if (scholarshipSheet && scholarshipSheet.getLastRow() > 1 && scholarshipSheet.getLastColumn() >= 28) {
       // Only show scholarship stats if the sheet has been properly set up with headers
       sh.getRange(row, 1).setValue('Total Applied:');
@@ -232,22 +210,22 @@ CollegeTools.Dashboard = (function() {
       row++;
 
       sh.getRange(row, 1).setValue('Pending Applications:');
-      sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + sheetRef_(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Pending"), 0)');
+      sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Pending"), 0)');
       row++;
 
       sh.getRange(row, 1).setValue('Awards Received:');
-      sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + sheetRef_(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Awarded"), 0)');
+      sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Awarded"), 0)');
       row++;
 
       sh.getRange(row, 1).setValue('Total Amount Awarded:');
-      sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + sheetRef_(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
-        ',"Awarded",' + sheetRef_(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAmtAwarded) + '), 0)');
+      sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
+        ',"Awarded",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAmtAwarded) + '), 0)');
       sh.getRange(row, 2).setNumberFormat('$#,##0');
       row++;
 
       sh.getRange(row, 1).setValue('Potential Amount (Pending):');
-      sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + sheetRef_(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
-        ',"Pending",' + sheetRef_(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rSkAmount) + '), 0)');
+      sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
+        ',"Pending",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rSkAmount) + '), 0)');
       sh.getRange(row, 2).setNumberFormat('$#,##0');
     } else if (scholarshipSheet) {
       sh.getRange(row, 1).setValue('(Scholarship Tracker is empty - run "Add/Update Trackers" to set it up)');
@@ -314,9 +292,9 @@ CollegeTools.Dashboard = (function() {
     var lastRow = Math.min(collegesSheet.getLastRow(), 1000);
     if (lastRow < 3) return; // No data
 
-    var nameCol = CollegeTools.Utils.colIndex2(collegesSheet, 'College Name');
-    var scoreCol = CollegeTools.Utils.colIndex2(collegesSheet, 'Weighted Score');
-    var priceCol = CollegeTools.Utils.colIndex2(collegesSheet, 'Estimated Net Price');
+    var nameCol = CollegeTools.Schema.columnIndex('COLLEGES', 'COLLEGE_NAME', collegesSheet);
+    var scoreCol = CollegeTools.Schema.columnIndex('COLLEGES', 'WEIGHTED_SCORE', collegesSheet);
+    var priceCol = CollegeTools.Schema.columnIndex('COLLEGES', 'NET_PRICE', collegesSheet);
 
     if (!nameCol || !scoreCol || !priceCol) return;
 

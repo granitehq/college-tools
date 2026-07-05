@@ -1,6 +1,6 @@
 /**
  * Sheet formatting and validation
- * @version 2.0.2
+ * @version 2.5.0
  * @author College Tools
  * @description Number formats, dropdowns, and data validation for sheets
  */
@@ -14,15 +14,31 @@ CollegeTools.Formatting = (function() {
   'use strict';
 
   /**
+   * Resolves the header row for a sheet, using schema metadata when available.
+   * @param {Sheet} sh - Target sheet
+   * @param {number=} headerRow - Explicit header row override
+   * @returns {number} Header row number
+   * @private
+   */
+  function resolveHeaderRow_(sh, headerRow) {
+    if (headerRow) return headerRow;
+    if (CollegeTools.Schema && CollegeTools.Schema.getSheetKeyByName) {
+      var sheetKey = CollegeTools.Schema.getSheetKeyByName(sh.getName());
+      if (sheetKey) return CollegeTools.Schema.getSheet(sheetKey).headerRow;
+    }
+    return 1;
+  }
+
+  /**
    * Finds a column by header on a configurable header row.
    * @param {Sheet} sh - Target sheet
    * @param {string} header - Header text
-   * @param {number=} headerRow - Header row number, defaults to 1
+   * @param {number=} headerRow - Header row number, defaults to schema or row 1
    * @returns {number|null} 1-based column index or null if not found
    * @private
    */
   function findColumn_(sh, header, headerRow) {
-    headerRow = headerRow || 1;
+    headerRow = resolveHeaderRow_(sh, headerRow);
     if (headerRow === 1) return CollegeTools.Utils.colIndex(sh, header);
 
     var last = Math.max(1, sh.getLastColumn());
@@ -41,7 +57,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function validateList(sh, header, options, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     var rule = SpreadsheetApp.newDataValidation()
@@ -61,7 +77,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function validateListFromRange(sh, header, sourceSheetName, sourceRange, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
 
@@ -84,7 +100,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function validateDate(sh, header, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     var rule = SpreadsheetApp.newDataValidation().requireDate().build();
@@ -100,7 +116,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function formatNumber(sh, header, pattern, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     sh.getRange(resolvedHeaderRow + 1, col, Math.max(1, sh.getMaxRows() - resolvedHeaderRow))

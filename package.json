@@ -1,6 +1,6 @@
 {
   "name": "college-tools",
-  "version": "2.0.2",
+  "version": "2.5.0",
   "description": "Google Apps Script project for college selection and tracking",
   "main": "src/menu.js",
   "scripts": {

@@ -1,6 +1,6 @@
 /**
  * Tracker sheet management
- * @version 2.0.2
+ * @version 2.5.0
  * @author College Tools
  * @description Creates and manages Financial Aid, Campus Visit, Application, and Scholarship trackers
  */
@@ -71,6 +71,91 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Captures existing tracker rows by college name so repair can preserve user data across row reordering.
+   * Duplicate names are intentionally ignored because name-only matching is ambiguous.
+   * @param {Sheet} sh - Tracker sheet
+   * @returns {Object} Snapshot map keyed by college name
+   * @private
+   */
+  function snapshotRowsByCollegeName_(sh) {
+    var snapshots = {};
+    if (!sh) return snapshots;
+    var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
+    if (!nameCol) return snapshots;
+
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return snapshots;
+
+    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var formulas = [];
+    for (var r = 0; r < values.length; r++) {
+      var rowFormulas = [];
+      for (var c = 1; c <= lastCol; c++) {
+        rowFormulas.push(sh.getRange(r + 2, c).getFormula());
+      }
+      formulas.push(rowFormulas);
+    }
+
+    for (var i = 0; i < values.length; i++) {
+      var collegeName = (values[i][nameCol - 1] || '').toString().trim();
+      if (!collegeName) continue;
+      if (snapshots[collegeName]) {
+        snapshots[collegeName].duplicate = true;
+        snapshots._duplicates = snapshots._duplicates || [];
+        snapshots._duplicates.push(collegeName);
+        continue;
+      }
+      snapshots[collegeName] = {
+        values: values[i],
+        formulas: formulas[i],
+        duplicate: false,
+      };
+    }
+
+    return snapshots;
+  }
+
+  /**
+   * Restores a captured tracker row into a target row when a unique college-name match exists.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {Object} snapshots - Snapshot map keyed by college name
+   * @param {string} collegeName - College display name
+   * @param {number} targetRow - Target row to restore
+   * @private
+   */
+  function restoreTrackerRow_(sh, snapshots, collegeName, targetRow) {
+    if (!sh || !collegeName) return;
+    var snapshot = snapshots[collegeName];
+    if (!snapshot || snapshot.duplicate) return;
+
+    sh.getRange(targetRow, 1, 1, snapshot.values.length).setValues([snapshot.values]);
+    for (var c = 0; c < snapshot.formulas.length; c++) {
+      if (snapshot.formulas[c]) sh.getRange(targetRow, c + 1).setFormula(snapshot.formulas[c]);
+    }
+  }
+
+  /**
+   * Adds duplicate-name snapshot warnings to a repair warning list.
+   * @param {Array<Object>} warnings - Warning accumulator
+   * @param {Object} snapshots - Snapshot map keyed by college name
+   * @param {string} sheetName - Tracker sheet name
+   * @private
+   */
+  function collectDuplicateSnapshotWarnings_(warnings, snapshots, sheetName) {
+    var seen = {};
+    (snapshots._duplicates || []).forEach(function(collegeName) {
+      if (seen[collegeName]) return;
+      seen[collegeName] = true;
+      warnings.push({
+        code: 'duplicate_tracker_name',
+        sheetName: sheetName,
+        collegeName: collegeName,
+      });
+    });
+  }
+
+  /**
    * Creates or updates the Financial Aid Tracker sheet with headers and formulas.
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -107,22 +192,24 @@ CollegeTools.Trackers = (function() {
     var scholarshipsCol = CollegeTools.Utils.colIndex(sh, 'Outside Scholarships Applied');
 
     if (netCol && coaCol && fedGrantsCol && needAidCol) {
-      var netFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, coaCol) +
-                       '-SUM(' + CollegeTools.Utils.addr(r2, fedGrantsCol) +
-                       ':' + CollegeTools.Utils.addr(r2, needAidCol) + '), "")';
+      var netFormula = CollegeTools.Formulas.netPriceAfterAid(
+        CollegeTools.Utils.addr(r2, coaCol),
+        CollegeTools.Utils.addr(r2, fedGrantsCol),
+        CollegeTools.Utils.addr(r2, needAidCol));
       sh.getRange(r2, netCol).setFormula(netFormula);
     }
 
     if (oopCol && netCol && scholarshipsCol) {
-      var oopFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, netCol) +
-                       '-' + CollegeTools.Utils.addr(r2, scholarshipsCol) + ', "")';
+      var oopFormula = CollegeTools.Formulas.outOfPocketCost(
+        CollegeTools.Utils.addr(r2, netCol),
+        CollegeTools.Utils.addr(r2, scholarshipsCol));
       sh.getRange(r2, oopCol).setFormula(oopFormula);
     }
 
     if (fourYearCol && oopCol) {
       // Four years of cost with 3% annual increases: year1 + year2 + year3 + year4
-      var fourYearFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, oopCol) +
-                           '*(1+1.03+1.03^2+1.03^3), "")';
+      var fourYearFormula = CollegeTools.Formulas.fourYearProjectedCost(
+        CollegeTools.Utils.addr(r2, oopCol));
       sh.getRange(r2, fourYearCol).setFormula(fourYearFormula);
     }
 
@@ -380,11 +467,12 @@ CollegeTools.Trackers = (function() {
       if (!opts.suppressAlert) {
         SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
       }
-      return {ok: false, count: 0};
+      return {ok: false, count: 0, warnings: warnings};
     }
 
     var lastRow = collegesSheet.getLastRow();
     var processed = 0;
+    var warnings = [];
 
     if (lastRow < 3) {
       if (!opts.suppressAlert) {
@@ -394,8 +482,27 @@ CollegeTools.Trackers = (function() {
           SpreadsheetApp.getUi().ButtonSet.OK,
         );
       }
-      return {ok: true, count: 0};
+      return {ok: true, count: 0, warnings: warnings};
     }
+
+    var faSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    var cvSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+    var atSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    var stSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+    var trackerSnapshots = {
+      financialAid: snapshotRowsByCollegeName_(faSheet),
+      campusVisit: snapshotRowsByCollegeName_(cvSheet),
+      applicationTimeline: snapshotRowsByCollegeName_(atSheet),
+      statusTracker: snapshotRowsByCollegeName_(stSheet),
+    };
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.financialAid,
+      CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.campusVisit,
+      CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.applicationTimeline,
+      CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.statusTracker,
+      CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
 
     // Read all header and data in two bulk reads instead of per-row calls
     var lastCol = collegesSheet.getLastColumn();
@@ -412,20 +519,21 @@ CollegeTools.Trackers = (function() {
       var coa = '';
       if (collegeName) {
         coa = coaIdx >= 0 ? data[i][coaIdx] : '';
+        var trackerRow = getTrackerRowForCollegeRow_(row);
+        restoreTrackerRow_(faSheet, trackerSnapshots.financialAid, collegeName, trackerRow);
+        restoreTrackerRow_(cvSheet, trackerSnapshots.campusVisit, collegeName, trackerRow);
+        restoreTrackerRow_(atSheet, trackerSnapshots.applicationTimeline, collegeName, trackerRow);
+        restoreTrackerRow_(stSheet, trackerSnapshots.statusTracker, collegeName, trackerRow);
         syncCollegeToTrackers({name: collegeName, coa: coa, sourceRow: row});
         processed++;
       }
     }
 
     var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID),
-      firstClearRow, ['College Name', 'Total Cost of Attendance']);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT),
-      firstClearRow, ['College Name']);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE),
-      firstClearRow, ['College Name']);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER),
-      firstClearRow, ['College Name']);
+    clearTrackerRows_(faSheet, firstClearRow, ['College Name', 'Total Cost of Attendance']);
+    clearTrackerRows_(cvSheet, firstClearRow, ['College Name']);
+    clearTrackerRows_(atSheet, firstClearRow, ['College Name']);
+    clearTrackerRows_(stSheet, firstClearRow, ['College Name']);
 
     if (!opts.suppressAlert) {
       SpreadsheetApp.getUi().alert(
@@ -436,7 +544,7 @@ CollegeTools.Trackers = (function() {
       );
     }
 
-    return {ok: true, count: processed};
+    return {ok: true, count: processed, warnings: warnings};
   }
 
   /**

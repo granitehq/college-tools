@@ -4,7 +4,7 @@
 
 const {createHarness, TestSuite} = require('./support');
 
-const harness = createHarness(['config.js', 'utils.js', 'formatting.js', 'trackers.js']);
+const harness = createHarness(['config.js', 'utils.js', 'formatting.js', 'formulas.js', 'trackers.js']);
 const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn} = harness;
 const suite = new TestSuite();
 
