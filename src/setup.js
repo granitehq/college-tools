@@ -127,6 +127,7 @@ CollegeTools.Setup = (function() {
       '• Re-syncing tracker college lists from the Colleges tab\n' +
       '• Reapplying dropdowns and formatting\n' +
       '• Refilling Regions from State values\n' +
+      '• Rebuilding scoring formulas (custom weights are kept)\n' +
       '• Refreshing dashboard data when present\n\n' +
       'Continue?',
       ui.ButtonSet.YES_NO,
@@ -138,6 +139,10 @@ CollegeTools.Setup = (function() {
       var syncResult = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
       var formattingResult = CollegeTools.Formatting.repairValidationsAndFormatting({suppressAlert: true});
       var regionResult = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
+
+      // Rebuild scoring formulas so Value Score normalization picks up
+      // current min/max (constants are baked in at formula-build time).
+      CollegeTools.Scoring.ensureScoring({suppressAlert: true});
 
       if (SpreadsheetApp.getActive().getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD)) {
         CollegeTools.Dashboard.refreshDashboard();

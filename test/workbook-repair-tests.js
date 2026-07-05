@@ -22,6 +22,15 @@ CollegeTools.Dashboard = {
   },
 };
 
+CollegeTools.Scoring = {
+  ensured: false,
+  lastOpts: null,
+  ensureScoring: function(opts) {
+    this.ensured = true;
+    this.lastOpts = opts;
+  },
+};
+
 suite.test('repairEntireWorkbook combines sync, validations, regions, and dashboard refresh', () => {
   const {colleges} = setupWorkbook({includeCampusSetting: true});
   var coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
@@ -47,6 +56,9 @@ suite.test('repairEntireWorkbook combines sync, validations, regions, and dashbo
   suite.assert(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'College Name')).getDataValidation(),
     'Workbook repair should reapply validations');
   suite.assert(CollegeTools.Dashboard.refreshed, 'Workbook repair should refresh dashboard data when present');
+  suite.assert(CollegeTools.Scoring.ensured, 'Workbook repair should rebuild scoring formulas');
+  suite.assert(CollegeTools.Scoring.lastOpts && CollegeTools.Scoring.lastOpts.suppressAlert,
+    'Scoring rebuild during repair should suppress its own alert');
   suite.assert(mockUi.alerts.length > 0, 'Workbook repair should notify the user');
 });
 

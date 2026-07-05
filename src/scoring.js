@@ -66,16 +66,36 @@ CollegeTools.Scoring = (function() {
    * Creates a Weights sheet with default weight values for different criteria.
    * Applies formulas to calculate Weighted Score in Colleges sheet and Visit Score in Campus Visit Tracker.
    * Formulas use VLOOKUP to reference weights dynamically from the Weights sheet.
+   * Value Score normalization bakes in the min/max at run time, so rerun this
+   * (or Repair Entire Workbook) after adding colleges.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress the completion alert
    */
-  function ensureScoring() {
+  function ensureScoring(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
 
-    // Ensure Weights sheet with defaults
+    // Ensure Weights sheet with defaults, preserving any user-customized
+    // weight values across reruns.
     var ws = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.WEIGHTS);
+    var existingWeights = {};
+    var wsLastRow = ws.getLastRow();
+    if (wsLastRow >= 2) {
+      ws.getRange(2, 1, wsLastRow - 1, 2).getValues().forEach(function(rowVals) {
+        var setting = (rowVals[0] || '').toString().trim();
+        if (setting && rowVals[1] !== '' && rowVals[1] !== null && !isNaN(Number(rowVals[1]))) {
+          existingWeights[setting] = Number(rowVals[1]);
+        }
+      });
+    }
+    var weightRows = CollegeTools.Config.DEFAULT_WEIGHTS.map(function(defaultRow) {
+      var setting = defaultRow[0];
+      var weight = existingWeights.hasOwnProperty(setting) ? existingWeights[setting] : defaultRow[1];
+      return [setting, weight];
+    });
     ws.clear();
     ws.getRange(1, 1, 1, 2).setValues([['Setting', 'Weight']]).setFontWeight('bold');
-    ws.getRange(2, 1, CollegeTools.Config.DEFAULT_WEIGHTS.length, 2)
-      .setValues(CollegeTools.Config.DEFAULT_WEIGHTS);
+    ws.getRange(2, 1, weightRows.length, 2).setValues(weightRows);
 
     // Colleges → Weighted Score
     var col = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
@@ -96,10 +116,12 @@ CollegeTools.Scoring = (function() {
       var cScore = CollegeTools.Utils.colIndex2(col, 'Weighted Score');
       var nameCol = CollegeTools.Utils.colIndex2(col, 'College Name');
 
-      if (cScore && nameCol) {
-        // Read all college names in one call, then build formulas in memory
-        var nameVals = col.getRange(rStart, nameCol, rEnd - rStart + 1, 1).getValues();
+      // Read all college names once — used by both the Weighted Score and
+      // Value Score blocks below.
+      var nameVals = nameCol ?
+        col.getRange(rStart, nameCol, rEnd - rStart + 1, 1).getValues() : null;
 
+      if (cScore && nameVals) {
         // Pre-compute the weight lookups once — they're the same for every row
         var pieceCols = [];
         pieces.forEach(function(header) {
@@ -120,7 +142,9 @@ CollegeTools.Scoring = (function() {
             var weightLookup = 'IFERROR(VLOOKUP("' + pc.header + '",' +
                               CollegeTools.Config.SHEET_NAMES.WEIGHTS + '!A:B,2,false),0)';
             num.push(cell + '*' + weightLookup);
-            den.push(weightLookup);
+            // Exclude unrated criteria from the denominator so a blank
+            // rating is ignored rather than counted as a score of 0.
+            den.push('IF(' + cell + '="",0,' + weightLookup + ')');
           });
           weightFormulas.push(['=IFERROR((' + num.join('+') + ')/(' + den.join('+') + '), "")']);
         }
@@ -135,7 +159,7 @@ CollegeTools.Scoring = (function() {
       var cEarnings = CollegeTools.Utils.colIndex2(col, 'Median Earnings (10yr)');
       var cNetPrice = CollegeTools.Utils.colIndex2(col, 'Estimated Net Price');
 
-      if (cValueScore && cGradRate && cRetention && cEarnings && cNetPrice) {
+      if (cValueScore && cGradRate && cRetention && cEarnings && cNetPrice && nameVals) {
         var valueFormulas = [];
         for (var rv = rStart; rv <= rEnd; rv++) {
           var namev = (nameVals[rv - rStart][0] || '').toString().trim();
@@ -176,7 +200,8 @@ CollegeTools.Scoring = (function() {
             var weightLookup = 'IFERROR(VLOOKUP("' + header + '",' +
                               CollegeTools.Config.SHEET_NAMES.WEIGHTS + '!A:B,2,false),0)';
             num2.push('IFERROR(' + cell + ',0)*' + weightLookup);
-            den2.push(weightLookup);
+            // Exclude unrated criteria so blanks don't drag the score down
+            den2.push('IF(' + cell + '="",0,' + weightLookup + ')');
           });
 
           var formula = '=IF(COUNTA(A' + r2 + ')=0,"",IFERROR((' +
@@ -187,8 +212,10 @@ CollegeTools.Scoring = (function() {
       }
     }
 
-    SpreadsheetApp.getUi().alert('Scoring formulas ensured. Edit weights anytime on the "' +
-                                CollegeTools.Config.SHEET_NAMES.WEIGHTS + '" sheet.');
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert('Scoring formulas ensured. Edit weights anytime on the "' +
+                                  CollegeTools.Config.SHEET_NAMES.WEIGHTS + '" sheet.');
+    }
   }
 
   // Public API
