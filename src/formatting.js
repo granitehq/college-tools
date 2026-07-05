@@ -223,7 +223,7 @@ CollegeTools.Formatting = (function() {
       ['Amount', 'Amount Awarded'].forEach(function(h) {
         formatNumber(sc, h, '$#,##0');
       });
-      ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Interview Scheduled', 'Interview Completed', 'Decision Date']
+      ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date']
         .forEach(function(h) {
           validateDate(sc, h);
         });
@@ -231,7 +231,7 @@ CollegeTools.Formatting = (function() {
         ['Merit', 'Need', 'Field-Specific', 'Local', 'National', 'Other']);
       validateList(sc, 'Award Type (One-time/Renewable)', ['One-time', 'Renewable', 'Other']);
       ['Financial Need Required', 'Transcript Required', 'FAFSA Required', 'Portfolio/Work Samples',
-        'Interview Required', 'Confirmation Received', 'Thank You Note Sent']
+        'Interview Required']
         .forEach(function(h) {
           validateList(sc, h, ['Y', 'N']);
         });

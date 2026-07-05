@@ -125,15 +125,17 @@ CollegeTools.Config = (function() {
       'Portfolio Submitted (Date)', 'Documents Complete', 'Notes',
     ],
 
+    // Post-award/renewal minutiae (renewal terms, credit hours, thank-you
+    // notes, etc.) were removed -- this tracker's job ends at "did we win
+    // money"; renewal terms live in the free-text Notes/Strategy column.
     SCHOLARSHIP_TRACKER: [
       'Scholarship Name', 'Provider/Organization', 'Type (Merit/Need/Field/Local/National)', 'Amount',
       'Award Type (One-time/Renewable)', 'GPA Requirement', 'Test Score Requirement', 'Financial Need Required',
       'Special Criteria', 'Geographic Restrictions', 'Deadline', 'Application Portal/Link', 'Essays Required (#)',
       'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types', 'Transcript Required',
       'FAFSA Required', 'Portfolio/Work Samples', 'Interview Required', 'Application Started Date',
-      'Application Submitted Date', 'Confirmation Received', 'Interview Scheduled', 'Interview Completed',
-      'Decision Date', 'Award Status (Pending/Awarded/Declined)', 'Amount Awarded', 'Thank You Note Sent',
-      'Renewable for # Years', 'GPA to Maintain', 'Credit Hours Required', 'Other Renewal Requirements', 'Notes/Strategy',
+      'Application Submitted Date', 'Decision Date', 'Award Status (Pending/Awarded/Declined)',
+      'Amount Awarded', 'Notes/Strategy',
     ],
   };
 

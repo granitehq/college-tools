@@ -437,9 +437,8 @@ CollegeTools.Trackers = (function() {
     CollegeTools.Formatting.validateList(sh, 'Interview Required', ['Y', 'N']);
     CollegeTools.Formatting.validateList(sh, 'Award Status (Pending/Awarded/Declined)',
       ['Pending', 'Awarded', 'Declined']);
-    CollegeTools.Formatting.validateList(sh, 'Thank You Note Sent', ['Y', 'N']);
 
-    ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Interview Scheduled', 'Interview Completed', 'Decision Date']
+    ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date']
       .forEach(function(h) {
         CollegeTools.Formatting.validateDate(sh, h);
       });

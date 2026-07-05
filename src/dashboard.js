@@ -175,9 +175,10 @@ CollegeTools.Dashboard = (function() {
     sh.getRange(row, 1).setValue('🎓 Scholarship Summary').setFontWeight('bold').setFontSize(14);
     row += 2;
 
-    // Check if scholarship tracker exists
-    if (scholarshipSheet && scholarshipSheet.getLastRow() > 1 && scholarshipSheet.getLastColumn() >= 28) {
-      // Only show scholarship stats if the sheet has been properly set up with headers
+    // Check if scholarship tracker exists and has been set up with headers
+    var scholarshipHeaderCount = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER.length;
+    if (scholarshipSheet && scholarshipSheet.getLastRow() > 1 &&
+        scholarshipSheet.getLastColumn() >= scholarshipHeaderCount) {
       sh.getRange(row, 1).setValue('Total Applied:');
       sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER + '!A2:A1000), 0)');
       row++;
