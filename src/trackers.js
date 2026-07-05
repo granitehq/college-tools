@@ -183,6 +183,13 @@ CollegeTools.Trackers = (function() {
 
     // Formulas row 2 (user can fill down)
     var r2 = 2;
+    var efcCol = CollegeTools.Utils.colIndex(sh, 'EFC (Expected Family Contribution)');
+    if (efcCol) {
+      // Prefill from the Personal Profile's EFC named range; the family can
+      // override a specific college's row if its aid letter differs.
+      sh.getRange(r2, efcCol).setFormula('=IFERROR(IF(EFC="","",EFC), "")');
+    }
+
     var netCol = CollegeTools.Utils.colIndex(sh, 'Net Price After Aid');
     var oopCol = CollegeTools.Utils.colIndex(sh, 'Out-of-Pocket Cost');
     var fourYearCol = CollegeTools.Utils.colIndex(sh, '4-Year Projected Cost');
@@ -304,33 +311,56 @@ CollegeTools.Trackers = (function() {
     var daysCol = CollegeTools.Utils.colIndex(sh, 'Days Until Deadline (App)');
 
     if (appDeadlineCol && daysCol) {
-      // Collect all formula columns and formulas
-      var deadlineCell = CollegeTools.Utils.addr(2, appDeadlineCol);
-      var formulaCols = [daysCol];
       // Blank deadlines stay blank instead of showing "PAST DUE"
-      var formulas = ['=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
-        '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")'];
+      var deadlineCell = CollegeTools.Utils.addr(2, appDeadlineCol);
+      var daysFormula = '=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
+        '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")';
+      sh.getRange(2, daysCol).setFormula(daysFormula);
+    }
+  }
 
-      // Warning formulas - collect all at once
-      var warningHeaders = ['60-Day Warning', '30-Day Warning', '14-Day Warning', '7-Day Warning'];
-      var warningDays = [60, 30, 14, 7];
+  /**
+   * Applies color-coded conditional formatting to Days Until Deadline (App),
+   * replacing the four separate 60/30/14/7-Day Warning boolean columns with
+   * one column that carries the same signal through color.
+   * @param {Sheet} sheet - The Application Timeline sheet
+   */
+  function enhanceApplicationTimelineFormatting(sheet) {
+    if (!sheet) return;
+    var daysCol = CollegeTools.Utils.colIndex(sheet, 'Days Until Deadline (App)');
+    if (!daysCol) return;
 
-      for (var i = 0; i < warningHeaders.length; i++) {
-        var warnCol = CollegeTools.Utils.colIndex(sh, warningHeaders[i]);
-        if (warnCol) {
-          formulaCols.push(warnCol);
-          // Warn only inside the window: not for blank or already-past deadlines
-          formulas.push('=IF(ISNUMBER(' + deadlineCell + '), AND(' +
-            deadlineCell + '-TODAY()<=' + warningDays[i] + ',' +
-            deadlineCell + '-TODAY()>=0), "")');
+    var lastRow = Math.max(2, sheet.getLastRow());
+    var range = sheet.getRange(2, daysCol, lastRow - 1, 1);
+
+    var rules = (sheet.getConditionalFormatRules() || []).filter(function(rule) {
+      var ranges = rule.getRanges ? rule.getRanges() : [];
+      for (var i = 0; i < ranges.length; i++) {
+        if (ranges[i].getColumn() <= daysCol && ranges[i].getLastColumn() >= daysCol &&
+            ranges[i].getSheet().getSheetId() === sheet.getSheetId()) {
+          return false; // our rule from a prior run -- remove it
         }
       }
+      return true;
+    });
 
-      // Batch set all formulas - much faster than individual setFormula calls
-      for (var j = 0; j < formulaCols.length; j++) {
-        sh.getRange(2, formulaCols[j]).setFormula(formulas[j]);
-      }
-    }
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('PAST DUE').setBackground('#f8d7da').setFontColor('#721c24')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberLessThanOrEqualTo(7).setBackground('#f8d7da').setFontColor('#721c24')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(8, 14).setBackground('#ffeaa7').setFontColor('#b95000')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(15, 30).setBackground('#fff3cd').setFontColor('#856404')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(31, 60).setBackground('#d1ecf1').setFontColor('#0c5460')
+      .setRanges([range]).build());
+
+    sheet.setConditionalFormatRules(rules);
   }
 
   /**
@@ -353,8 +383,9 @@ CollegeTools.Trackers = (function() {
       CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
     });
 
-    // Date validation
-    ['Application Deadline', 'Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
+    // Date validation. Application Deadline lives on Application Timeline
+    // only -- see the sheet-ownership note on APPLICATION_TIMELINE in config.js.
+    ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
       .forEach(function(h) {
         CollegeTools.Formatting.validateDate(sh, h);
       });
@@ -577,6 +608,11 @@ CollegeTools.Trackers = (function() {
       CollegeTools.Admissions.enhanceAdmissionFormatting(collegesSheet);
     }
 
+    var timelineSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    if (timelineSheet) {
+      enhanceApplicationTimelineFormatting(timelineSheet);
+    }
+
     SpreadsheetApp.getUi().alert('Tracker setup complete!');
   }
 
@@ -586,5 +622,6 @@ CollegeTools.Trackers = (function() {
     setupAllTrackers: setupAllTrackers,
     syncCollegeToTrackers: syncCollegeToTrackers,
     repairCollegeSync: repairCollegeSync,
+    enhanceApplicationTimelineFormatting: enhanceApplicationTimelineFormatting,
   };
 })();

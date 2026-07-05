@@ -299,9 +299,11 @@ function createValidationBuilder() {
 function createFormatRuleBuilder() {
   return {
     whenTextContains() { return this; },
+    whenTextEqualTo() { return this; },
     whenNumberGreaterThan() { return this; },
     whenNumberBetween() { return this; },
     whenNumberLessThan() { return this; },
+    whenNumberLessThanOrEqualTo() { return this; },
     setBackground() { return this; },
     setFontColor() { return this; },
     setRanges() { return this; },

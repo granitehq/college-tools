@@ -248,7 +248,7 @@ CollegeTools.Formatting = (function() {
         .forEach(function(h) {
           validateList(st, h, ['Y', 'N']);
         });
-      ['Application Deadline', 'Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
+      ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
         .forEach(function(h) {
           validateDate(st, h);
         });

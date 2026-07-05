@@ -144,6 +144,12 @@ CollegeTools.Setup = (function() {
       // Weighted Score, not just pre-existing rows.
       CollegeTools.Scoring.ensureScoring({suppressAlert: true});
 
+      var timelineSheet = SpreadsheetApp.getActive().getSheetByName(
+        CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+      if (timelineSheet) {
+        CollegeTools.Trackers.enhanceApplicationTimelineFormatting(timelineSheet);
+      }
+
       if (SpreadsheetApp.getActive().getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD)) {
         CollegeTools.Dashboard.refreshDashboard();
       }

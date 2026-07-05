@@ -107,18 +107,20 @@ CollegeTools.Config = (function() {
       'Visit Score', 'Notes',
     ],
 
+    // Owns the application deadline and FAFSA/CSS deadlines are owned by
+    // Financial Aid Tracker -- each deadline has exactly one home so manual
+    // entry can't contradict itself across sheets.
     APPLICATION_TIMELINE: [
       'College Name', 'Application Type (ED/ED2/EA/REA/RD)', 'Application Opens', 'Application Deadline',
       'Test Score Deadline', 'Transcript Deadline', 'Counselor Rec Deadline', 'Teacher Rec Deadline',
-      'FAFSA Opens', 'FAFSA Priority Deadline', 'CSS Profile Deadline', 'Merit Scholarship Deadline',
+      'FAFSA Opens', 'Merit Scholarship Deadline',
       'Honors Program Deadline', 'Portfolio/Audition Due', 'Mid-Year Report Due', 'Decision Release Date',
       'Student Visit Day', 'Housing Application Opens', 'Housing Deposit Due', 'Enrollment Deposit Deadline',
       'Orientation Registration Opens', 'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)',
-      '60-Day Warning', '30-Day Warning', '14-Day Warning', '7-Day Warning',
     ],
 
     STATUS_TRACKER: [
-      'College Name', 'Application Status', 'Decision Plan', 'Application Deadline', 'App Portal', 'Submitted Date',
+      'College Name', 'Application Status', 'Decision Plan', 'App Portal', 'Submitted Date',
       'Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete', 'Interview (Y/N)',
       'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Portfolio Required (Y/N)',
       'Portfolio Submitted (Date)', 'Documents Complete', 'Notes',
