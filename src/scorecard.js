@@ -13,22 +13,35 @@ var CollegeTools = CollegeTools || {};
 CollegeTools.Scorecard = (function() {
   'use strict';
 
-  // Private state for quota tracking
+  var QUOTA_PROPERTY_KEY = 'scorecard_quota_usage';
+
+  // Private state for quota tracking. dailyUsage is persisted in
+  // ScriptProperties because Apps Script executions do not share memory —
+  // an in-memory counter alone would reset on every menu invocation and
+  // never enforce the daily limit.
   var quotaState = {
-    dailyUsage: 0,
-    lastResetDate: new Date().toDateString(),
+    dailyUsage: null, // Lazily loaded from ScriptProperties
     executionStartTime: null,
   };
 
   /**
-   * Resets daily quota if it's a new day
+   * Loads today's persisted quota usage into quotaState (once per execution).
+   * Usage recorded on a previous day resets to zero.
    * @private
    */
-  function checkAndResetDailyQuota() {
-    var today = new Date().toDateString();
-    if (quotaState.lastResetDate !== today) {
-      quotaState.dailyUsage = 0;
-      quotaState.lastResetDate = today;
+  function loadDailyQuota() {
+    if (quotaState.dailyUsage !== null) return;
+    quotaState.dailyUsage = 0;
+    try {
+      var stored = PropertiesService.getScriptProperties().getProperty(QUOTA_PROPERTY_KEY);
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        if (parsed && parsed.date === new Date().toDateString()) {
+          quotaState.dailyUsage = Number(parsed.count) || 0;
+        }
+      }
+    } catch (e) {
+      // Property read failed — fall back to counting this execution only
     }
   }
 
@@ -53,7 +66,7 @@ CollegeTools.Scorecard = (function() {
    * @private
    */
   function checkQuotaLimits() {
-    checkAndResetDailyQuota();
+    loadDailyQuota();
 
     if (quotaState.dailyUsage >= CollegeTools.Config.API_CONFIG.DAILY_QUOTA_LIMIT) {
       return false;
@@ -63,11 +76,20 @@ CollegeTools.Scorecard = (function() {
   }
 
   /**
-   * Increments quota usage counter
+   * Increments quota usage counter and persists it across executions
    * @private
    */
   function incrementQuotaUsage() {
+    loadDailyQuota();
     quotaState.dailyUsage++;
+    try {
+      PropertiesService.getScriptProperties().setProperty(QUOTA_PROPERTY_KEY, JSON.stringify({
+        date: new Date().toDateString(),
+        count: quotaState.dailyUsage,
+      }));
+    } catch (e) {
+      // Persistence failed — in-memory count still limits this execution
+    }
   }
 
   /**
@@ -171,13 +193,14 @@ CollegeTools.Scorecard = (function() {
    */
   function makeHttpRequest(url) {
     try {
+      // Note: UrlFetchApp has no configurable request timeout; requests are
+      // bounded by the Apps Script execution limit instead.
       var options = {
         method: 'GET',
         headers: {
           'User-Agent': 'CollegeTools/' + CollegeTools.Config.VERSION,
         },
         muteHttpExceptions: true,
-        deadline: Math.floor(CollegeTools.Config.API_CONFIG.TIMEOUT / 1000),
       };
 
       var response = UrlFetchApp.fetch(url, options);
