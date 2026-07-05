@@ -83,8 +83,7 @@ CollegeTools.Config = (function() {
       'Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)',
       'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
       'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
-      'Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match',
-      'Merit Aid Likelihood', 'Campus Setting', 'Notes',
+      'Weighted Score', 'Admission Fit', 'Campus Setting', 'Notes',
     ],
 
     FINANCIAL_AID: [

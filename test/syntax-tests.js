@@ -179,7 +179,7 @@ tester.test('Config includes Personal Profile sheet', () => {
 tester.test('Config includes new financial columns', () => {
   const configPath = path.join(srcDir, 'config.js');
   const content = fs.readFileSync(configPath, 'utf8');
-  tester.assert(content.includes('Merit Aid Likelihood'), 'Config should include Merit Aid Likelihood column');
+  tester.assert(content.includes('Admission Fit'), 'Config should include Admission Fit column');
   tester.assert(content.includes('Financial Safety'), 'Config should include Financial Safety column');
   tester.assert(content.includes('4-Year Burden'), 'Config should include 4-Year Burden column');
 });
@@ -203,9 +203,12 @@ tester.test('Menu updated for Financial Intelligence', () => {
 
 tester.test('Admissions module updated for Personal Profile', () => {
   const admissionsPath = path.join(srcDir, 'admissions.js');
-  const content = fs.readFileSync(admissionsPath, 'utf8');
-  tester.assert(content.includes('SAT_Score'), 'Should use SAT_Score named range from Personal Profile');
-  tester.assert(!content.includes('Your_SAT'), 'Should not use old Your_SAT reference');
+  const formulasPath = path.join(srcDir, 'formulas.js');
+  const admissionsContent = fs.readFileSync(admissionsPath, 'utf8');
+  const formulasContent = fs.readFileSync(formulasPath, 'utf8');
+  tester.assert(formulasContent.includes('SAT_Score'), 'Formula builder should use SAT_Score named range from Personal Profile');
+  tester.assert(!admissionsContent.includes('Your_SAT'), 'Should not use old Your_SAT reference');
+  tester.assert(admissionsContent.includes('admissionFit'), 'Admissions module should call the admissionFit formula builder');
 });
 
 const success = tester.summary();

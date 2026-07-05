@@ -39,10 +39,7 @@ CollegeTools.Colleges = (function() {
     'Clubs/Activities (1-5)': true,
     'Personal Priority (1-5)': true,
     'Weighted Score': true,
-    'Value Score': true,
-    'Admission Chances': true,
-    'Academic Index Match': true,
-    'Merit Aid Likelihood': true,
+    'Admission Fit': true,
     // Preserved so the auto-stamp check in fillCollegeRowCore can decide:
     // user-entered notes survive a re-fill, auto-stamps get refreshed.
     'Notes': true,

@@ -577,7 +577,6 @@ CollegeTools.Trackers = (function() {
 
     var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (collegesSheet) {
-      CollegeTools.Financial.enhanceCollegesFormatting(collegesSheet);
       CollegeTools.Admissions.enhanceAdmissionFormatting(collegesSheet);
     }
 
