@@ -96,6 +96,9 @@ CollegeTools.Config = (function() {
       'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
       'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost',
       'Outside Scholarships Applied', 'Appeal Status', 'Financial Safety', '4-Year Burden', 'Aid Requirements Complete', 'Notes',
+      // Appended (not inserted mid-list) so existing sheets that rerun setup
+      // keep their data columns aligned with the rewritten header row.
+      'Verification Submitted (Y/N)',
     ],
 
     CAMPUS_VISIT: [

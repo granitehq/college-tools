@@ -157,7 +157,8 @@ CollegeTools.Formatting = (function() {
         validateDate(fa, h);
       });
       ['CSS Profile Required (Y/N)', 'FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)',
-        'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)', 'Verification Required (Y/N)', 'Work-Study Offered']
+        'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)', 'Verification Required (Y/N)',
+        'Verification Submitted (Y/N)', 'Work-Study Offered']
         .forEach(function(h) {
           validateList(fa, h, ['Y', 'N']);
         });

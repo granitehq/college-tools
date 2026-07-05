@@ -88,7 +88,8 @@ CollegeTools.Trackers = (function() {
       CollegeTools.Formatting.validateDate(sh, h);
     });
     CollegeTools.Formatting.validateList(sh, 'CSS Profile Required (Y/N)', ['Y', 'N']);
-    ['FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)', 'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)', 'Verification Required (Y/N)'].forEach(function(h) {
+    ['FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)', 'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)',
+      'Verification Required (Y/N)', 'Verification Submitted (Y/N)'].forEach(function(h) {
       CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
     });
     CollegeTools.Formatting.validateList(sh, 'Work-Study Offered', ['Y', 'N']);
@@ -133,6 +134,7 @@ CollegeTools.Trackers = (function() {
     var idocReqCol = CollegeTools.Utils.colIndex(sh, 'IDOC Required (Y/N)');
     var idocSubCol = CollegeTools.Utils.colIndex(sh, 'IDOC Submitted (Y/N)');
     var verReqCol = CollegeTools.Utils.colIndex(sh, 'Verification Required (Y/N)');
+    var verSubCol = CollegeTools.Utils.colIndex(sh, 'Verification Submitted (Y/N)');
 
     if (completeCol && fafsaSubCol && cssSubCol) {
       var fafsaSubCell = CollegeTools.Utils.addr(r2, fafsaSubCol);
@@ -141,12 +143,22 @@ CollegeTools.Trackers = (function() {
       var idocReqCell = idocReqCol ? CollegeTools.Utils.addr(r2, idocReqCol) : '';
       var idocSubCell = idocSubCol ? CollegeTools.Utils.addr(r2, idocSubCol) : '';
       var verReqCell = verReqCol ? CollegeTools.Utils.addr(r2, verReqCol) : '';
+      var verSubCell = verSubCol ? CollegeTools.Utils.addr(r2, verSubCol) : '';
+
+      // Verification counts as satisfied when not required (N or blank) or
+      // when submitted — without the submitted check, verification-required
+      // colleges could never reach Complete.
+      var verClause = '';
+      if (verReqCol) {
+        verClause = ',OR(' + verReqCell + '="N",' + verReqCell + '=""' +
+          (verSubCol ? ',' + verSubCell + '="Y"' : '') + ')';
+      }
 
       var completeFormula = '=IF(AND(' +
         fafsaSubCell + '="Y",' +
         'OR(' + cssReqCell + '="N",' + cssSubCell + '="Y")' +
         (idocReqCol ? ',OR(' + idocReqCell + '="N",' + idocSubCell + '="Y")' : '') +
-        (verReqCol ? ',OR(' + verReqCell + '="N",' + verReqCell + '="")' : '') +
+        verClause +
         '),"✅ Complete","⚠️ Pending")';
 
       sh.getRange(r2, completeCol).setFormula(completeFormula);
@@ -209,10 +221,11 @@ CollegeTools.Trackers = (function() {
 
     if (appDeadlineCol && daysCol) {
       // Collect all formula columns and formulas
+      var deadlineCell = CollegeTools.Utils.addr(2, appDeadlineCol);
       var formulaCols = [daysCol];
-      var formulas = ['=IF(' + CollegeTools.Utils.addr(2, appDeadlineCol) +
-        '-TODAY()>0, ' + CollegeTools.Utils.addr(2, appDeadlineCol) +
-        '-TODAY(), "PAST DUE")'];
+      // Blank deadlines stay blank instead of showing "PAST DUE"
+      var formulas = ['=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
+        '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")'];
 
       // Warning formulas - collect all at once
       var warningHeaders = ['60-Day Warning', '30-Day Warning', '14-Day Warning', '7-Day Warning'];
@@ -222,8 +235,10 @@ CollegeTools.Trackers = (function() {
         var warnCol = CollegeTools.Utils.colIndex(sh, warningHeaders[i]);
         if (warnCol) {
           formulaCols.push(warnCol);
-          formulas.push('=IF(ISNUMBER(' + CollegeTools.Utils.addr(2, appDeadlineCol) + '), ' +
-            CollegeTools.Utils.addr(2, appDeadlineCol) + '-TODAY()<=' + warningDays[i] + ', "")');
+          // Warn only inside the window: not for blank or already-past deadlines
+          formulas.push('=IF(ISNUMBER(' + deadlineCell + '), AND(' +
+            deadlineCell + '-TODAY()<=' + warningDays[i] + ',' +
+            deadlineCell + '-TODAY()>=0), "")');
         }
       }
 
