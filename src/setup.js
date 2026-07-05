@@ -24,9 +24,9 @@ CollegeTools.Setup = (function() {
       'Complete College Tools Setup',
       'This will set up all features in one optimized operation:\n\n' +
       '• All tracker sheets with headers and validation\n' +
-      '• Dashboard with metrics and charts\n' +
-      '• Scoring formulas (Weighted + Value scores)\n' +
-      '• Admission chances calculator\n' +
+      '• Dashboard with key metrics\n' +
+      '• Weighted Score formulas\n' +
+      '• Admission Fit (Reach/Match/Likely) calculator\n' +
       '• Enhanced formatting and dropdowns\n' +
       '• Performance optimization (trim excess rows)\n\n' +
       'This may take 30-60 seconds. Continue?',

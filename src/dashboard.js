@@ -171,22 +171,7 @@ CollegeTools.Dashboard = (function() {
       ')+COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + '))*100,0)&"%", "No data")');
     row += 3;
 
-    // Section 5: Upcoming Deadlines (next 60 days)
-    sh.getRange(row, 1).setValue('⏰ Upcoming Deadlines (Next 60 Days)').setFontWeight('bold').setFontSize(14);
-    row += 2;
-
-    // Headers for deadline table
-    var deadlineHeaders = ['College', 'Deadline Type', 'Date', 'Days Left'];
-    sh.getRange(row, 1, 1, deadlineHeaders.length).setValues([deadlineHeaders]);
-    sh.getRange(row, 1, 1, deadlineHeaders.length).setFontWeight('bold').setBackground('#f1f3f4');
-    row++;
-
-    // Add a note about deadline data
-    sh.getRange(row, 1).setValue('(Deadline data will populate from Application Timeline tracker)');
-    sh.getRange(row, 1).setFontStyle('italic').setFontColor('#666666');
-    row += 3;
-
-    // Section 6: Scholarship Summary
+    // Section 5: Scholarship Summary
     sh.getRange(row, 1).setValue('🎓 Scholarship Summary').setFontWeight('bold').setFontSize(14);
     row += 2;
 
@@ -224,7 +209,7 @@ CollegeTools.Dashboard = (function() {
     }
 
     // Auto-resize columns
-    for (var c = 1; c <= 6; c++) {
+    for (var c = 1; c <= 2; c++) {
       sh.autoResizeColumn(c);
     }
 
@@ -234,119 +219,21 @@ CollegeTools.Dashboard = (function() {
   }
 
   /**
-   * Creates data range for Weighted Score vs Net Price chart.
-   * @param {Spreadsheet} ss - The spreadsheet object
-   * @private
-   */
-  function setupChartData(ss) {
-    var dashSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
-    if (!dashSheet) return;
-
-    // Create a data section for the chart on the right side
-    var startCol = 5; // Column E
-    var row = 3;
-
-    dashSheet.getRange(row, startCol).setValue('📊 Score vs Cost Data').setFontWeight('bold').setFontSize(14);
-    row += 2;
-
-    // Headers for chart data
-    var chartHeaders = ['College Name', 'Weighted Score', 'Net Price'];
-    dashSheet.getRange(row, startCol, 1, chartHeaders.length).setValues([chartHeaders]);
-    dashSheet.getRange(row, startCol, 1, chartHeaders.length).setFontWeight('bold').setBackground('#f1f3f4');
-    row++;
-
-    // Formula to pull data from Colleges sheet (top 20 by weighted score)
-    // This will create a sortable range for the chart
-    // var _dataRange = 'E' + row + ':G' + (row + 19); // 20 rows of data - reserved for future use
-
-    // Note: Google Sheets charts work best with actual data rather than complex formulas
-    // Users can copy/paste values here for chart creation, or we can use Apps Script to populate
-    dashSheet.getRange(row, startCol).setValue('(Use "Refresh Chart Data" to populate this section)');
-    dashSheet.getRange(row, startCol).setFontStyle('italic').setFontColor('#666666');
-  }
-
-  /**
-   * Refreshes the chart data by copying values from the Colleges sheet.
-   * @param {Spreadsheet} ss - The spreadsheet object
-   * @private
-   */
-  function refreshChartData(ss) {
-    var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-    var dashSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
-
-    if (!collegesSheet || !dashSheet) return;
-
-    // Get data from Colleges sheet
-    var lastRow = Math.min(collegesSheet.getLastRow(), 1000);
-    if (lastRow < 3) return; // No data
-
-    var nameCol = CollegeTools.Schema.columnIndex('COLLEGES', 'COLLEGE_NAME', collegesSheet);
-    var scoreCol = CollegeTools.Schema.columnIndex('COLLEGES', 'WEIGHTED_SCORE', collegesSheet);
-    var priceCol = CollegeTools.Schema.columnIndex('COLLEGES', 'NET_PRICE', collegesSheet);
-
-    if (!nameCol || !scoreCol || !priceCol) return;
-
-    // Read one wide range, then index in-memory to avoid multiple API reads.
-    var startCol = Math.min(nameCol, scoreCol, priceCol);
-    var endCol = Math.max(nameCol, scoreCol, priceCol);
-    var rows = collegesSheet.getRange(3, startCol, lastRow - 2, endCol - startCol + 1).getValues();
-    var nameOffset = nameCol - startCol;
-    var scoreOffset = scoreCol - startCol;
-    var priceOffset = priceCol - startCol;
-
-    // Combine and filter out empty rows
-    var chartData = [];
-    for (var i = 0; i < rows.length; i++) {
-      var name = rows[i][nameOffset];
-      var score = rows[i][scoreOffset];
-      var price = rows[i][priceOffset];
-      if (name && score && price) {
-        chartData.push([name, score, price]);
-      }
-    }
-
-    // Sort by weighted score (descending)
-    chartData.sort(function(a, b) {
-      return b[1] - a[1];
-    });
-
-    // Take top 20
-    chartData = chartData.slice(0, 20);
-
-    // Write to dashboard
-    startCol = 5; // Column E
-    var startRow = 6;
-
-    // Clear existing data
-    dashSheet.getRange(startRow, startCol, 30, 3).clear();
-
-    // Write new data
-    if (chartData.length > 0) {
-      dashSheet.getRange(startRow, startCol, chartData.length, 3).setValues(chartData);
-
-      // Format the data
-      dashSheet.getRange(startRow, startCol + 1, chartData.length, 1).setNumberFormat('0.00'); // Scores
-      dashSheet.getRange(startRow, startCol + 2, chartData.length, 1).setNumberFormat('$#,##0'); // Prices
-    }
-  }
-
-  /**
    * Creates or updates the Dashboard sheet with all metrics and data.
    */
   function setupDashboard() {
     var ss = SpreadsheetApp.getActive();
     createOrUpdateDashboard(ss);
-    setupChartData(ss);
-    refreshChartData(ss);
-    SpreadsheetApp.getUi().alert('Dashboard created! You can now create charts using the data in columns E-G.');
+    SpreadsheetApp.getUi().alert('Dashboard created!');
   }
 
   /**
-   * Refreshes all dashboard data and chart information.
+   * Refreshes all dashboard data. All Dashboard values are live formulas, so
+   * this rebuilds the sheet to pick up any schema/header changes since setup.
    */
   function refreshDashboard() {
     var ss = SpreadsheetApp.getActive();
-    refreshChartData(ss);
+    createOrUpdateDashboard(ss);
     SpreadsheetApp.getUi().alert('Dashboard data refreshed!');
   }
 
