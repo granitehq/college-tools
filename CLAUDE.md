@@ -36,8 +36,8 @@ On re-fill, the row is cleared first then API data is written back. What survive
 
 ## Other Known Risks
 
-- **Dashboard formulas** in `src/dashboard.js` use hard-coded column letters. If `Colleges` header order changes, dashboard silently breaks.
-- **Admissions formatting** in `src/admissions.js` clears all conditional format rules on `Colleges` before reapplying its own — unrelated rules are lost.
+- **Dashboard formulas** in `src/dashboard.js` derive column letters from `Config.HEADERS` at build time. They are frozen into the sheet until Setup/Refresh Dashboard is rerun, so header-order changes require a dashboard rebuild.
+- **Value Score normalization** in `src/scoring.js` bakes min/max constants into formulas at build time. Rerun "Ensure Scoring Formulas" or "Repair Entire Workbook" after adding colleges.
 - **Setup and formatting functions** are rerunnable but several clear or rebuild sheet contents aggressively.
 
 ## Testing

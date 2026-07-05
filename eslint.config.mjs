@@ -29,7 +29,6 @@ const appsScriptGlobals = {
   // Menu adapter functions (global scope required by Apps Script)
   onOpen: 'writable',
   fillCollegeRow: 'writable',
-  fillCollegeRowFast: 'writable',
   fillSelectedRows: 'writable',
   debugFillCollegeRow: 'writable',
   showVersion: 'writable',
@@ -40,8 +39,6 @@ const appsScriptGlobals = {
   ensureScoring: 'writable',
   searchCollegeNames: 'writable',
   fillRegionsAllRows: 'writable',
-  testCollegeNameValidation: 'writable',
-  showQuotaStatus: 'writable',
   clearApiCache: 'writable',
 };
 
