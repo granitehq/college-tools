@@ -3,7 +3,7 @@
 ## Pre-Submission Requirements
 
 ### ✅ Manifest Configuration (appsscript.json)
-- [x] Updated to use `urlFetchAllowlist` instead of deprecated `urlFetchWhitelist`
+- [x] Uses the clasp-supported `urlFetchWhitelist` manifest field
 - [x] Added `webapp` configuration for security
 - [x] Added `addOns` section with common and sheets-specific configuration
 - [x] Specified minimal OAuth scopes (`spreadsheets.currentonly`, `script.external_request`)
@@ -28,7 +28,7 @@
 - [ ] Support URL/website
 
 ### 📋 Technical Requirements
-- [x] URL allowlisting configured for api.data.gov
+- [x] URL whitelisting configured for api.data.gov
 - [x] Proper error handling for API calls
 - [ ] Test with multiple users to ensure stability
 - [ ] Ensure all menu functions work correctly
