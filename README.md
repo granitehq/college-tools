@@ -37,7 +37,7 @@
 ### For End Users
 
 1. **Get the Template**
-   - Copy the [College Tools Template Sheet](https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy) to your Google Drive
+   - Get the current template from [college-tools.granite-hq.com/getting-started](https://college-tools.granite-hq.com/getting-started) and copy it to your Google Drive
    - The template comes **pre-configured** with all sheets and features ready to use
 
 2. **Run Quick Start**

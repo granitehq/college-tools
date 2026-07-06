@@ -47,7 +47,7 @@ Additional Requirements for Approval
 
   Distribution methods:
   - Share template spreadsheet with "Make a copy" link
-  - Your current setup: https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy
+  - Your current setup: the website's getting-started page (https://college-tools.granite-hq.com/getting-started) links to the current published spreadsheet's "Make a copy" URL
 
   Option 2: Direct Sharing
 
