@@ -52,19 +52,19 @@ CollegeTools.Scoring = (function() {
     if (col) {
       var rStart = 3; var rEnd = Math.max(3, col.getLastRow());
       var pieces = [
-        'Program Fit (1-5)',
-        'Academic Reputation (1-5)',
-        'Research Opportunities (1-5)',
-        'Safety (1-5)',
-        'Campus Culture Fit (1-5)',
-        'Weather Fit (1-5)',
-        'Clubs/Activities (1-5)',
-        'Personal Priority (1-5)',
+        'PROGRAM_FIT',
+        'ACADEMIC_REPUTATION',
+        'RESEARCH_OPPORTUNITIES',
+        'SAFETY',
+        'CAMPUS_CULTURE_FIT',
+        'WEATHER_FIT',
+        'CLUBS_ACTIVITIES',
+        'PERSONAL_PRIORITY',
       ];
 
       // Build formula using SUMPRODUCT with weights looked up via VLOOKUP
-      var cScore = CollegeTools.Utils.colIndex2(col, 'Weighted Score');
-      var nameCol = CollegeTools.Utils.colIndex2(col, 'College Name');
+      var cScore = CollegeTools.Schema.columnIndex('COLLEGES', 'WEIGHTED_SCORE', col);
+      var nameCol = CollegeTools.Schema.columnIndex('COLLEGES', 'COLLEGE_NAME', col);
 
       // Read all college names once for the Weighted Score block below.
       var nameVals = nameCol ?
@@ -73,9 +73,9 @@ CollegeTools.Scoring = (function() {
       if (cScore && nameVals) {
         // Pre-compute the weight lookups once — they're the same for every row
         var pieceCols = [];
-        pieces.forEach(function(header) {
-          var c = CollegeTools.Utils.colIndex2(col, header);
-          if (c) pieceCols.push({header: header, col: c});
+        pieces.forEach(function(columnKey) {
+          var c = CollegeTools.Schema.columnIndex('COLLEGES', columnKey, col);
+          if (c) pieceCols.push({header: CollegeTools.Schema.header('COLLEGES', columnKey), col: c});
         });
 
         var weightFormulas = [];
@@ -89,7 +89,8 @@ CollegeTools.Scoring = (function() {
           pieceCols.forEach(function(pc) {
             var cell = CollegeTools.Utils.addr(r, pc.col);
             var weightLookup = 'IFERROR(VLOOKUP("' + pc.header + '",' +
-                              CollegeTools.Config.SHEET_NAMES.WEIGHTS + '!A:B,2,false),0)';
+                              CollegeTools.Formulas.sheetRef(CollegeTools.Config.SHEET_NAMES.WEIGHTS) +
+                              '!A:B,2,false),0)';
             num.push(cell + '*' + weightLookup);
             // Exclude unrated criteria from the denominator so a blank
             // rating is ignored rather than counted as a score of 0.
@@ -123,13 +124,14 @@ CollegeTools.Scoring = (function() {
 
         if (ratingCols.length) {
           var rStart2 = 2; var rEnd2 = Math.max(2, cv.getLastRow());
+          var visitFormulas = [];
           for (var r2 = rStart2; r2 <= rEnd2; r2++) {
             var cells = ratingCols.map(function(c) {
               return CollegeTools.Utils.addr(r2, c);
             });
-            var formula = '=IF(COUNTA(A' + r2 + ')=0,"",IFERROR(AVERAGE(' + cells.join(',') + '), ""))';
-            cv.getRange(r2, cVisitScore).setFormula(formula);
+            visitFormulas.push(['=IF(COUNTA(A' + r2 + ')=0,"",IFERROR(AVERAGE(' + cells.join(',') + '), ""))']);
           }
+          cv.getRange(rStart2, cVisitScore, visitFormulas.length, 1).setFormulas(visitFormulas);
           CollegeTools.Formatting.formatNumber(cv, 'Visit Score', '0.00');
         }
       }
