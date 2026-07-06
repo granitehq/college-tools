@@ -126,6 +126,24 @@ suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', (
 });
 
 
+suite.test('fillCollegeRow still syncs trackers with the typed name when the API finds no match', () => {
+  const {colleges} = setupWorkbook();
+  const originalFetch = CollegeTools.Scorecard.fetchCollegeData;
+  CollegeTools.Scorecard.fetchCollegeData = () => ({ok: false, error: 'no match'});
+
+  try {
+    colleges.getRange(3, 1).setValue('Unknown College');
+    CollegeTools.Colleges.fillCollegeRow();
+
+    const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    suite.assertEqual(fa.getRange(2, 1).getValue(), 'Unknown College',
+      'Tracker should receive the typed name even when the Scorecard API has no match, ' +
+      'so stale sample data does not linger indefinitely');
+  } finally {
+    CollegeTools.Scorecard.fetchCollegeData = originalFetch;
+  }
+});
+
 suite.test('repairCollegeSync returns warnings array when Colleges sheet is missing', () => {
   harness.resetSheets();
 

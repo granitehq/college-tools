@@ -338,6 +338,14 @@ CollegeTools.Colleges = (function() {
         nextRowValues[COL.NOTES - 1] = CollegeTools.Config.VERSION + ' | ' + apiResult.error;
       }
       rowRange.setValues([nextRowValues]);
+      // Sync the typed name to trackers even without API data, so tracker rows
+      // don't keep showing stale sample colleges when a lookup fails to match.
+      if (!opts.skipTrackerSetup) {
+        CollegeTools.Trackers.syncCollegeToTrackers({
+          name: sanitizedName,
+          sourceRow: row,
+        });
+      }
       if (!suppressAlert) SpreadsheetApp.getUi().alert('No match for "' + sanitizedName + '". See Notes.');
       return {ok: false, msg: 'no match'};
     }
