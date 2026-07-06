@@ -35,6 +35,10 @@ suite.test('schema maps stable column keys to current Config headers', () => {
     'College name key should resolve to the current Colleges header');
   suite.assertEqual(CollegeTools.Schema.header('COLLEGES', 'NET_PRICE'), 'Estimated Net Price',
     'Net price key should resolve to the current Colleges header');
+  suite.assertEqual(CollegeTools.Schema.header('COLLEGES', 'TYPICAL_DEBT'), 'Typical Debt at Graduation',
+    'Typical debt key should resolve to the current Colleges header');
+  suite.assertEqual(CollegeTools.Schema.header('COLLEGES', 'PELL_GRANT_RATE'), 'Pell Grant Rate',
+    'Pell Grant key should resolve to the current Colleges header');
   suite.assertEqual(CollegeTools.Schema.header('FINANCIAL_AID', 'FOUR_YEAR_PROJECTED_COST'),
     '4-Year Projected Cost', 'Financial Aid projected cost key should resolve');
   suite.assertEqual(CollegeTools.Schema.header('STATUS_TRACKER', 'DOCUMENTS_COMPLETE'),
@@ -50,6 +54,10 @@ suite.test('schema declares ownership boundaries for preservation-sensitive colu
     'Admission Fit should be formula-owned');
   suite.assert(CollegeTools.Schema.isApiColumn('COLLEGES', 'CITY'),
     'City should be API-owned');
+  suite.assert(CollegeTools.Schema.isApiColumn('COLLEGES', 'TYPICAL_DEBT'),
+    'Typical Debt should be API-owned');
+  suite.assert(CollegeTools.Schema.isApiColumn('COLLEGES', 'PELL_GRANT_RATE'),
+    'Pell Grant Rate should be API-owned');
   suite.assert(CollegeTools.Schema.isLinkedColumn('FINANCIAL_AID', 'TOTAL_COST'),
     'Financial Aid total cost should be tracker-linked from Colleges');
 });

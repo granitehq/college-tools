@@ -22,12 +22,18 @@ suite.test('Colleges headers include test policy and residency-aware tuition fie
   suite.assert(headers.includes('In-State Tuition'), 'Colleges should expose in-state tuition');
   suite.assert(headers.includes('Out-of-State Tuition'), 'Colleges should expose out-of-state tuition');
   suite.assert(headers.includes('Applicable Tuition'), 'Colleges should expose the tuition that applies to the family');
+  suite.assert(headers.includes('Typical Debt at Graduation'), 'Colleges should expose typical debt at graduation');
+  suite.assert(headers.includes('Pell Grant Rate'), 'Colleges should expose Pell Grant Rate');
   suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.cost.tuition.in_state'),
     'Scorecard API fields should request in-state tuition');
   suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.cost.tuition.out_of_state'),
     'Scorecard API fields should request out-of-state tuition');
   suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.admissions.test_requirements'),
     'Scorecard API fields should request test policy data');
+  suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.aid.median_debt.completers.overall'),
+    'Scorecard API fields should request typical debt');
+  suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.aid.pell_grant_rate'),
+    'Scorecard API fields should request Pell Grant Rate');
 });
 
 suite.test('fillCollegeRow writes test policy and residency-aware tuition fields', () => {
@@ -47,6 +53,8 @@ suite.test('fillCollegeRow writes test policy and residency-aware tuition fields
           'latest.cost.tuition.in_state': 11000,
           'latest.cost.tuition.out_of_state': 36000,
           'latest.admissions.test_requirements': 5,
+          'latest.aid.median_debt.completers.overall': 18500,
+          'latest.aid.pell_grant_rate': 0.28,
         },
       };
     },
@@ -68,6 +76,10 @@ suite.test('fillCollegeRow writes test policy and residency-aware tuition fields
   suite.assertEqual(colleges.getRange(3, getCollegeColumn('Applicable Tuition', colleges)).getFormula(),
     '=IF(State_Residency=C3,AC3,AD3)',
     'Applicable tuition should compare State_Residency with the school state');
+  suite.assertEqual(colleges.getRange(3, getCollegeColumn('Typical Debt at Graduation', colleges)).getValue(), 18500,
+    'Typical debt should be written from the flattened Scorecard key');
+  suite.assertEqual(colleges.getRange(3, getCollegeColumn('Pell Grant Rate', colleges)).getValue(), 0.28,
+    'Pell Grant Rate should be written from the flattened Scorecard key');
 });
 
 const success = suite.summary();

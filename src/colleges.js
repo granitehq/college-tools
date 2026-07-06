@@ -290,6 +290,8 @@ CollegeTools.Colleges = (function() {
         IN_STATE_TUITION: columnIndexes.IN_STATE_TUITION,
         OUT_OF_STATE_TUITION: columnIndexes.OUT_OF_STATE_TUITION,
         APPLICABLE_TUITION: columnIndexes.APPLICABLE_TUITION,
+        TYPICAL_DEBT: columnIndexes.TYPICAL_DEBT,
+        PELL_GRANT_RATE: columnIndexes.PELL_GRANT_RATE,
         NOTES: columnIndexes.NOTES,
       };
       idxRegion0 = columnIndexes.REGION !== -1 ? columnIndexes.REGION - 1 : -1;
@@ -322,6 +324,8 @@ CollegeTools.Colleges = (function() {
         IN_STATE_TUITION: hdrs.indexOf('In-State Tuition') !== -1 ? requireCol_(hdrs, 'In-State Tuition') : -1,
         OUT_OF_STATE_TUITION: hdrs.indexOf('Out-of-State Tuition') !== -1 ? requireCol_(hdrs, 'Out-of-State Tuition') : -1,
         APPLICABLE_TUITION: hdrs.indexOf('Applicable Tuition') !== -1 ? requireCol_(hdrs, 'Applicable Tuition') : -1,
+        TYPICAL_DEBT: hdrs.indexOf('Typical Debt at Graduation') !== -1 ? requireCol_(hdrs, 'Typical Debt at Graduation') : -1,
+        PELL_GRANT_RATE: hdrs.indexOf('Pell Grant Rate') !== -1 ? requireCol_(hdrs, 'Pell Grant Rate') : -1,
         NOTES: requireCol_(hdrs, 'Notes'),
       };
       idxRegion0 = hdrs.indexOf('Region');
@@ -370,6 +374,8 @@ CollegeTools.Colleges = (function() {
     var inStateTuition = r['latest.cost.tuition.in_state'] || '';
     var outOfStateTuition = r['latest.cost.tuition.out_of_state'] || '';
     var testOptional = testOptionalFromRequirement_(r['latest.admissions.test_requirements']);
+    var typicalDebt = r['latest.aid.median_debt.completers.overall'] || '';
+    var pellGrantRate = r['latest.aid.pell_grant_rate'] || '';
 
     /**
      * Converts value to number or null if empty.
@@ -419,6 +425,8 @@ CollegeTools.Colleges = (function() {
     if (COL.TEST_OPTIONAL !== -1) writes.push([COL.TEST_OPTIONAL, testOptional]);
     if (COL.IN_STATE_TUITION !== -1) writes.push([COL.IN_STATE_TUITION, inStateTuition]);
     if (COL.OUT_OF_STATE_TUITION !== -1) writes.push([COL.OUT_OF_STATE_TUITION, outOfStateTuition]);
+    if (COL.TYPICAL_DEBT !== -1) writes.push([COL.TYPICAL_DEBT, typicalDebt]);
+    if (COL.PELL_GRANT_RATE !== -1) writes.push([COL.PELL_GRANT_RATE, pellGrantRate]);
     if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
     if (COL.APPLICABLE_TUITION !== -1 && COL.IN_STATE_TUITION !== -1 && COL.OUT_OF_STATE_TUITION !== -1) {
       sh.getRange(row, COL.APPLICABLE_TUITION).setFormula('=IF(State_Residency=' +
@@ -620,6 +628,8 @@ CollegeTools.Colleges = (function() {
       IN_STATE_TUITION: hdrs.indexOf('In-State Tuition') !== -1 ? requireCol_(hdrs, 'In-State Tuition') : -1,
       OUT_OF_STATE_TUITION: hdrs.indexOf('Out-of-State Tuition') !== -1 ? requireCol_(hdrs, 'Out-of-State Tuition') : -1,
       APPLICABLE_TUITION: hdrs.indexOf('Applicable Tuition') !== -1 ? requireCol_(hdrs, 'Applicable Tuition') : -1,
+      TYPICAL_DEBT: hdrs.indexOf('Typical Debt at Graduation') !== -1 ? requireCol_(hdrs, 'Typical Debt at Graduation') : -1,
+      PELL_GRANT_RATE: hdrs.indexOf('Pell Grant Rate') !== -1 ? requireCol_(hdrs, 'Pell Grant Rate') : -1,
       NOTES: requireCol_(hdrs, 'Notes'),
       REGION: hdrs.indexOf('Region') !== -1 ? hdrs.indexOf('Region') + 1 : -1,
       HEADERS: hdrs,

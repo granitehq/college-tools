@@ -40,7 +40,8 @@ suite.test('critical Colleges headers snapshot stays stable', () => {
     'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
     'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
     'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
-    'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition', 'Notes',
+    'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition',
+    'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes',
   ];
 
   suite.assertEqual(JSON.stringify(CollegeTools.Config.HEADERS.COLLEGES), JSON.stringify(expected),
@@ -80,6 +81,10 @@ suite.test('default weights and API field config remain non-empty', () => {
     'API field list should include in-state tuition');
   suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.admissions.test_requirements'),
     'API field list should include test policy');
+  suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.aid.median_debt.completers.overall'),
+    'API field list should include typical debt');
+  suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.aid.pell_grant_rate'),
+    'API field list should include Pell Grant Rate');
 });
 
 const success = suite.summary();

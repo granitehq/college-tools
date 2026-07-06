@@ -44,12 +44,6 @@ CollegeTools.Scorecard = {
   typeFromOwnership(code) {
     return code === 1 ? 'Public' : '';
   },
-  getQuotaStatus() {
-    return {
-      dailyUsage: 0,
-      dailyLimit: 1000,
-    };
-  },
 };
 
 const suite = new TestSuite();
