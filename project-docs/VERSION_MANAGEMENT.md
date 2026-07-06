@@ -68,8 +68,8 @@ Only do this once you've verified the template (formulas, dashboard, Setup/Repai
 2. **File → Make a copy.** Optionally rename it (e.g. "College Tools vX.Y.Z") — renaming never changes the file ID, so do this freely for your own bookkeeping.
 3. On the new copy, run **Complete Setup** (or **Repair Entire Workbook**) to confirm everything builds cleanly on a fresh copy.
 4. Copy the new file's ID out of its URL (`https://docs.google.com/spreadsheets/d/<ID>/edit`).
-5. Update the `/copy` link in `docs/index.html`, `docs/features.html`, and `docs/getting-started.html` to the new ID.
-6. Commit and push — Cloudflare Pages redeploys the website automatically.
+5. Run `npm run release:promote -- <new-id>` — this rewrites the "Copy Template" link in `docs/index.html`, `docs/features.html`, and `docs/getting-started.html` in one shot (`scripts/update-template-link.js`).
+6. Review with `git diff`, commit, and push — Cloudflare Pages redeploys the website automatically.
 
 Existing users who already copied an older published version are unaffected either way — each copy has its own independent Apps Script project frozen at copy time. There's no auto-update mechanism for already-distributed copies (see `ARCHITECTURE_REVIEW.md` item A5 for the closest planned thing, a deadline email digest, which is unrelated to code updates).
 

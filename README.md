@@ -95,7 +95,8 @@ npm run version:major # Increment major (5.6.0 → 6.0.0)
 npm run release       # Alias for release:prepare
 npm run release:prepare # Check + patch version bump
 npm run release:tag     # Create git tag from package.json version
-npm run release:clasp   # Check + clasp push + Apps Script version
+npm run release:clasp   # Check + clasp push + Apps Script version (deploys to the template)
+npm run release:promote -- <sheet-id> # Update the published template link on the website
 
 # Apps Script
 npm run push          # Lint + npx clasp push
@@ -108,7 +109,7 @@ npm install           # Install dependencies
 
 ## Release Workflow
 
-GitHub is the durable release record. Prepare and commit the project version first, tag that exact commit, then deploy the same code to Apps Script with clasp.
+GitHub is the durable release record. Prepare and commit the project version first, tag that exact commit, deploy the same code to the template's Apps Script project with clasp, then promote the template to a new published copy.
 
 ```bash
 npm run release:prepare
@@ -123,7 +124,8 @@ Notes:
 
 - Replace `v2.6.1` in the commit message with the version created by `npm run release:prepare`.
 - `npm run release:tag` creates `v<package.json version>`, for example `v2.6.1`.
-- `npm run release:clasp` pushes to Apps Script and creates an Apps Script version; it does not create a GitHub Release.
+- `npm run release:clasp` pushes to the template's Apps Script project and creates an Apps Script version; it does not touch the published spreadsheet and does not create a GitHub Release.
+- Once the template is verified, promote it to the published spreadsheet: make a Drive copy of the template, then run `npm run release:promote -- <new-sheet-id>` to update the "Copy Template" link across the website. See `project-docs/VERSION_MANAGEMENT.md` for the full promotion steps.
 
 ### For Developers
 

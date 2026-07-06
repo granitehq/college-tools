@@ -19,6 +19,7 @@ const tests = [
   'formatting-schema-integration-tests.js',
   'menu-wiring-tests.js',
   'validation-coverage-tests.js',
+  'update-template-link-tests.js',
   'syntax-tests.js',
 ];
 
