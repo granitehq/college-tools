@@ -1,73 +1,120 @@
 # CLAUDE.md
 
-Working rules and non-obvious traps for AI agents in this codebase. Trust source over any prose here if they conflict.
+Shared guidance for AI agents in this repo. `AGENTS.md` is the canonical source;
+keep this file aligned with it when durable project rules change.
 
-## What This Is
+## Project Snapshot
 
-Google Apps Script project — a Google Sheets college research and application tracker. Data comes from the U.S. Department of Education College Scorecard API. Source is in `src/`, static website in `docs/`, build tooling in `scripts/`.
+`college-tools` is a Google Apps Script V8 project for a Google Sheets college
+research and application tracker. Source lives in `src/`, tests in `test/`,
+helper scripts in `scripts/`, static website files in `docs/`, and project docs
+in `project-docs/`.
 
-All source modules follow the same IIFE namespace pattern: `CollegeTools.ModuleName = (function() { ... })()`. Menu entry points in `src/menu.js` are global functions that delegate into these modules.
+Apps Script modules use the global namespace/IIFE pattern:
 
-## Critical: Two Header Row Conventions
+```js
+var CollegeTools = CollegeTools || {};
+CollegeTools.ModuleName = (function() {
+  return {};
+})();
+```
 
-**`Colleges` sheet: headers on row 2, data from row 3.**
-**All other sheets: headers on row 1, data from row 2.**
+Global Sheets menu adapters live in `src/menu.js` and delegate into namespaced
+modules.
 
-`CollegeTools.Utils.colIndex()` reads row 1 only — never use it on `Colleges`. Colleges-specific code does its own row-2 header lookups. Mixing these up is the easiest way to introduce silent bugs.
+## Critical Sheet Rules
 
-## Critical: Flattened API Keys
+- `Colleges`: headers on row 2, data starts on row 3.
+- Tracker/helper sheets: headers on row 1, data starts on row 2.
+- `CollegeTools.Utils.colIndex()` reads row 1 only. Do not use it for
+  `Colleges`.
+- Prefer `CollegeTools.Schema` helpers for new sheet-aware code.
 
-Scorecard API responses are accessed as flattened dot-notation strings:
+## Critical API Rule
+
+College Scorecard row-fill code uses flattened keys:
 
 ```js
 r['school.city']
 r['latest.admissions.admission_rate.overall']
 ```
 
-Do not assume nested objects (`r.school.city` will be undefined). The `Lookup` module handles both forms defensively, but `src/colleges.js` is strictly flat.
+Do not switch `src/colleges.js` to nested object access unless refactoring the
+entire data path.
 
-## Re-fill Behavior (`fillCollegeRowCore`)
+## Current Modules To Know
 
-On re-fill, the row is cleared first then API data is written back. What survives:
-- `College Name`
-- User rating columns (`Program Fit` through `Personal Priority`)
-- Formula columns (`Weighted Score`, `Admission Fit`)
-- `Notes` — but only when it holds user-entered text. Empty cells and prior auto-stamps (`"1.2.3 | ..."` pattern) are refreshed with version info and matched school name.
+- `config`, `schema`, `formulas`, `menu`, `utils`
+- `scorecard`, `colleges`, `trackers`, `formatting`
+- `scoring`, `lookup`, `setup`, `financial`, `admissions`, `dashboard`
+- `instructions`, `registration`
 
-## Other Known Risks
+`src/registration.js`, `scripts/registry-webapp.js`, and
+`scripts/push-updates.js` support optional direct-push updates. The registry is
+low-trust telemetry, not a strong security boundary.
 
-- **Dashboard formulas** in `src/dashboard.js` derive column letters from `Config.HEADERS` at build time. They are frozen into the sheet until Setup/Refresh Dashboard is rerun, so header-order changes require a dashboard rebuild.
-- **Setup and formatting functions** are rerunnable but several clear or rebuild sheet contents aggressively.
+## Preservation Rules
 
-## Testing
+`fillCollegeRowCore()` performs a batched row refresh. It preserves user-owned
+rating cells, formula-owned cells, and user notes while refreshing API-owned
+fields. Be careful with ownership lists, default row arrays, and note-stamp
+logic.
 
-The `test/` harness mocks Apps Script globals. It catches wiring issues and config regressions but does not validate spreadsheet behavior, formulas, or real API calls. Manual testing in a live Google Sheet is required for meaningful changes.
+Setup, repair, formatting, dashboard, and tracker paths can touch broad ranges.
+Make narrow edits and add focused regression tests for preservation-sensitive
+changes.
 
-## Deploy
+## Commands
 
-- `npm run push` — runs lint check first, then `clasp push`
-- `npm run build` — only updates git hash in `docs/` HTML footers; does not compile anything
-- `npm run release` — bumps patch version then pushes
-- `scripts/update-version.js` — updates `package.json`, all source `@version` tags, and `Config.VERSION` together
+- `npm test` - run the Node regression harness.
+- `npm run check` - lint with zero warnings, then run tests.
+- `npm run push` - run checks, then `npx clasp push`.
+- `npm run build` - stamp website git hashes only; no compilation.
+- `npm run dev` - serve `docs/` locally.
+- `npm run release:prepare` - checks then patch-version update.
+- `npm run release:clasp` - checks, clasp push, Apps Script version.
+- `npm run release:promote -- <sheet-id>` - update website template link.
+- `npm run push:updates` - direct-push update utility.
 
-## Required Branch And Release Flow
+Node requirement is `>=24.0.0`.
 
-Default all new code to this flow:
+## Testing Limits
 
-1. Update local `development`.
-2. Create a feature branch from `development`.
-3. Commit feature work on the feature branch.
+The test harness mocks Apps Script globals. It catches wiring, schema, formula,
+registration, push-script, and regression issues, but it does not prove live
+spreadsheet UI, rendered formulas, OAuth, or live API behavior. Meaningful
+setup/repair/formula/deploy changes still need a copied-sheet smoke test.
+
+## Branch And Release Flow
+
+Default flow:
+
+1. Start from latest `development`.
+2. Create a feature branch off `development`.
+3. Commit on the feature branch.
 4. Merge the feature branch back to `development`.
 5. Merge `development` to `main`.
 6. Version and deploy from `main`.
 
-`main` should not receive commits directly during normal work. If the user asks to commit directly to `main`, pause and request an explicit override of this process before doing it. Direct `main` hotfixes should be rare, user-approved exceptions, and the fix should be reconciled back into `development` afterward.
+Do not commit directly to `main` without an explicit user override for that
+specific change. Reconcile any approved hotfix back to `development`.
+
+## Current Docs
+
+- Canonical backlog: `project-docs/backlog.md`.
+- Release/versioning: `project-docs/version-management.md`.
+- Direct-push runbooks:
+  - `project-docs/direct-push-registry-provisioning.md`
+  - `project-docs/direct-push-release-workflow.md`
+- Archived planning/review docs: `project-docs/archive/`.
 
 ## Working Rules
 
-- Confirm code changes are being committed from a feature branch based on `development`.
-- Do not commit directly to `main` without an explicit user override for that specific change.
-- Always check which header row convention a sheet uses before writing lookups or formulas.
-- Keep API field access as flattened keys unless refactoring the entire data path.
-- Prefer small, surgical edits. Setup/formatting functions touch a lot — be deliberate.
-- Verify formulas against `Config.HEADERS` and the actual row convention of the target sheet.
+- Trust current source over older prose.
+- Verify row conventions before lookups/formulas.
+- Preserve flattened Scorecard keys.
+- Preserve user data unless the requested migration is explicitly destructive.
+- Keep setup/formatting/tracker/dashboard edits surgical.
+- Add or update focused tests for behavior changes.
+- For docs-only changes, run `git diff --check`; for code changes, run the
+  relevant tests or `npm run check`.
