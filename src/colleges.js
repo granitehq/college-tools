@@ -54,6 +54,40 @@ CollegeTools.Colleges = (function() {
   }
 
   /**
+   * Ensures older Colleges sheets have the Region column in the canonical
+   * position after State, then returns the current row-2 headers.
+   * @param {Sheet} sh - Colleges sheet
+   * @returns {Array<string>} Trimmed row-2 header values
+   * @private
+   */
+  function ensureCollegesRegionColumn_(sh) {
+    var lastCol = Math.max(1, sh.getLastColumn());
+    var hdrs = sh.getRange(2, 1, 1, lastCol).getValues()[0]
+      .map(function(x) {
+        return (x || '').toString().trim();
+      });
+
+    if (hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'REGION')) !== -1) return hdrs;
+
+    var stateIdx = hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'STATE'));
+    if (stateIdx === -1) return hdrs;
+
+    var regionCol = stateIdx + 2;
+    sh.insertColumnBefore(regionCol);
+    sh.getRange(2, regionCol).setValue(CollegeTools.Schema.header('COLLEGES', 'REGION'));
+
+    if (CollegeTools.Formatting && CollegeTools.Formatting.validateList) {
+      CollegeTools.Formatting.validateList(sh, 'Region', ['Northeast', 'Midwest', 'South', 'West'], 2);
+    }
+
+    lastCol = Math.max(1, sh.getLastColumn());
+    return sh.getRange(2, 1, 1, lastCol).getValues()[0]
+      .map(function(x) {
+        return (x || '').toString().trim();
+      });
+  }
+
+  /**
    * Builds the canonical Colleges column map used by single-row and batch fill.
    * @param {Array<string>} hdrs - Row-2 Colleges headers
    * @returns {Object} Column map
@@ -300,10 +334,7 @@ CollegeTools.Colleges = (function() {
 
     var hdrs = opts.columnIndexes ? opts.columnIndexes.HEADERS : null;
     if (!hdrs) {
-      hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
-        .map(function(x) {
-          return (x || '').toString().trim();
-        });
+      hdrs = ensureCollegesRegionColumn_(sh);
     }
     var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
     var idxRegion0 = COL.REGION !== -1 ? COL.REGION - 1 : -1;
@@ -506,11 +537,8 @@ CollegeTools.Colleges = (function() {
       return {ok: true, count: 0};
     }
 
-    // Read header row 2
-    var hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
-      .map(function(x) {
-        return (x||'').toString().trim();
-      });
+    // Read header row 2, repairing older sheets that predate Region.
+    var hdrs = ensureCollegesRegionColumn_(sh);
 
     var columnIndexes = buildCollegesColumnMap_(hdrs);
     var colName = columnIndexes.NAME;
@@ -600,10 +628,7 @@ CollegeTools.Colleges = (function() {
     // Note: Tracker setup is handled separately - not needed during fill operations
 
     // Performance optimization: Read headers once for entire batch operation.
-    var hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
-      .map(function(x) {
-        return (x || '').toString().trim();
-      });
+    var hdrs = ensureCollegesRegionColumn_(sh);
     var columnIndexes = buildCollegesColumnMap_(hdrs);
 
     // Process each row, stopping early if we approach the execution time limit

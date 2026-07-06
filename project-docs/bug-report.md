@@ -6,6 +6,8 @@ Captured from user-reported issues in the live spreadsheet. Descriptions and lik
 
 ## Bug 1: Region not filled in on Colleges tab, and dropdown won't let it be corrected
 
+**Status: Fixed in code.**
+
 **Description:** On the `Colleges` tab, the Region column is not populated for any college, and attempting to select a value from the dropdown doesn't correct it.
 
 **Likely cause:**
@@ -13,7 +15,9 @@ Captured from user-reported issues in the live spreadsheet. Descriptions and lik
 - `Region` is not in `PRESERVED_HEADERS` (~L92-107), so it is blanked on every refill and only repopulated if a fill path (`fillCollegeRowCore`, `fillRegionsAllRows`, or `repairEntireWorkbook`) actually completes. If a fill fails partway (e.g., no API match — see Bug 3) or the user edits State manually without re-running Fill, Region stays blank.
 - The dropdown (`formatting.js`, `validateList`) restricts entries to the exact strings `Northeast/Midwest/South/West` with `setAllowInvalid(false)`. If a fill did partially succeed and wrote a value outside that set (or the column resolved to the wrong index due to the header mismatch above), manual correction via the dropdown would appear to "not take."
 - The region-mapping logic itself (`Utils.getRegionForState`, `Config.REGION_MAP`) appears internally correct and is covered by passing tests, so the defect is most likely structural (header/column resolution or fill-path failure) rather than in the state→region mapping.
-- Root cause needs confirming against the actual live sheet's row-2 header text for this column, which isn't determinable from source alone.
+- Confirmed root cause: older/existing Colleges sheets predate the Region column, so it's simply absent from row 2 on those sheets — `optionalCollegeColumn_()` correctly resolves to `-1` for a genuinely missing column, and the dropdown was never attached because `validateList` also can't find a column that isn't there.
+
+**Fix applied:** Added `ensureCollegesRegionColumn_()` in `src/colleges.js`, which detects a missing `Region` header, inserts the column immediately after `State`, writes the header label, and attaches the `Northeast/Midwest/South/West` dropdown validation. It's now called before header resolution in `fillCollegeRowCore`, `fillRegionsAllRows`, and `fillSelectedRows`, so any Fill action on an older sheet self-repairs the column first. Covered by regression tests in `test/regression-tests.js`.
 
 **Priority:** High — a core categorization field is unusable and can't be manually recovered by the user.
 
@@ -33,12 +37,19 @@ Captured from user-reported issues in the live spreadsheet. Descriptions and lik
 
 ## Bug 3: Tracker sheets (Application Status Tracker, Application Timeline, Financial Aid Tracker, Campus Visit Tracker, etc.) show sample colleges instead of the primary list from Colleges
 
+**Status: Fixed in code (both identified gaps addressed).**
+
 **Description:** Suspected earlier as a row-offset bug (Colleges data starts row 3; other sheets start row 2), user believed this was fixed, but sample colleges are still showing instead of syncing from the Colleges tab.
 
 **Likely cause:**
 - The row-offset conversion itself (`getTrackerRowForCollegeRow_()` in `src/trackers.js`, ~L23-25: `Math.max(2, sourceRow - 1)`) is correctly implemented and consistently used by both `syncCollegeToTrackers` and `repairCollegeSync` — this specific offset bug appears to already be fixed at the code level.
 - The real gap: sync to trackers only happens (a) inside `fillCollegeRowCore`, **after** a successful Scorecard API match — if the API lookup fails (`apiResult.ok === false`, ~L335-343), the function returns early before ever calling `syncCollegeToTrackers` (~L446-452), leaving that row's trackers untouched; or (b) via the explicit "Repair Entire Workbook" menu command (`repairCollegeSync`).
 - So rows where the Fill action failed to match the API (typos, small/foreign schools not in Scorecard, name variants), or rows where the user typed a college name directly without ever running Fill, never get synced — their tracker rows keep showing whatever sample data shipped in the template. Running "Repair Entire Workbook" should resync all rows regardless of per-row fill history and is worth testing as a diagnostic.
+
+**Fix applied:**
+- `fillCollegeRowCore` (`src/colleges.js`) now calls `CollegeTools.Trackers.syncCollegeToTrackers()` with the typed/sanitized name on the no-match failure path too, not just after a successful API match — so trackers get the real name even when Scorecard can't find the school.
+- Tracker setup (`src/trackers.js`, end of the setup flow) now automatically runs `repairCollegeSync({suppressAlert: true})` after creating/updating tracker sheets, and reports the synced row count in the completion alert — so running Setup/Refresh Trackers resyncs every row from Colleges regardless of per-row fill history, instead of relying on the user to separately run "Repair Entire Workbook."
+- Covered by regression tests in `test/regression-tests.js` (tracker sync on failed lookup, and existing repair/sync alignment tests).
 
 **Priority:** High — affects multiple tracker sheets and blocks the core cross-sheet workflow.
 
