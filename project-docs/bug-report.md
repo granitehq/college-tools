@@ -17,7 +17,11 @@ Captured from user-reported issues in the live spreadsheet. Descriptions and lik
 - The region-mapping logic itself (`Utils.getRegionForState`, `Config.REGION_MAP`) appears internally correct and is covered by passing tests, so the defect is most likely structural (header/column resolution or fill-path failure) rather than in the state→region mapping.
 - Confirmed root cause: older/existing Colleges sheets predate the Region column, so it's simply absent from row 2 on those sheets — `optionalCollegeColumn_()` correctly resolves to `-1` for a genuinely missing column, and the dropdown was never attached because `validateList` also can't find a column that isn't there.
 
-**Fix applied:** Added `ensureCollegesRegionColumn_()` in `src/colleges.js`, which detects a missing `Region` header, inserts the column immediately after `State`, writes the header label, and attaches the `Northeast/Midwest/South/West` dropdown validation. It's now called before header resolution in `fillCollegeRowCore`, `fillRegionsAllRows`, and `fillSelectedRows`, so any Fill action on an older sheet self-repairs the column first. Covered by regression tests in `test/regression-tests.js`.
+**Fix applied (v1, later found broken in production):** Added `ensureCollegesRegionColumn_()` in `src/colleges.js`, which detected a missing `Region` header and used `sh.insertColumnBefore()` to insert it immediately after `State`. This passed all local tests but threw a live Google Sheets error in production — see below.
+
+**Real root cause (confirmed on the live sheet):** `sh.insertColumnBefore()` throws `"This operation is not allowed on cells in typed columns"` when inserting a column next to a column using Google Sheets' newer "typed column" (dropdown/chip) feature — which this sheet has (Type, ratings, etc.). This is a genuine Google Sheets platform restriction that the local mock test harness fully simulates as succeeding, so the v1 fix passed every test yet aborted `Repair Entire Workbook` partway through on the actual spreadsheet, before Region (or anything later in the repair sequence) could complete.
+
+**Fix applied (v2, actual fix):** Rewrote `ensureCollegesRegionColumn_()` to append Region as a new trailing column instead of inserting it mid-row — this never triggers the typed-column restriction. Every column in this codebase is resolved by header name, not position (`buildCollegesColumnMap_`, `dashboard.js`), so Region's position doesn't matter functionally. Added a regression test that makes the mock throw the exact real error, to catch any future regression back to `insertColumnBefore`.
 
 **Priority:** High — a core categorization field is unusable and can't be manually recovered by the user.
 
@@ -52,6 +56,20 @@ Captured from user-reported issues in the live spreadsheet. Descriptions and lik
 - Covered by regression tests in `test/regression-tests.js` (tracker sync on failed lookup, and existing repair/sync alignment tests).
 
 **Priority:** High — affects multiple tracker sheets and blocks the core cross-sheet workflow.
+
+---
+
+## Bug 3b: Acceptance Rate cell showed #VALUE!/#N/A; other dropdown/date validations inconsistent row-to-row (e.g. Honors Program Deadline present on some rows, missing on row 3)
+
+**Status: Fixed in code.**
+
+**Description:** After Fill correctly matched "The University of Texas at Austin" (confirmed via the Notes stamp), the Acceptance Rate cell for that row showed a `#VALUE!`/`#N/A` formula error instead of the percentage. Separately, Application Deadline showed as a pick-from-a-list "option" instead of a date, and Honors Program Deadline had a working date picker on some rows but not row 3.
+
+**Root cause:** `#VALUE!`/`#N/A` can only come from an actual formula/typed-cell state, never a plain value — confirming a stray data validation rule (most likely a leaked Type/Region-style dropdown rule from the Bug 1 `insertColumnBefore` failure) ended up bound to the Acceptance Rate cell. More broadly, `enhanceFormatsDropdowns()` (run by both Complete Setup and Repair Entire Workbook) only ever **adds** the known dropdown/date rules to their intended columns — it never clears anything first. So any stray rule sitting on the wrong column, or a rule applied inconsistently row-to-row (some rows got it by hand, others didn't), is never corrected by Setup or Repair.
+
+**Fix applied:** Added `clearExistingValidation_()` in `src/formatting.js` and call it at the start of every per-sheet block inside `enhanceFormatsDropdowns()` (Colleges, Financial Aid, Campus Visit, Application Timeline, Scholarship Tracker, Status Tracker) — clearing all existing validation across each sheet's full data range before the correct rules are reapplied uniformly. Running **Repair Entire Workbook** (or Complete Setup) now normalizes every row to the same, correct validation state regardless of how it got corrupted or inconsistent. Covered by regression tests in `test/formatting-schema-integration-tests.js`.
+
+**Priority:** High — silently corrupts visible data (formula errors) and blocks normal data entry until manually cleared in the Sheets UI.
 
 ---
 
