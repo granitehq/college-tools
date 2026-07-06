@@ -33,7 +33,8 @@
     "release:prepare": "npm run check && npm run version:patch",
     "release:tag": "git tag v$(node -p \"require('./package.json').version\")",
     "release:clasp": "npm run check && npx clasp push && npx clasp version",
-    "release:promote": "node scripts/update-template-link.js"
+    "release:promote": "node scripts/update-template-link.js",
+    "push:updates": "node scripts/push-updates.js"
   },
   "keywords": [
     "google-apps-script",
@@ -59,5 +60,8 @@
   },
   "overrides": {
     "uuid": "11.1.1"
+  },
+  "dependencies": {
+    "googleapis": "^148.0.0"
   }
 }

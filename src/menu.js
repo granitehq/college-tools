@@ -12,6 +12,8 @@
  * Must be global for Google Sheets to find it.
  */
 function onOpen() {
+  CollegeTools.Registration.registerIfNeeded();
+
   SpreadsheetApp.getUi()
     .createMenu('College Tools')
     .addItem('📖 Instructions & Help', 'createInstructionsSheet')
