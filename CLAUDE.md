@@ -50,8 +50,23 @@ The `test/` harness mocks Apps Script globals. It catches wiring issues and conf
 - `npm run release` — bumps patch version then pushes
 - `scripts/update-version.js` — updates `package.json`, all source `@version` tags, and `Config.VERSION` together
 
+## Required Branch And Release Flow
+
+Default all new code to this flow:
+
+1. Update local `development`.
+2. Create a feature branch from `development`.
+3. Commit feature work on the feature branch.
+4. Merge the feature branch back to `development`.
+5. Merge `development` to `main`.
+6. Version and deploy from `main`.
+
+`main` should not receive commits directly during normal work. If the user asks to commit directly to `main`, pause and request an explicit override of this process before doing it. Direct `main` hotfixes should be rare, user-approved exceptions, and the fix should be reconciled back into `development` afterward.
+
 ## Working Rules
 
+- Confirm code changes are being committed from a feature branch based on `development`.
+- Do not commit directly to `main` without an explicit user override for that specific change.
 - Always check which header row convention a sheet uses before writing lookups or formulas.
 - Keep API field access as flattened keys unless refactoring the entire data path.
 - Prefer small, surgical edits. Setup/formatting functions touch a lot — be deliberate.

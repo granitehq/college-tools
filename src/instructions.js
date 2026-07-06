@@ -1,6 +1,6 @@
 /**
  * Instructions and Help System
- * @version 2.6.1
+ * @version 2.6.2
  * @author College Tools
  * @description Creates comprehensive user instructions and help documentation
  */
@@ -122,7 +122,7 @@ CollegeTools.Instructions = (function() {
     row += 2;
 
     writeMergedLine_(sheet, row,
-      '🔗 Get the latest template: https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy',
+      '🔗 Get the latest template: https://college-tools.granite-hq.com/getting-started',
       {fontSize: 10, background: '#f8f9fa', fontColor: '#6c757d'});
     row += 2;
 

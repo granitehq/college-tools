@@ -28,7 +28,7 @@ This project is primarily deployed and run within Google Sheets. For development
 *   `@google/clasp` globally installed (`npm install -g @google/clasp`)
 
 ### For End Users
-1.  **Get the Template**: Copy the [College Tools Template Sheet](https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy) to your Google Drive.
+1.  **Get the Template**: Get the current template from [college-tools.granite-hq.com/getting-started](https://college-tools.granite-hq.com/getting-started) and copy it to your Google Drive.
 2.  **Run Quick Start**: Open the copied sheet and navigate to `College Tools → 🚀 Quick Start (API Key Check)`.
 3.  **Add Your API Key**: Create a sheet named "ScorecardAPIKey" and paste your API key into cell A1. Run Quick Start again to confirm.
 4.  **Start Using**: Fill out your Personal Profile and use `College Tools → 🎓 For Students & Parents → Fill current row` to get college data.

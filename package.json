@@ -1,6 +1,6 @@
 {
   "name": "college-tools",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "Google Apps Script project for college selection and tracking",
   "main": "src/menu.js",
   "scripts": {
@@ -32,7 +32,8 @@
     "release": "npm run release:prepare",
     "release:prepare": "npm run check && npm run version:patch",
     "release:tag": "git tag v$(node -p \"require('./package.json').version\")",
-    "release:clasp": "npm run check && npx clasp push && npx clasp version"
+    "release:clasp": "npm run check && npx clasp push && npx clasp version",
+    "release:promote": "node scripts/update-template-link.js"
   },
   "keywords": [
     "google-apps-script",

@@ -37,7 +37,7 @@
 ### For End Users
 
 1. **Get the Template**
-   - Copy the [College Tools Template Sheet](https://docs.google.com/spreadsheets/d/1_DI-6_f1jTyqL3QKcWsuyRmgHFjnc6rhkp7Oqz6QqpU/copy) to your Google Drive
+   - Get the current template from [college-tools.granite-hq.com/getting-started](https://college-tools.granite-hq.com/getting-started) and copy it to your Google Drive
    - The template comes **pre-configured** with all sheets and features ready to use
 
 2. **Run Quick Start**
@@ -56,6 +56,20 @@
    - All tracker sheets, dashboard, and scoring are already set up!
 
 # For Developers wanting to contribute/modify
+
+## Required Branch Flow
+
+All new code should start from `development`, not `main`.
+
+```bash
+git checkout development
+git pull origin development
+git checkout -b feature/your-change
+```
+
+Finish the feature by merging the feature branch into `development`. After `development` is verified, merge `development` into `main`; then version and deploy from `main`.
+
+Direct commits to `main` are only for rare hotfixes. If you want to commit directly to `main`, explicitly override this process first, and reconcile the fix back into `development` afterward.
 
 ## Code Quality
 
@@ -95,7 +109,8 @@ npm run version:major # Increment major (5.6.0 → 6.0.0)
 npm run release       # Alias for release:prepare
 npm run release:prepare # Check + patch version bump
 npm run release:tag     # Create git tag from package.json version
-npm run release:clasp   # Check + clasp push + Apps Script version
+npm run release:clasp   # Check + clasp push + Apps Script version (deploys to the template)
+npm run release:promote -- <sheet-id> # Update the published template link on the website
 
 # Apps Script
 npm run push          # Lint + npx clasp push
@@ -108,7 +123,17 @@ npm install           # Install dependencies
 
 ## Release Workflow
 
-GitHub is the durable release record. Prepare and commit the project version first, tag that exact commit, then deploy the same code to Apps Script with clasp.
+GitHub is the durable release record. Normal releases flow from `development` into `main`; `main` should only contain changes that came through `development`, except for rare explicitly approved hotfixes.
+
+Before versioning, merge the verified `development` branch into `main`:
+
+```bash
+git checkout main
+git pull origin main
+git merge development
+```
+
+Then prepare and commit the project version on `main`, tag that exact commit, deploy the same code to the template's Apps Script project with clasp, then promote the template to a new published copy.
 
 ```bash
 npm run release:prepare
@@ -123,7 +148,8 @@ Notes:
 
 - Replace `v2.6.1` in the commit message with the version created by `npm run release:prepare`.
 - `npm run release:tag` creates `v<package.json version>`, for example `v2.6.1`.
-- `npm run release:clasp` pushes to Apps Script and creates an Apps Script version; it does not create a GitHub Release.
+- `npm run release:clasp` pushes to the template's Apps Script project and creates an Apps Script version; it does not touch the published spreadsheet and does not create a GitHub Release.
+- Once the template is verified, promote it to the published spreadsheet: make a Drive copy of the template, then run `npm run release:promote -- <new-sheet-id>` to update the "Copy Template" link across the website. See `project-docs/VERSION_MANAGEMENT.md` for the full promotion steps.
 
 ### For Developers
 
@@ -167,10 +193,11 @@ npm run version:patch # Bump patch version
 ### Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Check out `development`: `git checkout development && git pull origin development`
+3. Create a feature branch from `development`: `git checkout -b feature/amazing-feature`
+4. Commit changes: `git commit -m 'Add amazing feature'`
+5. Push to branch: `git push origin feature/amazing-feature`
+6. Open a Pull Request targeting `development`
 
 ## 🐛 Support
 
