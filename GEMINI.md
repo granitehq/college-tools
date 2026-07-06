@@ -1,77 +1,104 @@
-# Project: College Tools 🎓
+# GEMINI.md
+
+Shared guidance for AI agents in this repo. `AGENTS.md` is the canonical source;
+keep this file aligned with it when durable project rules change.
 
 ## Project Overview
 
-This project is a comprehensive Google Sheets-based college selection and tracking system. It leverages the U.S. Department of Education's College Scorecard API to automatically fetch and integrate college data into Google Sheets, providing users with tools for academic analysis, financial intelligence, and organizational tracking during the college application process.
+`college-tools` is a Google Apps Script V8 project for a Google Sheets based
+college research and application tracker. It uses the U.S. Department of
+Education College Scorecard API to populate a `Colleges` sheet and maintain
+tracker sheets, scoring, financial analysis, dashboard views, instructions,
+copy registration, and optional direct-push update workflows.
 
-The core logic is implemented using Google Apps Script (JavaScript) files located in the `src/` directory, which are deployed to a Google Sheet. Development tooling relies on Node.js and npm for tasks like linting, version management, and deployment.
+Key directories:
 
-**Key Features:**
-*   **College Data Import**: Fetches comprehensive college data using the College Scorecard API.
-*   **Academic Analysis**: Calculates admission probability and merit aid likelihood.
-*   **Financial Intelligence**: Assesses affordability and tracks aid requirements.
-*   **Organization Tools**: Provides tracker sheets (Financial Aid, Campus Visits, Application Timeline, Scholarships) and a weighted scoring system.
+- `src/` - Apps Script source.
+- `test/` - Node regression harness with mocked Apps Script globals.
+- `scripts/` - local release, website, registry, and push-update helpers.
+- `docs/` - static website.
+- `project-docs/` - runbooks and backlog; filenames are lowercase kebab-case.
 
-**Technologies Used:**
-*   **Frontend/Logic**: Google Sheets, Google Apps Script (JavaScript)
-*   **API Integration**: U.S. Department of Education's College Scorecard API
-*   **Development Tools**: Node.js, npm, `@google/clasp`, ESLint
+Source modules use the `CollegeTools` namespace/IIFE pattern. Google Sheets menu
+entry points live as globals in `src/menu.js`.
 
-## Building and Running
+## Core Architecture Rules
 
-This project is primarily deployed and run within Google Sheets. For development, the following commands are used:
+- Runtime: Google Apps Script V8.
+- Node requirement for local tooling: `>=24.0.0`.
+- `Colleges` headers are on row 2 and data starts on row 3.
+- Tracker/helper sheets use row-1 headers and row-2 data.
+- `CollegeTools.Utils.colIndex()` reads row 1 only; do not use it for
+  `Colleges`.
+- Prefer `CollegeTools.Schema` helpers for new sheet-aware code.
+- Scorecard responses in `src/colleges.js` are flattened keys such as
+  `r['school.city']`; do not assume nested objects.
 
-### Prerequisites
-*   Google Account with Google Sheets access
-*   College Scorecard API key (obtained from api.data.gov)
-*   Node.js 14+ and npm (for developers)
-*   `@google/clasp` globally installed (`npm install -g @google/clasp`)
+## Current Module Map
 
-### For End Users
-1.  **Get the Template**: Get the current template from [college-tools.granite-hq.com/getting-started](https://college-tools.granite-hq.com/getting-started) and copy it to your Google Drive.
-2.  **Run Quick Start**: Open the copied sheet and navigate to `College Tools → 🚀 Quick Start (API Key Check)`.
-3.  **Add Your API Key**: Create a sheet named "ScorecardAPIKey" and paste your API key into cell A1. Run Quick Start again to confirm.
-4.  **Start Using**: Fill out your Personal Profile and use `College Tools → 🎓 For Students & Parents → Fill current row` to get college data.
+- `config`, `schema`, `formulas`, `menu`, `utils`
+- `scorecard`, `colleges`, `trackers`, `formatting`
+- `scoring`, `lookup`, `setup`, `financial`, `admissions`, `dashboard`
+- `instructions`, `registration`
 
-### For Developers
+`src/registration.js`, `scripts/registry-webapp.js`, and
+`scripts/push-updates.js` implement optional direct-push registration/update
+support. The registry is low-trust telemetry, not strong authentication.
 
-1.  **Clone and Setup**:
-    ```bash
-    git clone https://github.com/granitehq/college-tools.git
-    cd college-tools
-    npm install
-    ```
-2.  **Configure clasp**:
-    ```bash
-    clasp login
-    clasp create --type sheets # Link to an existing Google Sheet or create a new one
-    ```
-3.  **Deploy**:
-    ```bash
-    npm run push # Lints and deploys the Apps Script code to the linked Google Sheet
-    ```
+## Development Commands
 
-### Key Development Commands:
+- `npm install` - install dependencies.
+- `npm test` - run the full Node harness.
+- `npm run check` - lint with zero warnings and run tests.
+- `npm run lint`, `npm run lint:fix`, `npm run lint:check` - lint tasks.
+- `npm run push` - run checks and push Apps Script via clasp.
+- `npm run pull` - pull Apps Script via clasp.
+- `npm run build` - stamp static website git hashes only.
+- `npm run dev` - serve `docs/` locally.
+- `npm run release:prepare` - checks then patch-version update.
+- `npm run release:tag` - create `v<package.json version>` tag.
+- `npm run release:clasp` - checks, clasp push, Apps Script version.
+- `npm run release:promote -- <sheet-id>` - update website template links.
+- `npm run push:updates` - direct-push update utility.
 
-*   **Linting**:
-    *   `npm run lint`: Check code style.
-    *   `npm run lint:fix`: Auto-fix code style issues.
-    *   `npm run lint:check`: Zero-tolerance linting check.
-*   **Deployment**:
-    *   `npm run push`: Lints and deploys the `src/` code to Google Apps Script.
-    *   `npm run pull`: Pulls the Apps Script code from Google to the local `src/` directory.
-    *   `npm run clasp:version`: Creates an Apps Script version.
-*   **Version Management**:
-    *   `npm run version:show`: Displays the current project version.
-    *   `npm run version:patch`: Increments the patch version.
-    *   `npm run version:minor`: Increments the minor version.
-    *   `npm run version:major`: Increments the major version.
-    *   `npm run release`: Increments the patch version, lints, and deploys.
+## Testing Limits
 
-## Development Conventions
+The local harness is useful for wiring, schema, formula text, registration,
+push scripts, and regression coverage. It does not prove live spreadsheet UI,
+rendered formulas, OAuth, or live Scorecard API behavior. Setup/repair/formula
+and deployment changes need manual smoke testing in a copied Google Sheet.
 
-*   **Code Style**: Enforced using ESLint with a configuration tailored for Google Apps Script. `npm run lint:check` is used for pre-commit and pre-push hooks to maintain code quality.
-*   **Modular Architecture**: The `src/` directory is organized into modules with clear separation of concerns (e.g., `scorecard.js` for API client, `colleges.js` for data operations, `menu.js` for UI integration).
-*   **API Key Protection**: API keys are stored locally in Google Sheets by the user and are not committed to version control.
-*   **Testing**: The `test/` directory contains various tests including `basic-functionality-tests.js`, `functionality-tests.js`, `regression-tests.js`, and `syntax-tests.js`.
-*   **Contribution**: Contributions follow a standard GitHub flow (fork, feature branch, commit, push, pull request).
+## Branch And Release Flow
+
+Default flow unless the user explicitly overrides it:
+
+1. Start from latest `development`.
+2. Create a feature branch off `development`.
+3. Commit on the feature branch.
+4. Merge the feature branch into `development`.
+5. Merge `development` into `main`.
+6. Version and deploy from `main`.
+
+Do not commit directly to `main` without an explicit override for that specific
+change. Approved direct hotfixes must be reconciled back into `development`.
+
+## Current Docs
+
+- Canonical backlog: `project-docs/backlog.md`.
+- Version/release process: `project-docs/version-management.md`.
+- Direct-push runbooks:
+  - `project-docs/direct-push-registry-provisioning.md`
+  - `project-docs/direct-push-release-workflow.md`
+- Archived planning/review docs: `project-docs/archive/`.
+
+## Working Rules
+
+- Trust current source over stale prose.
+- Preserve row-header conventions and flattened Scorecard field access.
+- Preserve user-owned cells, formula cells, notes, tracker details, and named
+  ranges unless a requested migration is explicitly destructive.
+- Keep setup, formatting, tracker repair, and dashboard edits small and
+  preservation-focused.
+- Add or update focused tests for behavior changes.
+- For docs-only changes, run `git diff --check`; for code changes, run relevant
+  tests or `npm run check`.
