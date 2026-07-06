@@ -87,15 +87,9 @@ CollegeTools.Trackers = (function() {
     var lastCol = sh.getLastColumn();
     if (lastRow < 2 || lastCol < 1) return snapshots;
 
-    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    var formulas = [];
-    for (var r = 0; r < values.length; r++) {
-      var rowFormulas = [];
-      for (var c = 1; c <= lastCol; c++) {
-        rowFormulas.push(sh.getRange(r + 2, c).getFormula());
-      }
-      formulas.push(rowFormulas);
-    }
+    var range = sh.getRange(2, 1, lastRow - 1, lastCol);
+    var values = range.getValues();
+    var formulas = range.getFormulas();
 
     for (var i = 0; i < values.length; i++) {
       var collegeName = (values[i][nameCol - 1] || '').toString().trim();
@@ -165,21 +159,7 @@ CollegeTools.Trackers = (function() {
     var headers = CollegeTools.Config.HEADERS.FINANCIAL_AID;
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    // College Name validation using dynamic range from Colleges sheet
-    CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
-
-    ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'].forEach(function(h) {
-      CollegeTools.Formatting.validateDate(sh, h);
-    });
-    CollegeTools.Formatting.validateList(sh, 'CSS Profile Required (Y/N)', ['Y', 'N']);
-    ['FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)', 'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)',
-      'Verification Required (Y/N)', 'Verification Submitted (Y/N)'].forEach(function(h) {
-      CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
-    });
-    CollegeTools.Formatting.validateList(sh, 'Work-Study Offered', ['Y', 'N']);
-    CollegeTools.Formatting.validateList(sh, 'Appeal Status',
-      ['Not Started', 'In Progress', 'Submitted', 'Approved', 'Denied']);
+    CollegeTools.Formatting.applyStandardValidations(sh);
 
     // Formulas row 2 (user can fill down)
     var r2 = 2;
@@ -269,18 +249,7 @@ CollegeTools.Trackers = (function() {
     var headers = CollegeTools.Config.HEADERS.CAMPUS_VISIT;
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    // College Name validation using dynamic range from Colleges sheet
-    CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
-
-    CollegeTools.Formatting.validateDate(sh, 'Visit Date');
-    CollegeTools.Formatting.validateList(sh, 'Visit Type (In-Person/Virtual/College Fair)',
-      ['In-Person', 'Virtual', 'College Fair', 'Regional Event']);
-    ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)']
-      .forEach(function(h) {
-        CollegeTools.Formatting.validateList(sh, h, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
-      });
-    CollegeTools.Formatting.validateList(sh, 'Follow-Up Needed', ['Y', 'N']);
+    CollegeTools.Formatting.applyStandardValidations(sh);
   }
 
   /**
@@ -293,18 +262,7 @@ CollegeTools.Trackers = (function() {
     var headers = CollegeTools.Config.HEADERS.APPLICATION_TIMELINE;
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    // Optimize: Skip dynamic validation during setup for speed - can be added later if needed
-    // CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-    //   CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A2:A1000');
-
-    // Optimize: Batch validate only the most critical date columns to reduce setup time
-    var criticalDateCols = ['Application Deadline', 'Decision Release Date'];
-    criticalDateCols.forEach(function(h) {
-      CollegeTools.Formatting.validateDate(sh, h);
-    });
-    CollegeTools.Formatting.validateList(sh, 'Application Type (ED/ED2/EA/REA/RD)',
-      ['ED', 'ED2', 'EA', 'REA', 'RD']);
-    CollegeTools.Formatting.validateList(sh, 'Priority Level', ['High', 'Medium', 'Low']);
+    CollegeTools.Formatting.applyStandardValidations(sh);
 
     // Batch optimize: Set all formulas at once instead of individual calls
     var appDeadlineCol = CollegeTools.Utils.colIndex(sh, 'Application Deadline');
@@ -373,28 +331,7 @@ CollegeTools.Trackers = (function() {
     var headers = CollegeTools.Config.HEADERS.STATUS_TRACKER;
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    // College Name validation using dynamic range from Colleges sheet
-    CollegeTools.Formatting.validateListFromRange(sh, 'College Name',
-      CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
-
-    // Validation for Y/N columns
-    ['Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete',
-      'Interview (Y/N)', 'Portfolio Required (Y/N)'].forEach(function(h) {
-      CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
-    });
-
-    // Date validation. Application Deadline lives on Application Timeline
-    // only -- see the sheet-ownership note on APPLICATION_TIMELINE in config.js.
-    ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
-      .forEach(function(h) {
-        CollegeTools.Formatting.validateDate(sh, h);
-      });
-
-    CollegeTools.Formatting.validateList(sh, 'Application Status',
-      ['Not Started', 'In Progress', 'Submitted', 'Under Review', 'Decision Received']);
-    CollegeTools.Formatting.validateList(sh, 'Decision Plan', ['ED', 'ED2', 'EA', 'REA', 'RD']);
-    CollegeTools.Formatting.validateList(sh, 'Decision/Result',
-      ['Pending', 'Accepted', 'Deferred', 'Waitlisted', 'Rejected']);
+    CollegeTools.Formatting.applyStandardValidations(sh);
 
     // Documents Complete formula in row 2
     var completeCol = CollegeTools.Utils.colIndex(sh, 'Documents Complete');
@@ -426,22 +363,7 @@ CollegeTools.Trackers = (function() {
     var headers = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    CollegeTools.Formatting.validateList(sh, 'Type (Merit/Need/Field/Local/National)',
-      ['Merit', 'Need', 'Field-Specific', 'Local', 'National']);
-    CollegeTools.Formatting.validateList(sh, 'Award Type (One-time/Renewable)',
-      ['One-time', 'Renewable']);
-    CollegeTools.Formatting.validateList(sh, 'Financial Need Required', ['Y', 'N']);
-    CollegeTools.Formatting.validateList(sh, 'Transcript Required', ['Y', 'N']);
-    CollegeTools.Formatting.validateList(sh, 'FAFSA Required', ['Y', 'N']);
-    CollegeTools.Formatting.validateList(sh, 'Portfolio/Work Samples', ['Y', 'N']);
-    CollegeTools.Formatting.validateList(sh, 'Interview Required', ['Y', 'N']);
-    CollegeTools.Formatting.validateList(sh, 'Award Status (Pending/Awarded/Declined)',
-      ['Pending', 'Awarded', 'Declined']);
-
-    ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date']
-      .forEach(function(h) {
-        CollegeTools.Formatting.validateDate(sh, h);
-      });
+    CollegeTools.Formatting.applyStandardValidations(sh);
   }
 
   /**
@@ -479,6 +401,94 @@ CollegeTools.Trackers = (function() {
     }
   }
 
+
+  /**
+   * Builds a repair-time linked-column write target with header indexes resolved once.
+   * @param {Sheet|null} sh - Tracker sheet
+   * @param {Array<string>} linkedHeaders - Headers repaired from Colleges
+   * @returns {Object|null} Repair sync target
+   * @private
+   */
+  function buildRepairSyncTarget_(sh, linkedHeaders) {
+    if (!sh) return null;
+    var lastCol = sh.getLastColumn();
+    if (lastCol < 1) return null;
+    var headerValues = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var columns = {};
+    var values = {};
+
+    linkedHeaders.forEach(function(header) {
+      for (var i = 0; i < headerValues.length; i++) {
+        if ((headerValues[i] || '').toString().trim() === header) {
+          columns[header] = i + 1;
+          values[header] = [];
+          return;
+        }
+      }
+    });
+
+    return {sheet: sh, columns: columns, values: values};
+  }
+
+  /**
+   * Queues linked values for a repair-time tracker update.
+   * @param {Object|null} target - Repair sync target
+   * @param {number} row - Tracker row to update
+   * @param {Object} updates - Header/value map
+   * @private
+   */
+  function queueRepairSync_(target, row, updates) {
+    if (!target) return;
+    for (var header in updates) {
+      if (!updates.hasOwnProperty(header) || !target.columns[header]) continue;
+      target.values[header].push({row: row, value: updates[header] || ''});
+    }
+  }
+
+  /**
+   * Writes queued column updates as contiguous setValues runs.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {number} column - 1-based column index
+   * @param {Array<Object>} entries - Row/value entries
+   * @private
+   */
+  function flushColumnRuns_(sh, column, entries) {
+    if (!entries.length) return;
+    entries.sort(function(a, b) {
+      return a.row - b.row;
+    });
+
+    var runStart = entries[0].row;
+    var runValues = [[entries[0].value]];
+    var previousRow = entries[0].row;
+
+    for (var i = 1; i < entries.length; i++) {
+      if (entries[i].row === previousRow + 1) {
+        runValues.push([entries[i].value]);
+      } else {
+        sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
+        runStart = entries[i].row;
+        runValues = [[entries[i].value]];
+      }
+      previousRow = entries[i].row;
+    }
+
+    sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
+  }
+
+  /**
+   * Flushes queued repair-time linked updates for one tracker sheet.
+   * @param {Object|null} target - Repair sync target
+   * @private
+   */
+  function flushRepairSyncTarget_(target) {
+    if (!target) return;
+    for (var header in target.values) {
+      if (!target.values.hasOwnProperty(header)) continue;
+      flushColumnRuns_(target.sheet, target.columns[header], target.values[header]);
+    }
+  }
+
   /**
    * Re-syncs all tracker tabs from the canonical Colleges sheet ordering.
    * This repairs stale sample/template names in existing downloaded spreadsheets.
@@ -488,6 +498,7 @@ CollegeTools.Trackers = (function() {
    */
   function repairCollegeSync(opts) {
     opts = opts || {};
+    var warnings = [];
     var ss = SpreadsheetApp.getActive();
     var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (!collegesSheet) {
@@ -499,7 +510,6 @@ CollegeTools.Trackers = (function() {
 
     var lastRow = collegesSheet.getLastRow();
     var processed = 0;
-    var warnings = [];
 
     if (lastRow < 3) {
       if (!opts.suppressAlert) {
@@ -521,6 +531,12 @@ CollegeTools.Trackers = (function() {
       campusVisit: snapshotRowsByCollegeName_(cvSheet),
       applicationTimeline: snapshotRowsByCollegeName_(atSheet),
       statusTracker: snapshotRowsByCollegeName_(stSheet),
+    };
+    var repairSyncTargets = {
+      financialAid: buildRepairSyncTarget_(faSheet, ['College Name', 'Total Cost of Attendance']),
+      campusVisit: buildRepairSyncTarget_(cvSheet, ['College Name']),
+      applicationTimeline: buildRepairSyncTarget_(atSheet, ['College Name']),
+      statusTracker: buildRepairSyncTarget_(stSheet, ['College Name']),
     };
     collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.financialAid,
       CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
@@ -551,10 +567,21 @@ CollegeTools.Trackers = (function() {
         restoreTrackerRow_(cvSheet, trackerSnapshots.campusVisit, collegeName, trackerRow);
         restoreTrackerRow_(atSheet, trackerSnapshots.applicationTimeline, collegeName, trackerRow);
         restoreTrackerRow_(stSheet, trackerSnapshots.statusTracker, collegeName, trackerRow);
-        syncCollegeToTrackers({name: collegeName, coa: coa, sourceRow: row});
+        queueRepairSync_(repairSyncTargets.financialAid, trackerRow, {
+          'College Name': collegeName,
+          'Total Cost of Attendance': coa,
+        });
+        queueRepairSync_(repairSyncTargets.campusVisit, trackerRow, {'College Name': collegeName});
+        queueRepairSync_(repairSyncTargets.applicationTimeline, trackerRow, {'College Name': collegeName});
+        queueRepairSync_(repairSyncTargets.statusTracker, trackerRow, {'College Name': collegeName});
         processed++;
       }
     }
+
+    flushRepairSyncTarget_(repairSyncTargets.financialAid);
+    flushRepairSyncTarget_(repairSyncTargets.campusVisit);
+    flushRepairSyncTarget_(repairSyncTargets.applicationTimeline);
+    flushRepairSyncTarget_(repairSyncTargets.statusTracker);
 
     var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
     clearTrackerRows_(faSheet, firstClearRow, ['College Name', 'Total Cost of Attendance']);

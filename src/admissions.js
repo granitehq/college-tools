@@ -20,46 +20,6 @@ CollegeTools.Admissions = (function() {
   var LEGACY_MARKERS = ['Strong', 'High Reach'];
 
   /**
-   * Adds a text-contains conditional format rule to a rules array.
-   * @param {ConditionalFormatRule[]} rules - Existing rules array
-   * @param {Range} range - Target range
-   * @param {string} text - Text fragment to match
-   * @param {string} bg - Background color
-   * @param {string} fg - Font color
-   * @private
-   */
-  function pushTextRule_(rules, range, text, bg, fg) {
-    rules.push(SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains(text)
-      .setBackground(bg)
-      .setFontColor(fg)
-      .setRanges([range])
-      .build());
-  }
-
-  /**
-   * Removes prior rules created by this module (or legacy versions of it)
-   * so reruns replace rules instead of accumulating duplicates.
-   * @param {ConditionalFormatRule[]} rules - Existing rules array
-   * @param {string[]} markers - Exact text markers used by our rules
-   * @returns {ConditionalFormatRule[]} Filtered rules
-   * @private
-   */
-  function removeFitTextRules_(rules, markers) {
-    return (rules || []).filter(function(rule) {
-      var text = '';
-      try {
-        var boolCondition = rule.getBooleanCondition && rule.getBooleanCondition();
-        var values = boolCondition && boolCondition.getCriteriaValues && boolCondition.getCriteriaValues();
-        text = values && values.length ? String(values[0]) : '';
-      } catch (e) {
-        text = '';
-      }
-      return markers.indexOf(text) === -1;
-    });
-  }
-
-  /**
    * Applies the Admission Fit formula to every college row.
    * Uses the student's SAT (or ACT when no SAT) from the Personal Profile
    * against the school's 25th/75th percentile columns, with a one-notch
@@ -115,12 +75,12 @@ CollegeTools.Admissions = (function() {
     var endRow = Math.max(startRow, sheet.getLastRow());
     var range = sheet.getRange(startRow, fitCol, endRow - startRow + 1, 1);
 
-    var rules = removeFitTextRules_(sheet.getConditionalFormatRules(),
+    var rules = CollegeTools.Formatting.removeTextRules(sheet.getConditionalFormatRules(),
       FIT_MARKERS.concat(LEGACY_MARKERS));
 
-    pushTextRule_(rules, range, 'Likely', '#d4edda', '#155724');
-    pushTextRule_(rules, range, 'Match', '#fff3cd', '#856404');
-    pushTextRule_(rules, range, 'Reach', '#f8d7da', '#721c24');
+    CollegeTools.Formatting.pushTextRule(rules, range, 'Likely', '#d4edda', '#155724');
+    CollegeTools.Formatting.pushTextRule(rules, range, 'Match', '#fff3cd', '#856404');
+    CollegeTools.Formatting.pushTextRule(rules, range, 'Reach', '#f8d7da', '#721c24');
 
     sheet.setConditionalFormatRules(rules);
   }

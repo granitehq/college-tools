@@ -14,46 +14,6 @@ CollegeTools.Financial = (function() {
   'use strict';
 
   /**
-   * Adds a text-contains conditional format rule to a rules array.
-   * @param {ConditionalFormatRule[]} rules - Existing rules array
-   * @param {Range} range - Target range
-   * @param {string} text - Text fragment to match
-   * @param {string} bg - Background color
-   * @param {string} fg - Font color
-   * @private
-   */
-  function pushTextRule_(rules, range, text, bg, fg) {
-    rules.push(SpreadsheetApp.newConditionalFormatRule()
-      .whenTextContains(text)
-      .setBackground(bg)
-      .setFontColor(fg)
-      .setRanges([range])
-      .build());
-  }
-
-  /**
-   * Removes prior text-contains rules created by this module so reruns
-   * replace them instead of accumulating duplicates.
-   * @param {ConditionalFormatRule[]} rules - Existing rules array
-   * @param {string[]} markers - Exact text markers used by our rules
-   * @returns {ConditionalFormatRule[]} Filtered rules
-   * @private
-   */
-  function removeTextRules_(rules, markers) {
-    return (rules || []).filter(function(rule) {
-      var text = '';
-      try {
-        var boolCondition = rule.getBooleanCondition && rule.getBooleanCondition();
-        var values = boolCondition && boolCondition.getCriteriaValues && boolCondition.getCriteriaValues();
-        text = values && values.length ? String(values[0]) : '';
-      } catch (e) {
-        text = '';
-      }
-      return markers.indexOf(text) === -1;
-    });
-  }
-
-  /**
    * Creates Personal Profile sheet with essential structure only (optimized for speed).
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -264,13 +224,13 @@ CollegeTools.Financial = (function() {
       var endRow = Math.max(2, sheet.getLastRow());
       var range = sheet.getRange(startRow, safetyCol, endRow - startRow + 1, 1);
 
-      var rules = removeTextRules_(sheet.getConditionalFormatRules(),
+      var rules = CollegeTools.Formatting.removeTextRules(sheet.getConditionalFormatRules(),
         ['🟢 Comfortable', '🟡 Manageable', '🟠 Stretch', '🔴 Reconsider']);
 
-      pushTextRule_(rules, range, '🟢 Comfortable', '#d4edda', '#155724');
-      pushTextRule_(rules, range, '🟡 Manageable', '#fff3cd', '#856404');
-      pushTextRule_(rules, range, '🟠 Stretch', '#ffeaa7', '#b95000');
-      pushTextRule_(rules, range, '🔴 Reconsider', '#f8d7da', '#721c24');
+      CollegeTools.Formatting.pushTextRule(rules, range, '🟢 Comfortable', '#d4edda', '#155724');
+      CollegeTools.Formatting.pushTextRule(rules, range, '🟡 Manageable', '#fff3cd', '#856404');
+      CollegeTools.Formatting.pushTextRule(rules, range, '🟠 Stretch', '#ffeaa7', '#b95000');
+      CollegeTools.Formatting.pushTextRule(rules, range, '🔴 Reconsider', '#f8d7da', '#721c24');
 
       sheet.setConditionalFormatRules(rules);
     }

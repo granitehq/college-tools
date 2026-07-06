@@ -7,6 +7,7 @@ const {createHarness, TestSuite} = require('./support');
 const harness = createHarness([
   'config.js',
   'utils.js',
+  'schema.js',
   'formatting.js',
   'trackers.js',
   'colleges.js',
@@ -76,6 +77,28 @@ suite.test('fillCollegeRow clears stale non-preserved data and keeps user rating
     'Notes should reflect the fetched college');
 });
 
+
+suite.test('fillCollegeRow writes the Colleges row with a batched row update', () => {
+  const {colleges} = setupWorkbook({includeCampusSetting: true});
+  const cityCol = getCollegeColumn('City', colleges);
+  const ratingCol = getCollegeColumn('Program Fit (1-5)', colleges);
+
+  colleges.getRange(3, 1).setValue('Pacific');
+  colleges.getRange(3, ratingCol).setValue('4');
+  colleges.resetCallCounts();
+
+  CollegeTools.Colleges.fillCollegeRow();
+
+  suite.assertEqual(colleges.getRange(3, cityCol).getValue(), 'New City',
+    'Fill should still write fetched API data');
+  suite.assertEqual(colleges.getRange(3, ratingCol).getValue(), '4',
+    'Fill should preserve user-owned rating data');
+  suite.assertEqual(colleges.callCounts.setValue, 0,
+    'Fill should not write Colleges cells one at a time');
+  suite.assert(colleges.callCounts.setValues > 0,
+    'Fill should write the Colleges row with setValues');
+});
+
 suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', () => {
   setupWorkbook();
 
@@ -100,6 +123,71 @@ suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', (
     'Application Timeline should stay aligned');
   suite.assertEqual(st.getRange(3, 1).getValue(), 'Updated College',
     'Status Tracker should stay aligned');
+});
+
+
+suite.test('repairCollegeSync returns warnings array when Colleges sheet is missing', () => {
+  harness.resetSheets();
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(result.ok, false, 'Repair should fail without the Colleges sheet');
+  suite.assert(Array.isArray(result.warnings), 'Repair should return an iterable warnings array');
+  suite.assertEqual(result.warnings.length, 0, 'Missing Colleges sheet should not create repair warnings');
+});
+
+suite.test('repairCollegeSync snapshots tracker formulas with one batched read per tracker', () => {
+  const {colleges} = setupWorkbook();
+  const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
+  colleges.getRange(3, 1).setValue('Alpha College');
+  colleges.getRange(3, coaCol).setValue(11111);
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const deadlineCol = CollegeTools.Utils.colIndex(fa, 'FAFSA Deadline');
+  fa.getRange(2, 1).setValue('Alpha College');
+  fa.getRange(2, deadlineCol).setFormula('=DATE(2026,1,15)');
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(result.ok, true, 'Repair should succeed');
+  suite.assertEqual(fa.getRange(2, deadlineCol).getFormula(), '=DATE(2026,1,15)',
+    'Repair should preserve existing tracker formulas');
+  suite.assertEqual(fa.callCounts.getFormula, 1,
+    'Repair should avoid per-cell formula reads; the only single-cell read should be this test assertion');
+  suite.assert(fa.callCounts.getFormulas > 0,
+    'Repair should use a batched formula read when snapshotting tracker rows');
+});
+
+
+suite.test('repairCollegeSync batches linked tracker updates after row restore', () => {
+  const {colleges} = setupWorkbook();
+  const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
+  colleges.getRange(3, 1).setValue('Alpha College');
+  colleges.getRange(3, coaCol).setValue(11111);
+  colleges.getRange(4, 1).setValue('Beta College');
+  colleges.getRange(4, coaCol).setValue(22222);
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  const at = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+  const st = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+  [fa, cv, at, st].forEach((sheet) => sheet.resetCallCounts());
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(result.ok, true, 'Repair should succeed');
+  suite.assertEqual(fa.getRange(2, 1).getValue(), 'Alpha College',
+    'Financial Aid tracker should still receive the first college name');
+  suite.assertEqual(fa.getRange(3, 12).getValue(), 22222,
+    'Financial Aid tracker should still receive linked COA values');
+  suite.assertEqual(fa.callCounts.setValue, 0,
+    'Repair should not use single-cell setValue for Financial Aid linked updates');
+  suite.assertEqual(cv.callCounts.setValue, 0,
+    'Repair should not use single-cell setValue for Campus Visit linked updates');
+  suite.assertEqual(at.callCounts.setValue, 0,
+    'Repair should not use single-cell setValue for Application Timeline linked updates');
+  suite.assertEqual(st.callCounts.setValue, 0,
+    'Repair should not use single-cell setValue for Status Tracker linked updates');
 });
 
 suite.test('repairCollegeSync replaces stale tracker names and clears trailing rows', () => {

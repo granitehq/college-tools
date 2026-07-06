@@ -90,6 +90,39 @@ suite.test('core tracker status columns keep dropdown validations', () => {
     'Status tracker application status should have validation');
 });
 
+
+suite.test('tracker setup and formatting repair apply the same audited dropdown options', () => {
+  setupWorkbook();
+  CollegeTools.Trackers.setupAllTrackers();
+
+  const checks = [
+    [CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID, 'Appeal Status'],
+    [CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT, 'Visit Type (In-Person/Virtual/College Fair)'],
+    [CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE, 'Application Type (ED/ED2/EA/REA/RD)'],
+    [CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE, 'Priority Level'],
+    [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Application Status'],
+    [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Decision Plan'],
+    [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Decision/Result'],
+    [CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 'Type (Merit/Need/Field/Local/National)'],
+    [CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 'Award Type (One-time/Renewable)'],
+    [CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 'Award Status (Pending/Awarded/Declined)'],
+  ];
+
+  const setupOptions = checks.map(([sheetName, header]) => {
+    const sheet = mockSpreadsheet.getSheetByName(sheetName);
+    return (sheet.getRange(2, CollegeTools.Utils.colIndex(sheet, header)).getDataValidation() || {}).options || [];
+  });
+
+  CollegeTools.Formatting.enhanceFormatsDropdowns({suppressAlert: true});
+
+  checks.forEach(([sheetName, header], index) => {
+    const sheet = mockSpreadsheet.getSheetByName(sheetName);
+    const repairedOptions = (sheet.getRange(2, CollegeTools.Utils.colIndex(sheet, header)).getDataValidation() || {}).options || [];
+    suite.assertEqual(JSON.stringify(setupOptions[index]), JSON.stringify(repairedOptions),
+      `${sheetName} ${header} should use the same dropdown options in setup and repair`);
+  });
+});
+
 suite.test('select audited dropdowns include flexible Other options where intended', () => {
   setupWorkbook();
   CollegeTools.Trackers.setupAllTrackers();

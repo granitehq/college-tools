@@ -169,6 +169,38 @@ tester.test('Formula builders are used by dashboard and financial tracker setup'
     'Financial Aid tracker should use the shared four-year cost formula builder');
 });
 
+
+tester.test('Colleges fill uses a shared schema-backed column map', () => {
+  const collegesContent = fs.readFileSync(path.join(srcDir, 'colleges.js'), 'utf8');
+  const requireColCalls = (collegesContent.match(/requireCol_\(hdrs,/g) || []).length;
+
+  tester.assert(collegesContent.includes('function buildCollegesColumnMap_'),
+    'Colleges should define one shared column map builder');
+  tester.assert(collegesContent.includes('CollegeTools.Schema.header'),
+    'Colleges column map should resolve labels through Schema.header');
+  tester.assert(requireColCalls <= 2,
+    'Colleges should not duplicate requireCol_ maps in fillCollegeRowCore and fillSelectedRows');
+});
+
+tester.test('Financial and admissions formatting use shared Formatting text-rule helpers', () => {
+  const formattingContent = fs.readFileSync(path.join(srcDir, 'formatting.js'), 'utf8');
+  const financialContent = fs.readFileSync(path.join(srcDir, 'financial.js'), 'utf8');
+  const admissionsContent = fs.readFileSync(path.join(srcDir, 'admissions.js'), 'utf8');
+
+  tester.assert(formattingContent.includes('pushTextRule'),
+    'Formatting should expose a shared text-rule helper');
+  tester.assert(formattingContent.includes('removeTextRules'),
+    'Formatting should expose a shared rule-removal helper');
+  tester.assert(!financialContent.includes('function pushTextRule_'),
+    'Financial should not keep a private copy of pushTextRule_');
+  tester.assert(!financialContent.includes('function removeTextRules_'),
+    'Financial should not keep a private copy of removeTextRules_');
+  tester.assert(!admissionsContent.includes('function pushTextRule_'),
+    'Admissions should not keep a private copy of pushTextRule_');
+  tester.assert(!admissionsContent.includes('function removeFitTextRules_'),
+    'Admissions should not keep a private copy of removeFitTextRules_');
+});
+
 tester.test('Config includes Personal Profile sheet', () => {
   const configPath = path.join(srcDir, 'config.js');
   const content = fs.readFileSync(configPath, 'utf8');
