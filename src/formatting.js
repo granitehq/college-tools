@@ -30,6 +30,27 @@ CollegeTools.Formatting = (function() {
   }
 
   /**
+   * Clears every existing data validation rule from a sheet's full data
+   * range before the caller reapplies the known set. A structural bug
+   * elsewhere (e.g. a botched column insert), or a sheet whose validation
+   * was only ever set up by hand, can leave stray or inconsistent rules —
+   * for example a dropdown landing on a plain numeric/date column, or a
+   * date picker present on some rows of a column but missing on others.
+   * Clearing first guarantees every row ends up in the same state once the
+   * known dropdowns/dates are reapplied on top.
+   * @param {Sheet} sh - Target sheet
+   * @param {number=} headerRow - Header row number, defaults to schema or row 1
+   * @private
+   */
+  function clearExistingValidation_(sh, headerRow) {
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
+    var dataStartRow = resolvedHeaderRow + 1;
+    var lastRow = Math.max(dataStartRow, sh.getLastRow());
+    var lastCol = Math.max(1, sh.getLastColumn());
+    sh.getRange(dataStartRow, 1, lastRow - dataStartRow + 1, lastCol).setDataValidation(null);
+  }
+
+  /**
    * Finds a column by header on a configurable header row.
    * @param {Sheet} sh - Target sheet
    * @param {string} header - Header text
@@ -262,6 +283,8 @@ CollegeTools.Formatting = (function() {
     var col = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (col) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.COLLEGES);
+      clearExistingValidation_(col, 2);
+
       ['Acceptance Rate', 'First-Year Retention', 'Grad Rate'].forEach(function(h) {
         formatNumber(col, h, '0.0%', 2);
       });
@@ -289,6 +312,7 @@ CollegeTools.Formatting = (function() {
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+      clearExistingValidation_(fa, 1);
       applyStandardValidations(fa);
       ['Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies', 'Personal Expenses', 'Travel Costs',
         'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid',
@@ -303,6 +327,7 @@ CollegeTools.Formatting = (function() {
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+      clearExistingValidation_(cv, 1);
       applyStandardValidations(cv);
       ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
         .forEach(function(h) {
@@ -313,6 +338,7 @@ CollegeTools.Formatting = (function() {
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+      clearExistingValidation_(at, 1);
       applyStandardValidations(at);
       var atHdrs = at.getRange(1, 1, 1, at.getLastColumn()).getValues()[0];
       for (var i = 0; i < atHdrs.length; i++) {
@@ -326,6 +352,7 @@ CollegeTools.Formatting = (function() {
     var sc = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     if (sc) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
+      clearExistingValidation_(sc, 1);
       ['Amount', 'Amount Awarded'].forEach(function(h) {
         formatNumber(sc, h, '$#,##0');
       });
@@ -335,6 +362,7 @@ CollegeTools.Formatting = (function() {
     var st = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     if (st) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+      clearExistingValidation_(st, 1);
       applyStandardValidations(st);
       formatNumber(st, 'Scholarship Offer ($)', '$#,##0');
     }
