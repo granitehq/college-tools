@@ -122,5 +122,32 @@ suite.test('registration caches success only for an ok registry body', () => {
     'OK registry body should cache lastRegisteredVersion');
 });
 
+
+suite.test('complete setup surfaces a registration warning when copy registration fails', () => {
+  const harness = createHarness(['config.js', 'setup.js']);
+  const {CollegeTools, mockUi} = harness;
+
+  CollegeTools.Instructions = {createInstructionsSheet() {}};
+  CollegeTools.Trackers = {setupAllTrackers() {}};
+  CollegeTools.Dashboard = {setupDashboard() {}};
+  CollegeTools.Formatting = {enhanceFormatsDropdowns() {}};
+  CollegeTools.Scoring = {ensureScoring() {}};
+  CollegeTools.Financial = {runFinancialSetup_() {}};
+  CollegeTools.Utils = {trimAllSheets() {}};
+  CollegeTools.Registration = {
+    registerIfNeeded() {
+      return {ok: false, skipped: false, reason: 'registry returned status rejected'};
+    },
+  };
+
+  CollegeTools.Setup.completeSetup();
+
+  const lastAlert = mockUi.alerts[mockUi.alerts.length - 1];
+  suite.assert(lastAlert.message.includes('Registration warning'),
+    'Complete Setup should include a visible registration warning when registration fails');
+  suite.assert(lastAlert.message.includes('registry returned status rejected'),
+    'Complete Setup should include the registration failure reason');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

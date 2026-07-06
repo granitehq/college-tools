@@ -61,13 +61,12 @@ CollegeTools.Setup = (function() {
       CollegeTools.Utils.trimAllSheets();
 
       // 7. Register this copy from an authorized menu action when configured.
+      var registrationResult = null;
       if (CollegeTools.Registration && CollegeTools.Registration.registerIfNeeded) {
-        CollegeTools.Registration.registerIfNeeded();
+        registrationResult = CollegeTools.Registration.registerIfNeeded();
       }
 
-      ui.alert(
-        'Setup Complete! ✅',
-        'College Tools is fully configured:\n\n' +
+      var setupMessage = 'College Tools is fully configured:\n\n' +
         '✅ Instructions sheet created (first tab)\n' +
         '✅ All tracker sheets created\n' +
         '✅ Dashboard with key metrics\n' +
@@ -80,7 +79,15 @@ CollegeTools.Setup = (function() {
         '2. Get your API key (see Instructions)\n' +
         '3. Fill out your Personal Profile\n' +
         '4. Start adding colleges!\n\n' +
-        'Everything you need to know is in Instructions!',
+        'Everything you need to know is in Instructions!';
+
+      if (registrationResult && !registrationResult.ok) {
+        setupMessage += '\n\nRegistration warning: ' + registrationResult.reason;
+      }
+
+      ui.alert(
+        'Setup Complete! ✅',
+        setupMessage,
         ui.ButtonSet.OK,
       );
     } catch (error) {

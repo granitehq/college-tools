@@ -47,6 +47,7 @@ Optional overrides:
 | `CREDENTIALS_PATH` | `credentials.json` | OAuth desktop/web client file. |
 | `TOKEN_PATH` | `token.json` | Cached OAuth token written after first authorization. |
 | `SOURCE_DIR` | `src` | Local Apps Script source directory to push. |
+| `MANIFEST_PATH` | `appsscript.json` | Apps Script manifest to push as the target `appsscript` file. Keep this pointed at the root manifest unless intentionally testing another manifest. |
 | `BACKUP_DIR` | `backups` | Directory for target script backups. |
 | `REGISTRY_RANGE` | `Registry!A2:F` | Registry rows to read. |
 | `PUSH_DELAY_MS` | `1500` | Delay between target pushes to avoid rate limits. |
@@ -117,10 +118,10 @@ The tool will:
 1. Read registered targets from `Registry!A2:F`.
 2. Load all source files from `src/`.
 3. Back up each target script project into `backups/`.
-4. Replace each target project's full Apps Script file set with the local source.
+4. Replace each target project's full Apps Script file set with the local source and manifest.
 5. Wait between pushes according to `PUSH_DELAY_MS`.
 
-Remember that `projects.updateContent` replaces the entire file set. Ensure `src/` contains every file that should exist in the target Apps Script project.
+Remember that `projects.updateContent` replaces the entire file set. Ensure `src/` contains every server/html source file that should exist in the target Apps Script project, and ensure `MANIFEST_PATH` points at the intended manifest.
 
 ### 7. Confirm Copies Report the New Version
 
@@ -141,7 +142,7 @@ npm run push:updates -- --script-id <script-id>
 npm run push:updates -- --limit 1
 ```
 
-Use `REGISTRY_RANGE` if you need a temporary filtered range from the registry sheet, for example a manually curated test tab/range.
+Use `REGISTRY_RANGE` if you need a temporary filtered range from the registry sheet, for example a manually curated test tab/range. The tool fails before pushing when a flag is unknown, a flag value is missing, `--limit` is invalid, or `--script-id` matches no registry row.
 
 ## Failure Handling
 
@@ -150,6 +151,7 @@ Use `REGISTRY_RANGE` if you need a temporary filtered range from the registry sh
 | 403 | Maintainer account does not have edit access to the target script/sheet. | Skip that row and ask the owner to share the copied sheet with editor access. |
 | 404 | Target script or spreadsheet no longer exists, or the script ID is wrong. | Mark or remove the stale registry row after confirming. |
 | 429 | API quota/rate limit. | Increase `PUSH_DELAY_MS` and rerun. Rows that already succeeded can be skipped with a filtered registry range or `--script-id`. |
+| Nonzero command exit | At least one selected target failed, or argument/target validation failed before pushing. | Read the per-target log, fix the failing row or access issue, and rerun with `--script-id` or a filtered `REGISTRY_RANGE`. |
 | Auth prompt repeats | Token missing, revoked, or wrong account. | Delete `token.json`, confirm `credentials.json`, and authorize with the maintainer account. |
 
 ## Rollback
