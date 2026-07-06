@@ -108,13 +108,13 @@ the two-branch rule because `origin/main` has not been updated.
 
 ## Source Documents Consolidated
 
-- `product-plan.md`
-- `ARCHITECTURE_REVIEW.md`
-- `CODE_REVIEW_2026-07.md`
-- `CODE_REVIEW_2026-07_FOLLOWUP.md`
+- `archive/product-plan.md`
+- `archive/architecture-review.md`
+- `archive/code-review-2026-07.md`
+- `archive/code-review-2026-07-followup.md`
 - `archive/bug-report.md`
-- `PLAN.md`
-- `MARKETPLACE_CHECKLIST.md`
-- `LEGAL_CUSTOMIZATION_GUIDE.md`
-- `DIRECT_PUSH_RELEASE_WORKFLOW.md`
-- `DIRECT_PUSH_REGISTRY_PROVISIONING.md`
+- `archive/plan.md`
+- `marketplace-checklist.md`
+- `legal-customization-guide.md`
+- `direct-push-release-workflow.md`
+- `direct-push-registry-provisioning.md`

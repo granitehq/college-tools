@@ -2,7 +2,7 @@
 
 This document explains how to use the direct-push update feature when releasing new College Tools code. Use it after the central registry has been provisioned and the template has phone-home registration enabled.
 
-For registry setup, see `project-docs/DIRECT_PUSH_REGISTRY_PROVISIONING.md`.
+For registry setup, see `project-docs/direct-push-registry-provisioning.md`.
 
 ## Release Responsibilities
 
@@ -56,7 +56,7 @@ Optional overrides:
 
 ### 1. Prepare the Release Source
 
-Follow the normal version and release process in `project-docs/VERSION_MANAGEMENT.md`:
+Follow the normal version and release process in `project-docs/version-management.md`:
 
 ```bash
 npm run release:prepare
@@ -162,7 +162,7 @@ Every run writes backups before pushing. To roll back a target manually:
 2. Inspect the JSON to identify the saved `files` payload.
 3. Use a small recovery script or the Apps Script API to call `projects.updateContent` with the backed-up files for that target `scriptId`.
 
-For template rollback, use the normal Git/clasp process documented in `project-docs/VERSION_MANAGEMENT.md`.
+For template rollback, use the normal Git/clasp process documented in `project-docs/version-management.md`.
 
 ## Operational Notes
 

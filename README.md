@@ -149,7 +149,7 @@ Notes:
 - Replace `v2.6.1` in the commit message with the version created by `npm run release:prepare`.
 - `npm run release:tag` creates `v<package.json version>`, for example `v2.6.1`.
 - `npm run release:clasp` pushes to the template's Apps Script project and creates an Apps Script version; it does not touch the published spreadsheet and does not create a GitHub Release.
-- Once the template is verified, promote it to the published spreadsheet: make a Drive copy of the template, then run `npm run release:promote -- <new-sheet-id>` to update the "Copy Template" link across the website. See `project-docs/VERSION_MANAGEMENT.md` for the full promotion steps.
+- Once the template is verified, promote it to the published spreadsheet: make a Drive copy of the template, then run `npm run release:promote -- <new-sheet-id>` to update the "Copy Template" link across the website. See `project-docs/version-management.md` for the full promotion steps.
 
 ### For Developers
 

@@ -11,7 +11,7 @@ Performance & Maintenance actions.
 
 ## Completed since the first review
 
-Items 1–5 from `CODE_REVIEW_2026-07.md` are **done** on branch
+Items 1–5 from `code-review-2026-07.md` are **done** on branch
 `perf/repair-sync-bulk-writes` (not yet merged to `development`), each with
 behavior-preservation + round-trip regression tests (`test/perf-batching-tests.js`):
 
