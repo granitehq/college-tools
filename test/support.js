@@ -250,7 +250,21 @@ class MockSheet {
   setColumnWidths() { return this; }
   setFrozenRows() { return this; }
   autoResizeColumn() { return this; }
-  insertColumnBefore() { return this; }
+  insertColumnBefore(column) {
+    const shiftMap = (source) => {
+      const shifted = {};
+      Object.keys(source).forEach((key) => {
+        const [row, col] = key.split(',').map((part) => parseInt(part, 10));
+        const nextCol = col >= column ? col + 1 : col;
+        shifted[this._key(row, nextCol)] = source[key];
+      });
+      return shifted;
+    };
+    this.values = shiftMap(this.values);
+    this.formulas = shiftMap(this.formulas);
+    this.validations = shiftMap(this.validations);
+    return this;
+  }
   deleteRows() { return this; }
   setConditionalFormatRules() { return this; }
   getConditionalFormatRules() { return []; }

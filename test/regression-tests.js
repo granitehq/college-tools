@@ -9,6 +9,7 @@ const harness = createHarness([
   'utils.js',
   'schema.js',
   'formatting.js',
+  'formulas.js',
   'trackers.js',
   'colleges.js',
 ]);
@@ -125,6 +126,24 @@ suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', (
     'Status Tracker should stay aligned');
 });
 
+
+suite.test('fillCollegeRow still syncs trackers with the typed name when the API finds no match', () => {
+  const {colleges} = setupWorkbook();
+  const originalFetch = CollegeTools.Scorecard.fetchCollegeData;
+  CollegeTools.Scorecard.fetchCollegeData = () => ({ok: false, error: 'no match'});
+
+  try {
+    colleges.getRange(3, 1).setValue('Unknown College');
+    CollegeTools.Colleges.fillCollegeRow();
+
+    const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    suite.assertEqual(fa.getRange(2, 1).getValue(), 'Unknown College',
+      'Tracker should receive the typed name even when the Scorecard API has no match, ' +
+      'so stale sample data does not linger indefinitely');
+  } finally {
+    CollegeTools.Scorecard.fetchCollegeData = originalFetch;
+  }
+});
 
 suite.test('repairCollegeSync returns warnings array when Colleges sheet is missing', () => {
   harness.resetSheets();
@@ -272,6 +291,66 @@ suite.test('repairCollegeSync reports duplicate tracker names instead of silentl
     warning.sheetName === CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID &&
     warning.collegeName === 'Alpha College'),
   'Repair should report duplicate tracker names that require manual resolution');
+});
+
+suite.test('fillRegionsAllRows repairs a missing Colleges Region column before filling regions', () => {
+  const {colleges} = setupWorkbook();
+  const legacyHeaders = CollegeTools.Config.HEADERS.COLLEGES.filter((header) => header !== 'Region');
+  colleges.clear();
+  colleges.getRange(2, 1, 1, legacyHeaders.length).setValues([legacyHeaders]);
+  colleges.getRange(3, 1).setValue('The University of Texas at Austin');
+  colleges.getRange(3, legacyHeaders.indexOf('State') + 1).setValue('TX');
+  colleges.getRange(3, legacyHeaders.indexOf('Type (Public/Private)') + 1).setValue('Public');
+
+  const result = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
+  const repairedHeaders = colleges.getRange(2, 1, 1, colleges.getLastColumn()).getValues()[0];
+  const regionCol = repairedHeaders.indexOf('Region') + 1;
+  const typeCol = repairedHeaders.indexOf('Type (Public/Private)') + 1;
+
+  suite.assertEqual(result.ok, true, 'Region fill should repair and continue when Region is missing');
+  suite.assertEqual(regionCol, repairedHeaders.indexOf('State') + 2,
+    'Region should be inserted immediately after State');
+  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'South',
+    'Region should be filled from the existing State value');
+  suite.assertEqual(colleges.getRange(3, typeCol).getValue(), 'Public',
+    'Existing data to the right of the inserted Region column should shift with its header');
+});
+
+suite.test('setupAllTrackers repairs stale sample tracker names from Colleges', () => {
+  const {colleges} = setupWorkbook();
+  const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
+  colleges.getRange(3, 1).setValue('The University of Texas at Austin');
+  colleges.getRange(3, coaCol).setValue(31000);
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  const at = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+  const st = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+  fa.getRange(2, 1).setValue('Sample College');
+  cv.getRange(2, 1).setValue('Sample College');
+  at.getRange(2, 1).setValue('Sample College');
+  st.getRange(2, 1).setValue('Sample College');
+
+  CollegeTools.Financial = {
+    enhancePersonalProfileFormatting() {},
+    enhanceFinancialAidFormatting() {},
+  };
+  CollegeTools.Admissions = {
+    enhanceAdmissionFormatting() {},
+  };
+
+  CollegeTools.Trackers.setupAllTrackers();
+
+  suite.assertEqual(fa.getRange(2, 1).getValue(), 'The University of Texas at Austin',
+    'Setup should repair Financial Aid tracker names from Colleges row 3');
+  suite.assertEqual(cv.getRange(2, 1).getValue(), 'The University of Texas at Austin',
+    'Setup should repair Campus Visit tracker names from Colleges row 3');
+  suite.assertEqual(at.getRange(2, 1).getValue(), 'The University of Texas at Austin',
+    'Setup should repair Application Timeline tracker names from Colleges row 3');
+  suite.assertEqual(st.getRange(2, 1).getValue(), 'The University of Texas at Austin',
+    'Setup should repair Application Status tracker names from Colleges row 3');
+  suite.assertEqual(fa.getRange(2, 12).getValue(), 31000,
+    'Setup should repair linked tracker fields from Colleges row 3');
 });
 
 const success = suite.summary();

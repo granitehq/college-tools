@@ -639,7 +639,13 @@ CollegeTools.Trackers = (function() {
       enhanceApplicationTimelineFormatting(timelineSheet);
     }
 
-    SpreadsheetApp.getUi().alert('Tracker setup complete!');
+    var syncResult = repairCollegeSync({suppressAlert: true});
+    var message = 'Tracker setup complete!';
+    if (syncResult && syncResult.ok) {
+      message += '\n\nSynced tracker college rows: ' + syncResult.count;
+    }
+
+    SpreadsheetApp.getUi().alert(message);
   }
 
 
