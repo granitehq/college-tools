@@ -92,7 +92,10 @@ npm run version:show  # Display current version
 npm run version:patch # Increment patch (5.6.0 → 5.6.1)
 npm run version:minor # Increment minor (5.6.0 → 5.7.0)
 npm run version:major # Increment major (5.6.0 → 6.0.0)
-npm run release       # Patch + lint + deploy
+npm run release       # Alias for release:prepare
+npm run release:prepare # Check + patch version bump
+npm run release:tag     # Create git tag from package.json version
+npm run release:clasp   # Check + clasp push + Apps Script version
 
 # Apps Script
 npm run push          # Lint + npx clasp push
@@ -102,6 +105,25 @@ npm run clasp:version # Create Apps Script version
 # Setup
 npm install           # Install dependencies
 ```
+
+## Release Workflow
+
+GitHub is the durable release record. Prepare and commit the project version first, tag that exact commit, then deploy the same code to Apps Script with clasp.
+
+```bash
+npm run release:prepare
+git add -A
+git commit -m "chore: release v2.6.1"
+npm run release:tag
+git push origin main --tags
+npm run release:clasp
+```
+
+Notes:
+
+- Replace `v2.6.1` in the commit message with the version created by `npm run release:prepare`.
+- `npm run release:tag` creates `v<package.json version>`, for example `v2.6.1`.
+- `npm run release:clasp` pushes to Apps Script and creates an Apps Script version; it does not create a GitHub Release.
 
 ### For Developers
 
