@@ -19,6 +19,13 @@ function col(sheet, header, headerRow) {
   return headers.indexOf(header) + 1;
 }
 
+function findRow(sheet, label, maxRows = 120) {
+  for (let row = 1; row <= maxRows; row++) {
+    if (sheet.getRange(row, 1).getValue() === label) return row;
+  }
+  return 0;
+}
+
 suite.test('dashboard aggregates dated tracker items due in the next 60 days', () => {
   setupWorkbook();
   const timeline = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
@@ -42,21 +49,21 @@ suite.test('dashboard aggregates dated tracker items due in the next 60 days', (
   CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-07-05T00:00:00'), suppressAlert: true});
   const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
-  suite.assertEqual(dashboard.getRange(31, 1).getValue(), "What's Due Next",
-    'Dashboard should include a due-next section');
-  suite.assertEqual(dashboard.getRange(33, 1).getValue(), 'College/Source',
+  const dueRow = findRow(dashboard, "What's Due Next");
+  suite.assert(dueRow > 0, 'Dashboard should include a due-next section');
+  suite.assertEqual(dashboard.getRange(dueRow + 2, 1).getValue(), 'College/Source',
     'Due-next table should expose the source college or scholarship');
-  suite.assertEqual(dashboard.getRange(34, 1).getValue(), 'Local STEM Grant',
+  suite.assertEqual(dashboard.getRange(dueRow + 3, 1).getValue(), 'Local STEM Grant',
     'Due-next table should sort the soonest dated item first');
-  suite.assertEqual(dashboard.getRange(34, 2).getValue(), 'Scholarship Tracker: Deadline',
+  suite.assertEqual(dashboard.getRange(dueRow + 3, 2).getValue(), 'Scholarship Tracker: Deadline',
     'Due-next rows should name the source tracker and date field');
-  suite.assertEqual(dashboard.getRange(35, 1).getValue(), 'Alpha University',
+  suite.assertEqual(dashboard.getRange(dueRow + 4, 1).getValue(), 'Alpha University',
     'Financial deadline should be included in sorted due-next rows');
-  suite.assertEqual(dashboard.getRange(35, 5).getValue(), 'Yes',
+  suite.assertEqual(dashboard.getRange(dueRow + 4, 5).getValue(), 'Yes',
     'Done column should reflect submitted financial aid requirements');
-  suite.assertEqual(dashboard.getRange(36, 4).getValue(), 15,
+  suite.assertEqual(dashboard.getRange(dueRow + 5, 4).getValue(), 15,
     'Days-left column should be computed from the dashboard refresh date');
-  suite.assertEqual(dashboard.getRange(37, 1).getValue(), '',
+  suite.assertEqual(dashboard.getRange(dueRow + 6, 1).getValue(), '',
     'Dates outside the next 60 days should be excluded');
 });
 
@@ -86,21 +93,21 @@ suite.test('dashboard compares accepted offers side by side', () => {
   CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-07-05T00:00:00'), suppressAlert: true});
   const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
-  suite.assertEqual(dashboard.getRange(52, 1).getValue(), 'Accepted Offer Comparison',
-    'Dashboard should include an accepted-offer comparison section');
-  suite.assertEqual(dashboard.getRange(54, 1).getValue(), 'College',
+  const offerRow = findRow(dashboard, 'Accepted Offer Comparison');
+  suite.assert(offerRow > 0, 'Dashboard should include an accepted-offer comparison section');
+  suite.assertEqual(dashboard.getRange(offerRow + 2, 1).getValue(), 'College',
     'Offer comparison should include a table header');
-  suite.assertEqual(dashboard.getRange(55, 1).getValue(), 'Alpha University',
+  suite.assertEqual(dashboard.getRange(offerRow + 3, 1).getValue(), 'Alpha University',
     'Accepted schools should be listed in the offer comparison table');
-  suite.assertEqual(dashboard.getRange(55, 2).getValue(), 22000,
+  suite.assertEqual(dashboard.getRange(offerRow + 3, 2).getValue(), 22000,
     'Offer comparison should show real net annual cost from the award tracker');
-  suite.assertEqual(dashboard.getRange(55, 3).getValue(), 94000,
+  suite.assertEqual(dashboard.getRange(offerRow + 3, 3).getValue(), 94000,
     'Offer comparison should show four-year projected cost');
-  suite.assertEqual(dashboard.getRange(55, 4).getValue(), 38000,
+  suite.assertEqual(dashboard.getRange(offerRow + 3, 4).getValue(), 38000,
     'Offer comparison should project loan burden at graduation from annual offered loans');
-  suite.assertEqual(dashboard.getRange(55, 5).getValue(), 4.7,
+  suite.assertEqual(dashboard.getRange(offerRow + 3, 5).getValue(), 4.7,
     'Offer comparison should include the college weighted score');
-  suite.assertEqual(dashboard.getRange(56, 1).getValue(), '',
+  suite.assertEqual(dashboard.getRange(offerRow + 4, 1).getValue(), '',
     'Non-accepted schools should not appear in the offer comparison');
 });
 
@@ -127,29 +134,29 @@ suite.test('dashboard summarizes decision outcomes and next deposit deadline', (
   CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-04-01T00:00:00'), suppressAlert: true});
   const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
-  suite.assertEqual(dashboard.getRange(72, 1).getValue(), 'Decision Outcomes',
-    'Dashboard should include a decision-outcome rollup section');
-  suite.assertEqual(dashboard.getRange(74, 1).getValue(), 'Accepted',
+  const decisionRow = findRow(dashboard, 'Decision Outcomes');
+  suite.assert(decisionRow > 0, 'Dashboard should include a decision-outcome rollup section');
+  suite.assertEqual(dashboard.getRange(decisionRow + 2, 1).getValue(), 'Accepted',
     'Decision rollup should list accepted count');
-  suite.assertEqual(dashboard.getRange(74, 2).getValue(), 1,
+  suite.assertEqual(dashboard.getRange(decisionRow + 2, 2).getValue(), 1,
     'Accepted count should include accepted/admitted decisions');
-  suite.assertEqual(dashboard.getRange(75, 1).getValue(), 'Pending',
+  suite.assertEqual(dashboard.getRange(decisionRow + 3, 1).getValue(), 'Pending',
     'Decision rollup should list pending count');
-  suite.assertEqual(dashboard.getRange(75, 2).getValue(), 1,
+  suite.assertEqual(dashboard.getRange(decisionRow + 3, 2).getValue(), 1,
     'Pending count should include pending decisions');
-  suite.assertEqual(dashboard.getRange(76, 1).getValue(), 'Waitlisted',
+  suite.assertEqual(dashboard.getRange(decisionRow + 4, 1).getValue(), 'Waitlisted',
     'Decision rollup should list waitlisted count');
-  suite.assertEqual(dashboard.getRange(76, 2).getValue(), 1,
+  suite.assertEqual(dashboard.getRange(decisionRow + 4, 2).getValue(), 1,
     'Waitlisted count should include waitlisted decisions');
-  suite.assertEqual(dashboard.getRange(77, 1).getValue(), 'Denied',
+  suite.assertEqual(dashboard.getRange(decisionRow + 5, 1).getValue(), 'Denied',
     'Decision rollup should list denied count');
-  suite.assertEqual(dashboard.getRange(77, 2).getValue(), 1,
+  suite.assertEqual(dashboard.getRange(decisionRow + 5, 2).getValue(), 1,
     'Denied count should include denied/rejected decisions');
-  suite.assertEqual(dashboard.getRange(79, 1).getValue(), 'Next Deposit Deadline',
+  suite.assertEqual(dashboard.getRange(decisionRow + 7, 1).getValue(), 'Next Deposit Deadline',
     'Decision rollup should identify the next deposit deadline');
-  suite.assertEqual(dashboard.getRange(79, 2).getValue(), 'Alpha University',
+  suite.assertEqual(dashboard.getRange(decisionRow + 7, 2).getValue(), 'Alpha University',
     'Next deposit deadline should use the earliest future deposit date');
-  suite.assertEqual(dashboard.getRange(79, 3).getValue(), 19,
+  suite.assertEqual(dashboard.getRange(decisionRow + 7, 3).getValue(), 19,
     'Next deposit deadline should include days left');
 });
 
@@ -169,21 +176,21 @@ suite.test('dashboard reports Reach Match Likely balance and warns when lopsided
   CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-04-01T00:00:00'), suppressAlert: true});
   const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
-  suite.assertEqual(dashboard.getRange(84, 1).getValue(), 'Application List Balance',
-    'Dashboard should include a Reach/Match/Likely balance section');
-  suite.assertEqual(dashboard.getRange(86, 1).getValue(), 'Reach',
+  const balanceRow = findRow(dashboard, 'Application List Balance');
+  suite.assert(balanceRow > 0, 'Dashboard should include a Reach/Match/Likely balance section');
+  suite.assertEqual(dashboard.getRange(balanceRow + 2, 1).getValue(), 'Reach',
     'Balance table should include Reach count');
-  suite.assertEqual(dashboard.getRange(86, 2).getValue(), 3,
+  suite.assertEqual(dashboard.getRange(balanceRow + 2, 2).getValue(), 3,
     'Reach count should include all Reach rows');
-  suite.assertEqual(dashboard.getRange(87, 1).getValue(), 'Match',
+  suite.assertEqual(dashboard.getRange(balanceRow + 3, 1).getValue(), 'Match',
     'Balance table should include Match count');
-  suite.assertEqual(dashboard.getRange(87, 2).getValue(), 0,
+  suite.assertEqual(dashboard.getRange(balanceRow + 3, 2).getValue(), 0,
     'Match count should include zero when no matches exist');
-  suite.assertEqual(dashboard.getRange(88, 1).getValue(), 'Likely',
+  suite.assertEqual(dashboard.getRange(balanceRow + 4, 1).getValue(), 'Likely',
     'Balance table should include Likely count');
-  suite.assertEqual(dashboard.getRange(88, 2).getValue(), 1,
+  suite.assertEqual(dashboard.getRange(balanceRow + 4, 2).getValue(), 1,
     'Likely count should include all Likely rows');
-  suite.assert(dashboard.getRange(90, 1).getValue().indexOf('Add more Match schools') !== -1,
+  suite.assert(dashboard.getRange(balanceRow + 6, 1).getValue().indexOf('Add more Match schools') !== -1,
     'Balance guardrail should nudge when the list has no Match schools');
 });
 

@@ -418,6 +418,7 @@ CollegeTools.Dashboard = (function() {
    * @param {Array<string>} headers - Table headers
    * @param {Array<Array<*>>} rows - Table rows
    * @param {string} emptyMessage - Message when no rows are available
+   * @returns {number} First row after the table plus one spacer row
    * @private
    */
   function writeDashboardTable_(sh, startRow, headers, rows, emptyMessage) {
@@ -425,9 +426,10 @@ CollegeTools.Dashboard = (function() {
     sh.getRange(startRow, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f3f4');
     if (!rows.length) {
       sh.getRange(startRow + 1, 1).setValue(emptyMessage).setFontStyle('italic').setFontColor('#666666');
-      return;
+      return startRow + 3;
     }
     sh.getRange(startRow + 1, 1, rows.length, headers.length).setValues(rows);
+    return startRow + rows.length + 2;
   }
 
   /**
@@ -596,53 +598,63 @@ CollegeTools.Dashboard = (function() {
       sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
         ',"Pending",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rSkAmount) + '), 0)');
       sh.getRange(row, 2).setNumberFormat('$#,##0');
+      row++;
     } else if (scholarshipSheet) {
       sh.getRange(row, 1).setValue('(Scholarship Tracker is empty - run "Add/Update Trackers" to set it up)');
       sh.getRange(row, 1).setFontStyle('italic').setFontColor('#666666');
+      row++;
     } else {
       sh.getRange(row, 1).setValue('(Scholarship Tracker not found - run "Add/Update Trackers" first)');
       sh.getRange(row, 1).setFontStyle('italic').setFontColor('#666666');
+      row++;
     }
 
-    // Section 6: real next-deadline table. Fixed rows keep the dashboard scannable.
-    row = 31;
+    // Section 6: real next-deadline table.
+    row += 2;
     sh.getRange(row, 1).setValue('What\'s Due Next').setFontWeight('bold').setFontSize(14);
-    writeDashboardTable_(sh, row + 2,
+    var dueRows = buildDueNextRows_(ss, opts && opts.today).slice(0, 15);
+    var dueTableStart = row + 2;
+    row = writeDashboardTable_(sh, dueTableStart,
       ['College/Source', 'Item', 'Date', 'Days Left', 'Done?'],
-      buildDueNextRows_(ss, opts && opts.today).slice(0, 15),
+      dueRows,
       'No dated tracker items due in the next 60 days.');
-    sh.getRange(row + 3, 3, 16, 1).setNumberFormat('m/d/yyyy');
+    if (dueRows.length) sh.getRange(dueTableStart + 1, 3, dueRows.length, 1).setNumberFormat('m/d/yyyy');
 
     // Section 7: decision-time accepted-offer comparison.
-    row = 52;
+    row += 2;
     sh.getRange(row, 1).setValue('Accepted Offer Comparison').setFontWeight('bold').setFontSize(14);
-    writeDashboardTable_(sh, row + 2,
+    var offerRows = buildOfferComparisonRows_(ss);
+    var offerTableStart = row + 2;
+    row = writeDashboardTable_(sh, offerTableStart,
       ['College', 'Annual Net Cost', '4-Year Total', 'Loan Burden at Graduation', 'Weighted Score'],
-      buildOfferComparisonRows_(ss),
+      offerRows,
       'No accepted offers recorded yet.');
-    sh.getRange(row + 3, 2, 20, 3).setNumberFormat('$#,##0');
-    sh.getRange(row + 3, 5, 20, 1).setNumberFormat('0.00');
+    if (offerRows.length) {
+      sh.getRange(offerTableStart + 1, 2, offerRows.length, 3).setNumberFormat('$#,##0');
+      sh.getRange(offerTableStart + 1, 5, offerRows.length, 1).setNumberFormat('0.00');
+    }
 
     // Section 8: decision outcomes and deposit deadline.
-    row = 72;
+    row += 2;
     sh.getRange(row, 1).setValue('Decision Outcomes').setFontWeight('bold').setFontSize(14);
-    writeDashboardTable_(sh, row + 1,
+    row = writeDashboardTable_(sh, row + 1,
       ['Decision', 'Count'],
       buildDecisionOutcomeRows_(ss),
       'No decisions recorded yet.');
     var deposit = nextDepositDeadline_(ss, opts && opts.today);
-    sh.getRange(row + 7, 1, 1, 3).setValues([['Next Deposit Deadline', deposit ? deposit[0] : '', deposit ? deposit[2] : '']]);
-    if (deposit) sh.getRange(row + 7, 4).setValue(deposit[1]).setNumberFormat('m/d/yyyy');
+    sh.getRange(row, 1, 1, 3).setValues([['Next Deposit Deadline', deposit ? deposit[0] : '', deposit ? deposit[2] : '']]);
+    if (deposit) sh.getRange(row, 4).setValue(deposit[1]).setNumberFormat('m/d/yyyy');
+    row += 1;
 
     // Section 9: Reach/Match/Likely balance guardrail.
-    row = 84;
+    row += 2;
     sh.getRange(row, 1).setValue('Application List Balance').setFontWeight('bold').setFontSize(14);
     var fitRows = buildFitBalanceRows_(collegesSheet);
-    writeDashboardTable_(sh, row + 1,
+    row = writeDashboardTable_(sh, row + 1,
       ['Admission Fit', 'Count'],
       fitRows,
       'No Admission Fit data yet.');
-    sh.getRange(row + 6, 1).setValue(fitBalanceMessage_(fitRows)).setFontStyle('italic');
+    sh.getRange(row, 1).setValue(fitBalanceMessage_(fitRows)).setFontStyle('italic');
 
     // Auto-resize columns
     for (var c = 1; c <= 5; c++) {
