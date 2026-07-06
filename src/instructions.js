@@ -1,6 +1,6 @@
 /**
  * Instructions and Help System
- * @version 2.6.2
+ * @version 2.6.3
  * @author College Tools
  * @description Creates comprehensive user instructions and help documentation
  */
