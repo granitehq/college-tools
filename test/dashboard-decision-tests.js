@@ -104,5 +104,88 @@ suite.test('dashboard compares accepted offers side by side', () => {
     'Non-accepted schools should not appear in the offer comparison');
 });
 
+
+suite.test('dashboard summarizes decision outcomes and next deposit deadline', () => {
+  setupWorkbook();
+  const status = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+  const timeline = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+
+  status.getRange(2, col(status, 'College Name', 1)).setValue('Alpha University');
+  status.getRange(2, col(status, 'Decision/Result', 1)).setValue('Accepted');
+  status.getRange(3, col(status, 'College Name', 1)).setValue('Beta College');
+  status.getRange(3, col(status, 'Decision/Result', 1)).setValue('Waitlisted');
+  status.getRange(4, col(status, 'College Name', 1)).setValue('Gamma Institute');
+  status.getRange(4, col(status, 'Decision/Result', 1)).setValue('Pending');
+  status.getRange(5, col(status, 'College Name', 1)).setValue('Delta State');
+  status.getRange(5, col(status, 'Decision/Result', 1)).setValue('Denied');
+
+  timeline.getRange(2, col(timeline, 'College Name', 1)).setValue('Alpha University');
+  timeline.getRange(2, col(timeline, 'Enrollment Deposit Deadline', 1)).setValue(new Date('2026-04-20T00:00:00'));
+  timeline.getRange(3, col(timeline, 'College Name', 1)).setValue('Epsilon College');
+  timeline.getRange(3, col(timeline, 'Enrollment Deposit Deadline', 1)).setValue(new Date('2026-05-01T00:00:00'));
+
+  CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-04-01T00:00:00'), suppressAlert: true});
+  const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
+
+  suite.assertEqual(dashboard.getRange(72, 1).getValue(), 'Decision Outcomes',
+    'Dashboard should include a decision-outcome rollup section');
+  suite.assertEqual(dashboard.getRange(74, 1).getValue(), 'Accepted',
+    'Decision rollup should list accepted count');
+  suite.assertEqual(dashboard.getRange(74, 2).getValue(), 1,
+    'Accepted count should include accepted/admitted decisions');
+  suite.assertEqual(dashboard.getRange(75, 1).getValue(), 'Pending',
+    'Decision rollup should list pending count');
+  suite.assertEqual(dashboard.getRange(75, 2).getValue(), 1,
+    'Pending count should include pending decisions');
+  suite.assertEqual(dashboard.getRange(76, 1).getValue(), 'Waitlisted',
+    'Decision rollup should list waitlisted count');
+  suite.assertEqual(dashboard.getRange(76, 2).getValue(), 1,
+    'Waitlisted count should include waitlisted decisions');
+  suite.assertEqual(dashboard.getRange(77, 1).getValue(), 'Denied',
+    'Decision rollup should list denied count');
+  suite.assertEqual(dashboard.getRange(77, 2).getValue(), 1,
+    'Denied count should include denied/rejected decisions');
+  suite.assertEqual(dashboard.getRange(79, 1).getValue(), 'Next Deposit Deadline',
+    'Decision rollup should identify the next deposit deadline');
+  suite.assertEqual(dashboard.getRange(79, 2).getValue(), 'Alpha University',
+    'Next deposit deadline should use the earliest future deposit date');
+  suite.assertEqual(dashboard.getRange(79, 3).getValue(), 19,
+    'Next deposit deadline should include days left');
+});
+
+suite.test('dashboard reports Reach Match Likely balance and warns when lopsided', () => {
+  setupWorkbook();
+  const colleges = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
+
+  colleges.getRange(3, col(colleges, 'College Name', 2)).setValue('Alpha University');
+  colleges.getRange(3, col(colleges, 'Admission Fit', 2)).setValue('Reach');
+  colleges.getRange(4, col(colleges, 'College Name', 2)).setValue('Beta College');
+  colleges.getRange(4, col(colleges, 'Admission Fit', 2)).setValue('Reach');
+  colleges.getRange(5, col(colleges, 'College Name', 2)).setValue('Gamma Institute');
+  colleges.getRange(5, col(colleges, 'Admission Fit', 2)).setValue('Reach');
+  colleges.getRange(6, col(colleges, 'College Name', 2)).setValue('Delta State');
+  colleges.getRange(6, col(colleges, 'Admission Fit', 2)).setValue('Likely');
+
+  CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-04-01T00:00:00'), suppressAlert: true});
+  const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
+
+  suite.assertEqual(dashboard.getRange(84, 1).getValue(), 'Application List Balance',
+    'Dashboard should include a Reach/Match/Likely balance section');
+  suite.assertEqual(dashboard.getRange(86, 1).getValue(), 'Reach',
+    'Balance table should include Reach count');
+  suite.assertEqual(dashboard.getRange(86, 2).getValue(), 3,
+    'Reach count should include all Reach rows');
+  suite.assertEqual(dashboard.getRange(87, 1).getValue(), 'Match',
+    'Balance table should include Match count');
+  suite.assertEqual(dashboard.getRange(87, 2).getValue(), 0,
+    'Match count should include zero when no matches exist');
+  suite.assertEqual(dashboard.getRange(88, 1).getValue(), 'Likely',
+    'Balance table should include Likely count');
+  suite.assertEqual(dashboard.getRange(88, 2).getValue(), 1,
+    'Likely count should include all Likely rows');
+  suite.assert(dashboard.getRange(90, 1).getValue().indexOf('Add more Match schools') !== -1,
+    'Balance guardrail should nudge when the list has no Match schools');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

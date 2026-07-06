@@ -86,7 +86,8 @@ CollegeTools.Config = (function() {
       'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
       'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
       'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
-      'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition', 'Notes',
+      'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition',
+      'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes',
     ],
 
     FINANCIAL_AID: [

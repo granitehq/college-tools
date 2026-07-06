@@ -80,6 +80,8 @@ CollegeTools.Schema = (function() {
         ['IN_STATE_TUITION', 'In-State Tuition'],
         ['OUT_OF_STATE_TUITION', 'Out-of-State Tuition'],
         ['APPLICABLE_TUITION', 'Applicable Tuition'],
+        ['TYPICAL_DEBT', 'Typical Debt at Graduation'],
+        ['PELL_GRANT_RATE', 'Pell Grant Rate'],
         ['NOTES', 'Notes'],
       ]),
       apiColumns: setFromKeys([
@@ -87,6 +89,7 @@ CollegeTools.Schema = (function() {
         'GRAD_RATE', 'EARNINGS_10YR', 'TOTAL_COST', 'NET_PRICE', 'LINK',
         'SAT_25', 'SAT_75', 'ACT_25', 'ACT_75', 'CAMPUS_SETTING',
         'TEST_OPTIONAL', 'IN_STATE_TUITION', 'OUT_OF_STATE_TUITION',
+        'TYPICAL_DEBT', 'PELL_GRANT_RATE',
       ]),
       userColumns: setFromKeys([
         'COLLEGE_NAME', 'PROGRAM_FIT', 'ACADEMIC_REPUTATION', 'RESEARCH_OPPORTUNITIES',
