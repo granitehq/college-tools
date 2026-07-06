@@ -60,8 +60,8 @@ suite.test('tracked Apps Script manifests stay aligned and allow registry posts'
 
   suite.assertEqual(JSON.stringify(srcManifest), JSON.stringify(rootManifest),
     'Root and src appsscript manifests should stay aligned');
-  suite.assert(rootManifest.urlFetchAllowlist.includes('https://script.google.com/'),
-    'Manifest URL fetch allowlist should include the Apps Script registry Web App host');
+  suite.assert(rootManifest.urlFetchWhitelist.includes('https://script.google.com/'),
+    'Manifest URL fetch whitelist should include the Apps Script registry Web App host');
 });
 
 suite.test('parseArgs fails closed for missing values, unknown flags, and invalid limits', () => {

@@ -7,7 +7,7 @@
     "https://www.googleapis.com/auth/spreadsheets.currentonly",
     "https://www.googleapis.com/auth/script.external_request"
   ],
-  "urlFetchAllowlist": [
+  "urlFetchWhitelist": [
     "https://api.data.gov/",
     "https://script.google.com/"
   ],
