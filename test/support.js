@@ -105,11 +105,13 @@ class MockRange {
   }
 
   setFormula(formula) {
+    this.sheet.callCounts.setFormula++;
     this.sheet.setCellFormula(this.row, this.col, formula);
     return this;
   }
 
   setFormulas(formulas) {
+    this.sheet.callCounts.setFormulas++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
         this.sheet.setCellFormula(this.row + r, this.col + c, formulas[r][c]);
@@ -157,7 +159,7 @@ class MockSheet {
     this.values = {};
     this.formulas = {};
     this.validations = {};
-    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0};
+    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0};
     this.activeRow = 3;
     this.maxRows = 1000;
   }
@@ -223,7 +225,7 @@ class MockSheet {
   }
 
   resetCallCounts() {
-    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0};
+    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0};
   }
 
   getActiveCell() {
@@ -240,7 +242,7 @@ class MockSheet {
     this.values = {};
     this.formulas = {};
     this.validations = {};
-    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0};
+    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0};
     return this;
   }
 
