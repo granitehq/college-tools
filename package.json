@@ -29,7 +29,10 @@
     "version:minor": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+\\\\.)(\\\\d+)(\\\\..+)/, (_, maj, min, patch) => maj + (+min + 1) + '.0')\")",
     "version:major": "npm run version:update $(node -p \"require('./package.json').version.replace(/(\\\\d+)(\\\\..+)/, (_, maj) => (+maj + 1) + '.0.0')\")",
     "version:show": "node -p \"'Current version: ' + require('./package.json').version\"",
-    "release": "npm run check && npm run version:patch && npm run push"
+    "release": "npm run release:prepare",
+    "release:prepare": "npm run check && npm run version:patch",
+    "release:tag": "git tag v$(node -p \"require('./package.json').version\")",
+    "release:clasp": "npm run check && npx clasp push && npx clasp version"
   },
   "keywords": [
     "google-apps-script",

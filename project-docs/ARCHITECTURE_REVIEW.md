@@ -10,6 +10,36 @@ The project already has a strong foundation for a Google Apps Script codebase: a
 
 The refactor should therefore start with guardrails, not rewrites. Before changing behavior, add characterization coverage for the current workbook contract: existing copied spreadsheets, row-2 vs row-1 headers, preserved user columns, tracker data, named ranges, formulas, and repair idempotence. Once those invariants are locked down, the safest path is: schema registry, stable row identity, formula builders, batch write plans, service/menu separation, and then setup orchestration.
 
+## Status Update — 2026-07-06
+
+Progress against the original findings, so this document reflects reality:
+
+| # | Finding | Status |
+|---|---------|--------|
+| 1 | Migration guardrails / characterization tests | **Largely complete.** Harness now includes schema-metadata, workbook-repair, formulas, template-integrity, validation-coverage, formatting-schema-integration, dashboard-decision, and tracker repair-path regression tests. Write-plan and setup-plan coverage remain open. |
+| 2 | Canonical `CollegeTools.Schema` | **Partially complete.** `src/schema.js` exists with `headerRow`, `dataStartRow`, column keys, ownership groups, `validateHeaderRow`, and `validateWorkbookShape`. Dashboard, Admissions, Formatting, and the Colleges fill/region column map resolve through it. `scoring.js` still calls `Utils.colIndex2`; some tracker internals still use row-1 header helpers. |
+| 3 | Stable college identity for tracker sync | **Partially complete.** `repairCollegeSync` now snapshots tracker rows by college name, preserves rows after reorder, reports duplicate-name warnings, and batches repair-time linked updates. Stable key columns are not implemented; live sync remains positional. |
+| 4 | Formula builders | **Partially complete.** `src/formulas.js` exists (`sheetRef`, `netPriceAfterAid`, `outOfPocketCost`, `fourYearProjectedCost`, `admissionFit`) with Node tests. Weighted Score, Visit Score, timeline/status/aid-completion, financial safety, and dashboard stat formulas are still built inline. Value Score was removed entirely (R2), closing its normalization concern. |
+| 5 | Batch write plans | **Partially complete.** Tracker repair now batches formula snapshots and linked tracker updates, and `fillCollegeRowCore` now reads/builds/writes a Colleges row in one pass. Live tracker sync and some smaller helpers still write per cell. |
+| 6 | Menu boundary / structured results | **Open.** Services still alert directly and thread `suppressAlert`. |
+| 7 | Declarative setup orchestration | **Open.** |
+| 8 | Centralized diagnostics | **Open.** Repair now returns stable `warnings` arrays, including the missing-Colleges path; broader diagnostics remain open. |
+| 9 | Scoped locks | **Open.** Note: the API quota subsystem was removed (R5), so the script-properties race now only covers the cache-key registry. |
+| 10 | API key storage | **Open.** Key still lives in `ScorecardAPIKey!A1`. |
+| 11 | Dashboard/instructions as renderers | **Partially complete.** `instructions.js` now renders from declarative section data; `dashboard.js` gained `writeDashboardTable_`, data-built tables for the deadline/decision sections, and computed section rows for those tables. Shared conditional-format text-rule helpers now live in `Formatting`. The Key Statistics area is still an imperative cell script. |
+| 12 | Harness coverage of seams | **Largely complete** for Schema and Formulas; repair-path batching coverage was added; write-plan and setup-plan coverage still open. |
+
+Completed since the previous status pass:
+
+- Fixed dashboard magic row anchors for the deadline/decision/list-balance sections; tests now locate dashboard sections by label and assert relative structure.
+- Fixed `repairCollegeSync` missing-Colleges return so `warnings` is always an array.
+- Replaced repair snapshot per-cell `getFormula()` calls with one batched `getFormulas()` read per tracker sheet.
+- Changed repair-time linked tracker updates to resolve tracker columns once and flush queued linked values with batched `setValues()` calls.
+- Deduplicated tracker dropdown/date validation specs so setup and repair apply the same options.
+- Consolidated Colleges fill/region column lookup into one schema-backed column map.
+- Converted `fillCollegeRowCore` from cell-by-cell writes to a read-once/write-once row update that preserves formulas and user-owned columns.
+- Moved duplicated Financial/Admissions text conditional-format helpers into `CollegeTools.Formatting`.
+
 ## Refactoring Principles
 
 1. Preserve user data first. Existing copied spreadsheets may contain user ratings, tracker details, notes, formatting, and customized weights. A refactor that is cleaner but destroys data is a regression.
@@ -321,3 +351,72 @@ The first batch should be intentionally small:
 5. Run the full verification matrix and inspect the diff for accidental behavior changes.
 
 This creates a safe runway for the larger refactor without forcing multiple high-risk behavior changes into the first patch.
+
+---
+
+## Apps Script Best-Practices, Readability, DRY/KISS Review — 2026-07-05
+
+**Scope:** Full `src/` pass evaluated against Google's published Apps Script best practices (developers.google.com/apps-script/guides/support/best-practices — chiefly "use batch operations": read once into arrays, compute in memory, write once; minimize service calls; use Cache Service) plus DRY and KISS. Overlaps with the original findings are noted rather than repeated. Feature work in progress on `development` (deadline/decision dashboard views) was treated as in-flight, not a defect.
+
+### Findings (ordered by priority)
+
+1. **Complete: `repairCollegeSync` returns `warnings` before it is initialized.** The missing-Colleges-sheet early return now initializes and returns `warnings: []`, with a harness test for the missing-sheet path.
+
+2. **Complete: per-cell `getFormula()` loop in tracker snapshots.** `snapshotRowsByCollegeName_` now reads formulas with one `getFormulas()` range call per tracker sheet. A harness test asserts repair preserves formulas without per-cell formula reads.
+
+3. **Complete: `fillCollegeRowCore` read and wrote cell-by-cell.** `fillCollegeRowCore` now reads the row values/formulas once, builds the refreshed row in memory, preserves user/formula columns, and writes the Colleges row with one `setValues()` call.
+
+4. **Complete: Colleges column knowledge was defined multiple times.** `buildCollegesColumnMap_` now resolves labels through `Schema.header('COLLEGES', key)` and is shared by single-row fill, selected-row fill, and region fill.
+
+5. **Complete: validation/dropdown rules were duplicated between `trackers.js` and `formatting.js`.** Shared tracker validation specs now live in `Formatting.applyStandardValidations`, and both tracker setup and formatting repair use the same dropdown/date definitions.
+
+6. **Complete for repair: repair loop re-resolves tracker columns for every college row.** `repairCollegeSync` no longer calls `syncCollegeToTrackers` inside the repair loop. It resolves each repair tracker target once, queues linked values, and writes contiguous row runs with `setValues()`. Live row-fill sync remains positional and per-cell until the stable-identity/fill-row batching work.
+
+7. **Partly complete: dashboard layout relied on magic absolute rows and could self-collide.** The deadline/offer/decision/list-balance sections now use a flowing row cursor and table-returned next rows, and formatting ranges follow actual row counts. Remaining dashboard renderer work: the Key Statistics area is still imperative, and the repeated `CollegeTools.Formulas.sheetRef(cn.X) + '!' + safeRange_(rY)` concatenation still needs a local `ref_(sheetName, range)` helper or render model.
+
+8. **Complete for Financial/Admissions: `pushTextRule_`/`removeTextRules_` were copy-pasted between modules.** Shared text-rule helpers now live in `CollegeTools.Formatting`, and Financial/Admissions use them. `enhanceApplicationTimelineFormatting` still has range-based rule ownership logic because it removes numeric deadline rules by target range rather than text marker.
+
+9. **Two independent execution-time guards (KISS).** `Scorecard.executionState` (`src/scorecard.js:21–38`) and the `startTime`/`elapsed` check in `fillSelectedRows` (`src/colleges.js:640–655`) measure the same 5-minute budget with separate clocks that can disagree (Scorecard's timer starts on first fetch and is only reset by `searchColleges`). Keep one guard — a small shared `ExecutionBudget` started explicitly at the top of each menu action — and have both the batch loop and the API client consult it.
+
+10. **ES5 idiom throughout, despite the V8 runtime.** Every module uses `var`, string concatenation, and `function` expressions; `appsscript.json` runs V8 and Google recommends modern JavaScript on it. `const`/`let`, template literals (a major win for the formula-building code), `Object.assign` instead of `JSON.parse(JSON.stringify(...))` cloning (`src/scorecard.js:347–361`, `420`, `437`), and arrow callbacks would materially improve readability. Do this incrementally, one module per PR alongside other work — never as a big-bang rewrite — with ESLint `no-var`/`prefer-const` ratcheted per file.
+
+11. **Minor placement and consistency items (batch these into adjacent work, not standalone PRs):**
+    - `showVersion` and `debugFillCollegeRow` live in `CollegeTools.Colleges` but are about-dialog and developer tooling, not college data (`src/colleges.js:117–232`).
+    - `scoring.js:92` builds `Weights!A:B` by raw concatenation instead of `Formulas.sheetRef` — safe only while the sheet name has no spaces or quotes.
+    - `scoring.js` is the last `Utils.colIndex2` caller; migrating it to `Schema.columnIndex` lets colIndex2 be deprecated (original finding 2's acceptance gate).
+    - The Campus Visit score loop still applies formulas with per-row `setFormula` (`src/scoring.js:126–132`); build the array and use one `setFormulas` like the Weighted Score block directly above it already does.
+    - `Utils.getPath`/`getField` exist to defensively handle nested API responses, but `colleges.js` is strictly flat per CLAUDE.md — only `lookup.js` uses them. Either standardize the lookup on flat keys or note why the defensive form remains.
+
+### Recommended PR Sequence (updated 2026-07-06)
+
+The originally recommended PRs 1-4 are complete in the current worktree and should ship together as one architecture-refactor PR after review/manual spreadsheet smoke testing. Remaining work should move to the deferred architecture items below rather than expanding this PR further.
+
+**PR 1 — Repair-path fixes: findings 1 + 2 + 6 (`src/trackers.js`) — complete**
+- `repairCollegeSync` initializes and returns `warnings` consistently, including the missing-Colleges path.
+- `snapshotRowsByCollegeName_` reads tracker formulas with one `getFormulas()` range call per sheet.
+- `repairCollegeSync` queues linked tracker values after row restore and flushes them with batched `setValues()` runs.
+- Tests: regression coverage now asserts the missing-Colleges result, batched formula snapshotting, and batched linked tracker updates.
+- Manual check still required before merge: run Repair College Sync and Repair Entire Workbook on a copied sheet with tracker user data; confirm rows stay attached and repair is visibly faster.
+
+**PR 2 — Validation spec dedup: finding 5 (`src/trackers.js`, `src/formatting.js`) — complete**
+- Shared validation specs live in `Formatting.applyStandardValidations`.
+- Tracker setup and formatting repair now apply identical audited dropdown options.
+
+**PR 3 — Single Colleges column map: finding 4 (`src/colleges.js`) — complete**
+- `buildCollegesColumnMap_` is shared by fill and region paths and resolves labels through `Schema.header`.
+
+**PR 4 — Fill-row batching: finding 3 (`src/colleges.js`) — complete**
+- `fillCollegeRowCore` now performs a batched row update while preserving user-owned and formula-owned cells.
+- Manual check still required before merge: in a copied sheet, re-fill a row that has user ratings, user-entered Notes, and formula columns; verify all survive. Also verify the no-API-match path still stamps Notes correctly and a batch fill of several rows behaves.
+
+**Riding along:** finding 8's Financial/Admissions helper duplication is complete.
+
+**Deferred, with conditions:**
+- **Finding 7 (dashboard renderer cleanup):** the fixed-row collision is complete. Defer the remaining render-model cleanup until dashboard stats/formulas are touched again.
+- **Finding 9 (duplicate execution-time guards):** fold into the menu-boundary work (original finding 6), which restructures the same entry points.
+- **Finding 10 (ES5 → modern JS):** never a standalone project. Rule: any module touched for PRs 1–4 may be modernized in the same PR if the diff stays reviewable; ratchet ESLint `no-var`/`prefer-const` per file.
+- **Finding 11 (minor placement/consistency):** batch into adjacent work. Exception worth prioritizing: migrate `scoring.js` off `Utils.colIndex2` to `Schema.columnIndex` next time scoring is touched — it is the last caller and closes the original finding 2 acceptance gate.
+
+### What is already in good shape
+
+Worth stating so it is preserved: consistent IIFE-namespace modules with JSDoc on nearly every function, `Cache Service` used for search responses exactly as Google recommends, exponential backoff with `muteHttpExceptions`, bounded batch loops with configured delays and an execution-time stop, conditional-format rule ownership on rerun, user-weight preservation in `ensureScoring`, and several paths (Weighted Score, Admission Fit, financial safety) already using batched `setFormulas`. The new dashboard deadline/decision builders are pure data-in/rows-out functions with Node tests — the right pattern for everything else on this list.

@@ -28,6 +28,67 @@ CollegeTools.Colleges = (function() {
     return i + 1;
   }
 
+
+  /**
+   * Returns a required Colleges column index from a schema column key.
+   * @param {Array<string>} hdrs - Header row values
+   * @param {string} columnKey - Schema column key
+   * @returns {number} 1-based column index
+   * @private
+   */
+  function requiredCollegeColumn_(hdrs, columnKey) {
+    return requireCol_(hdrs, CollegeTools.Schema.header('COLLEGES', columnKey));
+  }
+
+  /**
+   * Returns an optional Colleges column index from a schema column key.
+   * @param {Array<string>} hdrs - Header row values
+   * @param {string} columnKey - Schema column key
+   * @returns {number} 1-based column index or -1 when absent
+   * @private
+   */
+  function optionalCollegeColumn_(hdrs, columnKey) {
+    var label = CollegeTools.Schema.header('COLLEGES', columnKey);
+    var index = hdrs.indexOf(label);
+    return index === -1 ? -1 : index + 1;
+  }
+
+  /**
+   * Builds the canonical Colleges column map used by single-row and batch fill.
+   * @param {Array<string>} hdrs - Row-2 Colleges headers
+   * @returns {Object} Column map
+   * @private
+   */
+  function buildCollegesColumnMap_(hdrs) {
+    return {
+      NAME: requiredCollegeColumn_(hdrs, 'COLLEGE_NAME'),
+      CITY: requiredCollegeColumn_(hdrs, 'CITY'),
+      STATE: requiredCollegeColumn_(hdrs, 'STATE'),
+      TYPE: requiredCollegeColumn_(hdrs, 'TYPE'),
+      ACC: requiredCollegeColumn_(hdrs, 'ACCEPTANCE_RATE'),
+      RET: requiredCollegeColumn_(hdrs, 'RETENTION_RATE'),
+      GRAD: requiredCollegeColumn_(hdrs, 'GRAD_RATE'),
+      EARN: requiredCollegeColumn_(hdrs, 'EARNINGS_10YR'),
+      COA: requiredCollegeColumn_(hdrs, 'TOTAL_COST'),
+      NET: requiredCollegeColumn_(hdrs, 'NET_PRICE'),
+      LINK: requiredCollegeColumn_(hdrs, 'LINK'),
+      SAT25: requiredCollegeColumn_(hdrs, 'SAT_25'),
+      SAT75: requiredCollegeColumn_(hdrs, 'SAT_75'),
+      ACT25: requiredCollegeColumn_(hdrs, 'ACT_25'),
+      ACT75: requiredCollegeColumn_(hdrs, 'ACT_75'),
+      CAMPUS_SETTING: optionalCollegeColumn_(hdrs, 'CAMPUS_SETTING'),
+      TEST_OPTIONAL: optionalCollegeColumn_(hdrs, 'TEST_OPTIONAL'),
+      IN_STATE_TUITION: optionalCollegeColumn_(hdrs, 'IN_STATE_TUITION'),
+      OUT_OF_STATE_TUITION: optionalCollegeColumn_(hdrs, 'OUT_OF_STATE_TUITION'),
+      APPLICABLE_TUITION: optionalCollegeColumn_(hdrs, 'APPLICABLE_TUITION'),
+      TYPICAL_DEBT: optionalCollegeColumn_(hdrs, 'TYPICAL_DEBT'),
+      PELL_GRANT_RATE: optionalCollegeColumn_(hdrs, 'PELL_GRANT_RATE'),
+      NOTES: requiredCollegeColumn_(hdrs, 'NOTES'),
+      REGION: optionalCollegeColumn_(hdrs, 'REGION'),
+      HEADERS: hdrs,
+    };
+  }
+
   var PRESERVED_HEADERS = {
     'College Name': true,
     'Program Fit (1-5)': true,
@@ -85,30 +146,6 @@ CollegeTools.Colleges = (function() {
    */
   function shouldPreserveHeader(header) {
     return !!PRESERVED_HEADERS[(header || '').toString().trim()];
-  }
-
-  /**
-   * Clears stale college-specific values from a Colleges row while preserving user-owned
-   * rating columns and formula columns.
-   * Builds contiguous runs of clearable columns and issues one clearContent() per run,
-   * instead of one API call per cell.
-   * @param {Sheet} sh - Colleges sheet
-   * @param {number} row - Absolute row number
-   * @param {Array<string>} headers - Header row 2 values
-   * @private
-   */
-  function clearStaleCollegeData_(sh, row, headers) {
-    var lastCol = Math.min(headers.length, sh.getLastColumn());
-    var runStart = null;
-    for (var c = 1; c <= lastCol + 1; c++) {
-      var clearable = c <= lastCol && !shouldPreserveHeader(headers[c - 1]);
-      if (clearable && runStart === null) {
-        runStart = c;
-      } else if (!clearable && runStart !== null) {
-        sh.getRange(row, runStart, 1, c - runStart).clearContent();
-        runStart = null;
-      }
-    }
   }
 
   /**
@@ -247,8 +284,6 @@ CollegeTools.Colleges = (function() {
     opts = opts || {};
     var suppressAlert = !!opts.suppressAlert;
     var skipHighlight = !!opts.skipHighlight;
-    var columnIndexes = opts.columnIndexes || null;
-
     var ss = SpreadsheetApp.getActive();
     var sh = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (!sh) {
@@ -263,92 +298,46 @@ CollegeTools.Colleges = (function() {
       return {ok: false, msg: 'row<3'};
     }
 
-    // Performance optimization: Use pre-computed column indexes for batch operations
-    var COL; var idxRegion0;
-
-    var hdrs;
-    if (columnIndexes) {
-      // Use pre-computed indexes from batch operation
-      COL = {
-        NAME: columnIndexes.NAME,
-        CITY: columnIndexes.CITY,
-        STATE: columnIndexes.STATE,
-        TYPE: columnIndexes.TYPE,
-        ACC: columnIndexes.ACC,
-        RET: columnIndexes.RET,
-        GRAD: columnIndexes.GRAD,
-        EARN: columnIndexes.EARN,
-        COA: columnIndexes.COA,
-        NET: columnIndexes.NET,
-        LINK: columnIndexes.LINK,
-        SAT25: columnIndexes.SAT25,
-        SAT75: columnIndexes.SAT75,
-        ACT25: columnIndexes.ACT25,
-        ACT75: columnIndexes.ACT75,
-        CAMPUS_SETTING: columnIndexes.CAMPUS_SETTING,
-        TEST_OPTIONAL: columnIndexes.TEST_OPTIONAL,
-        IN_STATE_TUITION: columnIndexes.IN_STATE_TUITION,
-        OUT_OF_STATE_TUITION: columnIndexes.OUT_OF_STATE_TUITION,
-        APPLICABLE_TUITION: columnIndexes.APPLICABLE_TUITION,
-        TYPICAL_DEBT: columnIndexes.TYPICAL_DEBT,
-        PELL_GRANT_RATE: columnIndexes.PELL_GRANT_RATE,
-        NOTES: columnIndexes.NOTES,
-      };
-      idxRegion0 = columnIndexes.REGION !== -1 ? columnIndexes.REGION - 1 : -1;
-      hdrs = columnIndexes.HEADERS || [];
-    } else {
-      // Read headers for single-row operations (backward compatibility)
+    var hdrs = opts.columnIndexes ? opts.columnIndexes.HEADERS : null;
+    if (!hdrs) {
       hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
         .map(function(x) {
-          return (x||'').toString().trim();
+          return (x || '').toString().trim();
         });
-
-      COL = {
-        NAME: requireCol_(hdrs, 'College Name'),
-        CITY: requireCol_(hdrs, 'City'),
-        STATE: requireCol_(hdrs, 'State'),
-        TYPE: requireCol_(hdrs, 'Type (Public/Private)'),
-        ACC: requireCol_(hdrs, 'Acceptance Rate'),
-        RET: requireCol_(hdrs, 'First-Year Retention'),
-        GRAD: requireCol_(hdrs, 'Grad Rate'),
-        EARN: requireCol_(hdrs, 'Median Earnings (10yr)'),
-        COA: requireCol_(hdrs, 'Total Cost of Attendance'),
-        NET: requireCol_(hdrs, 'Estimated Net Price'),
-        LINK: requireCol_(hdrs, 'Link'),
-        SAT25: requireCol_(hdrs, 'SAT 25%'),
-        SAT75: requireCol_(hdrs, 'SAT 75%'),
-        ACT25: requireCol_(hdrs, 'ACT 25%'),
-        ACT75: requireCol_(hdrs, 'ACT 75%'),
-        CAMPUS_SETTING: hdrs.indexOf('Campus Setting') !== -1 ? requireCol_(hdrs, 'Campus Setting') : -1,
-        TEST_OPTIONAL: hdrs.indexOf('Test Optional') !== -1 ? requireCol_(hdrs, 'Test Optional') : -1,
-        IN_STATE_TUITION: hdrs.indexOf('In-State Tuition') !== -1 ? requireCol_(hdrs, 'In-State Tuition') : -1,
-        OUT_OF_STATE_TUITION: hdrs.indexOf('Out-of-State Tuition') !== -1 ? requireCol_(hdrs, 'Out-of-State Tuition') : -1,
-        APPLICABLE_TUITION: hdrs.indexOf('Applicable Tuition') !== -1 ? requireCol_(hdrs, 'Applicable Tuition') : -1,
-        TYPICAL_DEBT: hdrs.indexOf('Typical Debt at Graduation') !== -1 ? requireCol_(hdrs, 'Typical Debt at Graduation') : -1,
-        PELL_GRANT_RATE: hdrs.indexOf('Pell Grant Rate') !== -1 ? requireCol_(hdrs, 'Pell Grant Rate') : -1,
-        NOTES: requireCol_(hdrs, 'Notes'),
-      };
-      idxRegion0 = hdrs.indexOf('Region');
     }
+    var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
+    var idxRegion0 = COL.REGION !== -1 ? COL.REGION - 1 : -1;
+    var lastCol = Math.min(hdrs.length, sh.getLastColumn());
+    var rowRange = sh.getRange(row, 1, 1, lastCol);
+    var rowValues = rowRange.getValues()[0];
+    var rowFormulas = rowRange.getFormulas()[0];
 
-    var name = (sh.getRange(row, COL.NAME).getValue()||'').toString().trim();
+    var name = (rowValues[COL.NAME - 1] || '').toString().trim();
     if (!name) return {ok: false, msg: 'empty name'};
 
     // Sanitize college name to prevent injection and abuse
     var sanitizedName = CollegeTools.Utils.sanitizeCollegeName(name);
     if (!sanitizedName) return {ok: false, msg: 'invalid name after sanitization'};
 
-    // Replace stale sample/template data but keep user-owned ratings and formulas.
-    clearStaleCollegeData_(sh, row, hdrs);
-    sh.getRange(row, COL.NAME).setValue(sanitizedName);
+    // Replace stale sample/template data in memory while preserving user-owned ratings and formulas.
+    var nextRowValues = rowValues.slice();
+    for (var c = 0; c < lastCol; c++) {
+      if (shouldPreserveHeader(hdrs[c])) {
+        nextRowValues[c] = rowFormulas[c] || rowValues[c];
+      } else {
+        nextRowValues[c] = '';
+      }
+    }
+    nextRowValues[COL.NAME - 1] = sanitizedName;
 
     // Fetch college data via API
     var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName);
     if (!apiResult.ok) {
-      // Don't clobber user-entered notes with the error message
-      if (isAutoStampNotes_(sh.getRange(row, COL.NOTES).getValue())) {
-        sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + apiResult.error);
+      // Don't clobber user-entered notes with the error message.
+      if (isAutoStampNotes_(rowValues[COL.NOTES - 1])) {
+        nextRowValues[COL.NOTES - 1] = CollegeTools.Config.VERSION + ' | ' + apiResult.error;
       }
+      rowRange.setValues([nextRowValues]);
       if (!suppressAlert) SpreadsheetApp.getUi().alert('No match for "' + sanitizedName + '". See Notes.');
       return {ok: false, msg: 'no match'};
     }
@@ -429,19 +418,20 @@ CollegeTools.Colleges = (function() {
     if (COL.PELL_GRANT_RATE !== -1) writes.push([COL.PELL_GRANT_RATE, pellGrantRate]);
     if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
     if (COL.APPLICABLE_TUITION !== -1 && COL.IN_STATE_TUITION !== -1 && COL.OUT_OF_STATE_TUITION !== -1) {
-      sh.getRange(row, COL.APPLICABLE_TUITION).setFormula('=IF(State_Residency=' +
+      writes.push([COL.APPLICABLE_TUITION, '=IF(State_Residency=' +
         CollegeTools.Utils.addr(row, COL.STATE) + ',' +
         CollegeTools.Utils.addr(row, COL.IN_STATE_TUITION) + ',' +
-        CollegeTools.Utils.addr(row, COL.OUT_OF_STATE_TUITION) + ')');
+        CollegeTools.Utils.addr(row, COL.OUT_OF_STATE_TUITION) + ')']);
     }
     writes.forEach(function(w) {
-      sh.getRange(row, w[0]).setValue(w[1] || '');
+      nextRowValues[w[0] - 1] = w[1] || '';
     });
     // Only overwrite Notes when it is empty or still holds a prior auto-stamp
     // (auto-stamps look like "1.2.3 | School Name"). User-entered notes are preserved.
-    if (isAutoStampNotes_(sh.getRange(row, COL.NOTES).getValue())) {
-      sh.getRange(row, COL.NOTES).setValue(CollegeTools.Config.VERSION + ' | ' + (usedName||name));
+    if (isAutoStampNotes_(rowValues[COL.NOTES - 1])) {
+      nextRowValues[COL.NOTES - 1] = CollegeTools.Config.VERSION + ' | ' + (usedName || name);
     }
+    rowRange.setValues([nextRowValues]);
 
     if (!suppressAlert && !skipHighlight) {
       // Highlight when run one-off (skip highlighting for performance)
@@ -514,9 +504,10 @@ CollegeTools.Colleges = (function() {
         return (x||'').toString().trim();
       });
 
-    var colName = requireCol_(hdrs, 'College Name');
-    var colState = requireCol_(hdrs, 'State');
-    var idxRegion = hdrs.indexOf('Region');
+    var columnIndexes = buildCollegesColumnMap_(hdrs);
+    var colName = columnIndexes.NAME;
+    var colState = columnIndexes.STATE;
+    var idxRegion = columnIndexes.REGION === -1 ? -1 : columnIndexes.REGION - 1;
 
     if (idxRegion === -1) {
       if (!opts.suppressAlert) {
@@ -600,40 +591,12 @@ CollegeTools.Colleges = (function() {
 
     // Note: Tracker setup is handled separately - not needed during fill operations
 
-    // Performance optimization: Read headers once for entire batch operation
+    // Performance optimization: Read headers once for entire batch operation.
     var hdrs = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0]
       .map(function(x) {
-        return (x||'').toString().trim();
+        return (x || '').toString().trim();
       });
-
-    // Pre-compute all column indexes for batch operation
-    var columnIndexes = {
-      NAME: requireCol_(hdrs, 'College Name'),
-      CITY: requireCol_(hdrs, 'City'),
-      STATE: requireCol_(hdrs, 'State'),
-      TYPE: requireCol_(hdrs, 'Type (Public/Private)'),
-      ACC: requireCol_(hdrs, 'Acceptance Rate'),
-      RET: requireCol_(hdrs, 'First-Year Retention'),
-      GRAD: requireCol_(hdrs, 'Grad Rate'),
-      EARN: requireCol_(hdrs, 'Median Earnings (10yr)'),
-      COA: requireCol_(hdrs, 'Total Cost of Attendance'),
-      NET: requireCol_(hdrs, 'Estimated Net Price'),
-      LINK: requireCol_(hdrs, 'Link'),
-      SAT25: requireCol_(hdrs, 'SAT 25%'),
-      SAT75: requireCol_(hdrs, 'SAT 75%'),
-      ACT25: requireCol_(hdrs, 'ACT 25%'),
-      ACT75: requireCol_(hdrs, 'ACT 75%'),
-      CAMPUS_SETTING: hdrs.indexOf('Campus Setting') !== -1 ? requireCol_(hdrs, 'Campus Setting') : -1,
-      TEST_OPTIONAL: hdrs.indexOf('Test Optional') !== -1 ? requireCol_(hdrs, 'Test Optional') : -1,
-      IN_STATE_TUITION: hdrs.indexOf('In-State Tuition') !== -1 ? requireCol_(hdrs, 'In-State Tuition') : -1,
-      OUT_OF_STATE_TUITION: hdrs.indexOf('Out-of-State Tuition') !== -1 ? requireCol_(hdrs, 'Out-of-State Tuition') : -1,
-      APPLICABLE_TUITION: hdrs.indexOf('Applicable Tuition') !== -1 ? requireCol_(hdrs, 'Applicable Tuition') : -1,
-      TYPICAL_DEBT: hdrs.indexOf('Typical Debt at Graduation') !== -1 ? requireCol_(hdrs, 'Typical Debt at Graduation') : -1,
-      PELL_GRANT_RATE: hdrs.indexOf('Pell Grant Rate') !== -1 ? requireCol_(hdrs, 'Pell Grant Rate') : -1,
-      NOTES: requireCol_(hdrs, 'Notes'),
-      REGION: hdrs.indexOf('Region') !== -1 ? hdrs.indexOf('Region') + 1 : -1,
-      HEADERS: hdrs,
-    };
+    var columnIndexes = buildCollegesColumnMap_(hdrs);
 
     // Process each row, stopping early if we approach the execution time limit
     var ok=0; var skipped=0; var failed=0; var timeLimitExceeded=false;

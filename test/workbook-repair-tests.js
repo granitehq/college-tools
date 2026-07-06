@@ -7,6 +7,7 @@ const {createHarness, TestSuite} = require('./support');
 const harness = createHarness([
   'config.js',
   'utils.js',
+  'schema.js',
   'formatting.js',
   'trackers.js',
   'colleges.js',

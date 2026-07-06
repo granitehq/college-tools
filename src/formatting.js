@@ -123,6 +123,129 @@ CollegeTools.Formatting = (function() {
       .setNumberFormat(pattern);
   }
 
+
+  var STANDARD_VALIDATIONS = {};
+  STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID] = {
+    range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
+    date: ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'],
+    list: [
+      ['CSS Profile Required (Y/N)', ['Y', 'N']],
+      ['FAFSA Submitted (Y/N)', ['Y', 'N']],
+      ['CSS Profile Submitted (Y/N)', ['Y', 'N']],
+      ['IDOC Required (Y/N)', ['Y', 'N']],
+      ['IDOC Submitted (Y/N)', ['Y', 'N']],
+      ['Verification Required (Y/N)', ['Y', 'N']],
+      ['Verification Submitted (Y/N)', ['Y', 'N']],
+      ['Work-Study Offered', ['Y', 'N']],
+      ['Appeal Status', ['Not Started', 'In Progress', 'Submitted', 'Approved', 'Denied', 'Other']],
+    ],
+  };
+  STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT] = {
+    range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
+    date: ['Visit Date'],
+    list: [
+      ['Visit Type (In-Person/Virtual/College Fair)', ['In-Person', 'Virtual', 'College Fair', 'Regional Event', 'Other']],
+      ['Campus & Facilities (1-10)', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
+      ['Academic Vibe (1-10)', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
+      ['Social Atmosphere (1-10)', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
+      ['Overall Gut Feeling (1-10)', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
+      ['Follow-Up Needed', ['Y', 'N']],
+    ],
+  };
+  STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE] = {
+    range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
+    date: ['Application Deadline', 'Decision Release Date'],
+    list: [
+      ['Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']],
+      ['Priority Level', ['High', 'Medium', 'Low', 'Other']],
+    ],
+  };
+  STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER] = {
+    range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
+    date: ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)'],
+    list: [
+      ['Transcript Sent', ['Y', 'N']],
+      ['Test Scores Sent', ['Y', 'N']],
+      ['Recommendations Complete', ['Y', 'N']],
+      ['Essays Complete', ['Y', 'N']],
+      ['Interview (Y/N)', ['Y', 'N']],
+      ['Portfolio Required (Y/N)', ['Y', 'N']],
+      ['Application Status', ['Not Started', 'In Progress', 'Submitted', 'Under Review', 'Decision Received', 'Other']],
+      ['Decision Plan', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']],
+      ['Decision/Result', ['Pending', 'Accepted', 'Deferred', 'Waitlisted', 'Rejected', 'Other']],
+    ],
+  };
+  STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER] = {
+    date: ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date'],
+    list: [
+      ['Type (Merit/Need/Field/Local/National)', ['Merit', 'Need', 'Field-Specific', 'Local', 'National', 'Other']],
+      ['Award Type (One-time/Renewable)', ['One-time', 'Renewable', 'Other']],
+      ['Financial Need Required', ['Y', 'N']],
+      ['Transcript Required', ['Y', 'N']],
+      ['FAFSA Required', ['Y', 'N']],
+      ['Portfolio/Work Samples', ['Y', 'N']],
+      ['Interview Required', ['Y', 'N']],
+      ['Award Status (Pending/Awarded/Declined)', ['Pending', 'Awarded', 'Declined', 'Waitlisted', 'Other']],
+    ],
+  };
+
+  /**
+   * Applies shared dropdown/date validation specs for tracker sheets.
+   * @param {Sheet} sh - Target sheet
+   */
+  function applyStandardValidations(sh) {
+    if (!sh) return;
+    var spec = STANDARD_VALIDATIONS[sh.getName()];
+    if (!spec) return;
+
+    (spec.range || []).forEach(function(entry) {
+      validateListFromRange(sh, entry[0], entry[1], entry[2]);
+    });
+    (spec.date || []).forEach(function(header) {
+      validateDate(sh, header);
+    });
+    (spec.list || []).forEach(function(entry) {
+      validateList(sh, entry[0], entry[1]);
+    });
+  }
+
+  /**
+   * Adds a text-contains conditional format rule to a rules array.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {Range} range - Target range
+   * @param {string} text - Text fragment to match
+   * @param {string} bg - Background color
+   * @param {string} fg - Font color
+   */
+  function pushTextRule(rules, range, text, bg, fg) {
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenTextContains(text)
+      .setBackground(bg)
+      .setFontColor(fg)
+      .setRanges([range])
+      .build());
+  }
+
+  /**
+   * Removes prior text-contains conditional format rules with matching markers.
+   * @param {ConditionalFormatRule[]} rules - Existing rules array
+   * @param {string[]} markers - Exact text markers used by owned rules
+   * @returns {ConditionalFormatRule[]} Filtered rules
+   */
+  function removeTextRules(rules, markers) {
+    return (rules || []).filter(function(rule) {
+      var text = '';
+      try {
+        var boolCondition = rule.getBooleanCondition && rule.getBooleanCondition();
+        var values = boolCondition && boolCondition.getCriteriaValues && boolCondition.getCriteriaValues();
+        text = values && values.length ? String(values[0]) : '';
+      } catch (e) {
+        text = '';
+      }
+      return markers.indexOf(text) === -1;
+    });
+  }
+
   /**
    * Applies formatting and dropdown validations to all sheets.
    * Sets number formats for percentages, currency, and scores.
@@ -166,18 +289,7 @@ CollegeTools.Formatting = (function() {
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
-      validateListFromRange(fa, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
-      ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'].forEach(function(h) {
-        validateDate(fa, h);
-      });
-      ['CSS Profile Required (Y/N)', 'FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)',
-        'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)', 'Verification Required (Y/N)',
-        'Verification Submitted (Y/N)', 'Work-Study Offered']
-        .forEach(function(h) {
-          validateList(fa, h, ['Y', 'N']);
-        });
-      validateList(fa, 'Appeal Status',
-        ['Not Started', 'In Progress', 'Submitted', 'Approved', 'Denied', 'Other']);
+      applyStandardValidations(fa);
       ['Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies', 'Personal Expenses', 'Travel Costs',
         'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid',
         'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
@@ -191,21 +303,17 @@ CollegeTools.Formatting = (function() {
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
-      validateListFromRange(cv, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
-      validateDate(cv, 'Visit Date');
+      applyStandardValidations(cv);
       ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
         .forEach(function(h) {
           formatNumber(cv, h, '0');
         });
-      validateList(cv, 'Visit Type (In-Person/Virtual/College Fair)',
-        ['In-Person', 'Virtual', 'College Fair', 'Regional Event', 'Other']);
-      validateList(cv, 'Follow-Up Needed', ['Y', 'N']);
     }
 
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
-      validateListFromRange(at, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
+      applyStandardValidations(at);
       var atHdrs = at.getRange(1, 1, 1, at.getLastColumn()).getValues()[0];
       for (var i = 0; i < atHdrs.length; i++) {
         var h = (atHdrs[i] || '').toString().trim();
@@ -213,8 +321,6 @@ CollegeTools.Formatting = (function() {
       }
       formatNumber(at, 'Days Until Deadline (App)', '0');
       formatNumber(at, 'Completion Status (%)', '0');
-      validateList(at, 'Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']);
-      validateList(at, 'Priority Level', ['High', 'Medium', 'Low', 'Other']);
     }
 
     var sc = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
@@ -223,41 +329,14 @@ CollegeTools.Formatting = (function() {
       ['Amount', 'Amount Awarded'].forEach(function(h) {
         formatNumber(sc, h, '$#,##0');
       });
-      ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date']
-        .forEach(function(h) {
-          validateDate(sc, h);
-        });
-      validateList(sc, 'Type (Merit/Need/Field/Local/National)',
-        ['Merit', 'Need', 'Field-Specific', 'Local', 'National', 'Other']);
-      validateList(sc, 'Award Type (One-time/Renewable)', ['One-time', 'Renewable', 'Other']);
-      ['Financial Need Required', 'Transcript Required', 'FAFSA Required', 'Portfolio/Work Samples',
-        'Interview Required']
-        .forEach(function(h) {
-          validateList(sc, h, ['Y', 'N']);
-        });
-      validateList(sc, 'Award Status (Pending/Awarded/Declined)',
-        ['Pending', 'Awarded', 'Declined', 'Waitlisted', 'Other']);
+      applyStandardValidations(sc);
     }
 
     var st = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     if (st) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
-      validateListFromRange(st, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
-      ['Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete',
-        'Interview (Y/N)', 'Portfolio Required (Y/N)']
-        .forEach(function(h) {
-          validateList(st, h, ['Y', 'N']);
-        });
-      ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
-        .forEach(function(h) {
-          validateDate(st, h);
-        });
+      applyStandardValidations(st);
       formatNumber(st, 'Scholarship Offer ($)', '$#,##0');
-      validateList(st, 'Application Status',
-        ['Not Started', 'In Progress', 'Submitted', 'Under Review', 'Decision Received', 'Other']);
-      validateList(st, 'Decision Plan', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']);
-      validateList(st, 'Decision/Result',
-        ['Pending', 'Accepted', 'Deferred', 'Waitlisted', 'Rejected', 'Other']);
     }
 
     if (!opts.suppressAlert) {
@@ -295,5 +374,8 @@ CollegeTools.Formatting = (function() {
     validateListFromRange: validateListFromRange,
     validateDate: validateDate,
     formatNumber: formatNumber,
+    applyStandardValidations: applyStandardValidations,
+    pushTextRule: pushTextRule,
+    removeTextRules: removeTextRules,
   };
 })();
