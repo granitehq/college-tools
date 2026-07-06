@@ -149,6 +149,21 @@ Notes:
 - `scripts/update-version.js` updates `package.json`, module `@version` headers, and `Config.VERSION`.
 - `npm run push` runs lint first, then `clasp push`.
 
+## Required Branch And Release Flow
+
+Default all new code changes to this branch flow unless the user explicitly overrides it:
+
+1. Start from the latest `development` branch.
+2. Create a feature branch off `development` for the change.
+3. Commit the feature work on that feature branch.
+4. Merge the feature branch back into `development`.
+5. Merge `development` into `main`.
+6. Version and deploy from `main`.
+
+`main` should not receive ordinary feature commits or documentation commits directly. If the user asks for a direct commit to `main`, treat it as an exception path: explain that the normal process is to go through `development`, and request an explicit override before committing directly to `main`.
+
+Rare hotfixes may go straight to `main`, but only after the user explicitly confirms the override. After any direct `main` hotfix, make sure the fix is also reconciled back into `development` so future feature branches include it.
+
 ## Testing
 
 There is a lightweight Node-based regression harness under [`test/`](/home/scott/code/college-tools/test).
@@ -182,6 +197,8 @@ The `docs/` directory is a separate static documentation/marketing site, not the
 
 ## Safe Working Rules For Future Agents
 
+- Before creating commits for new code, confirm the branch is a feature branch based on `development`.
+- Do not commit directly to `main` unless the user explicitly overrides the required branch flow for that specific change.
 - Start by checking whether you are touching `Colleges` row-2 logic or tracker row-1 logic. Do not mix them.
 - When changing Scorecard field extraction, preserve flattened-key access.
 - When editing fill/setup flows, check for unintended sheet clearing or whole-row overwrites.

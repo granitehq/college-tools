@@ -57,6 +57,20 @@
 
 # For Developers wanting to contribute/modify
 
+## Required Branch Flow
+
+All new code should start from `development`, not `main`.
+
+```bash
+git checkout development
+git pull origin development
+git checkout -b feature/your-change
+```
+
+Finish the feature by merging the feature branch into `development`. After `development` is verified, merge `development` into `main`; then version and deploy from `main`.
+
+Direct commits to `main` are only for rare hotfixes. If you want to commit directly to `main`, explicitly override this process first, and reconcile the fix back into `development` afterward.
+
 ## Code Quality
 
 - **ESLint Integration** - Automated code style and syntax checking
@@ -109,7 +123,17 @@ npm install           # Install dependencies
 
 ## Release Workflow
 
-GitHub is the durable release record. Prepare and commit the project version first, tag that exact commit, deploy the same code to the template's Apps Script project with clasp, then promote the template to a new published copy.
+GitHub is the durable release record. Normal releases flow from `development` into `main`; `main` should only contain changes that came through `development`, except for rare explicitly approved hotfixes.
+
+Before versioning, merge the verified `development` branch into `main`:
+
+```bash
+git checkout main
+git pull origin main
+git merge development
+```
+
+Then prepare and commit the project version on `main`, tag that exact commit, deploy the same code to the template's Apps Script project with clasp, then promote the template to a new published copy.
 
 ```bash
 npm run release:prepare
@@ -169,10 +193,11 @@ npm run version:patch # Bump patch version
 ### Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Check out `development`: `git checkout development && git pull origin development`
+3. Create a feature branch from `development`: `git checkout -b feature/amazing-feature`
+4. Commit changes: `git commit -m 'Add amazing feature'`
+5. Push to branch: `git push origin feature/amazing-feature`
+6. Open a Pull Request targeting `development`
 
 ## 🐛 Support
 
