@@ -366,7 +366,7 @@ CollegeTools.Instructions = (function() {
         title: '🆘 Getting Help',
         lines: [
           '📝 Documentation: This Instructions sheet covers most common questions',
-          '🐛 Bug Reports: Report issues at github.com/anthropics/claude-code/issues',
+          '🐛 Bug Reports: Report issues at github.com/granitehq/college-tools/issues',
           '💡 Feature Requests: Suggest improvements in the same GitHub repository',
           '📊 Data Questions: College Scorecard data comes from the U.S. Department of Education',
           '🔄 Updates: Check "Show version" in the menu for your current version',
