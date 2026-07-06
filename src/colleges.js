@@ -54,8 +54,13 @@ CollegeTools.Colleges = (function() {
   }
 
   /**
-   * Ensures older Colleges sheets have the Region column in the canonical
-   * position after State, then returns the current row-2 headers.
+   * Ensures older Colleges sheets have a Region column, appending it as a new
+   * trailing column when missing, then returns the current row-2 headers.
+   * Appends rather than inserting mid-row: Google Sheets rejects
+   * insertColumnBefore/After next to columns using its "typed column"
+   * (dropdown/chip) feature with "This operation is not allowed on cells in
+   * typed columns," and every column in this sheet is located by header name,
+   * not position, so an appended Region column works everywhere the same way.
    * @param {Sheet} sh - Colleges sheet
    * @returns {Array<string>} Trimmed row-2 header values
    * @private
@@ -69,11 +74,7 @@ CollegeTools.Colleges = (function() {
 
     if (hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'REGION')) !== -1) return hdrs;
 
-    var stateIdx = hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'STATE'));
-    if (stateIdx === -1) return hdrs;
-
-    var regionCol = stateIdx + 2;
-    sh.insertColumnBefore(regionCol);
+    var regionCol = lastCol + 1;
     sh.getRange(2, regionCol).setValue(CollegeTools.Schema.header('COLLEGES', 'REGION'));
 
     if (CollegeTools.Formatting && CollegeTools.Formatting.validateList) {
