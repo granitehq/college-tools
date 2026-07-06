@@ -98,8 +98,8 @@ Code reads Colleges headers from row 2 of the sheet; the template must be edited
 - [ ] **J3. Add a short "Where to find scholarships" pointer list to the Instructions sheet.**
   The Scholarship Tracker only tracks scholarships once found — it does nothing for the *discovery* job, and the College Scorecard API has no scholarship data to serve it with. Rather than building search/matching (out of reach without a new data source, and against this project's own "don't build what doesn't change a decision" principle), add 4-5 curated links (Fastweb, Scholarships.com, Going Merry, the student's state 529/scholarship portal, "ask your school counselor for the local list") to the Instructions sheet's existing Scholarship Tracker section. Cheap, honest, closes a real gap without scope creep.
 
-- [ ] **F10 (fix, not feature). Instructions sheet "Bug Reports" link points at the wrong repository.**
-  `src/instructions.js:369` sends users to `github.com/anthropics/claude-code/issues` — that's the Claude Code CLI's tracker, not this project's. A parent trying to report a real problem hits a dead end. One-line fix; bundle with whichever Instructions change ships next.
+- [x] **F10 (fix, not feature). Instructions sheet "Bug Reports" link points at the wrong repository.**
+  `src/instructions.js:369` sent users to `github.com/anthropics/claude-code/issues` — that's the Claude Code CLI's tracker, not this project's. A parent trying to report a real problem hit a dead end. Fixed to point at `github.com/granitehq/college-tools/issues`.
 
 **Considered and deliberately not recommended:**
 - *Per-essay/per-supplement tracking.* Real pain point, but modeling "essays complete" at the per-supplement level (most schools have 2-5) would re-inflate Status Tracker or Application Timeline the same way Phase 1 just cut down — the single `Essays Complete (Y/N)` column is the right altitude for a spreadsheet whose audience does this once.
