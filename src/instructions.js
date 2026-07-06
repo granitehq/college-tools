@@ -1,6 +1,6 @@
 /**
  * Instructions and Help System
- * @version 2.0.2
+ * @version 2.6.0
  * @author College Tools
  * @description Creates comprehensive user instructions and help documentation
  */
@@ -218,9 +218,7 @@ CollegeTools.Instructions = (function() {
           '   • Weighted scores calculated automatically',
           '',
           '4. Smart Analysis:',
-          '   • Admission Chances based on your test scores',
-          '   • Academic Index Match score (competitiveness)',
-          '   • Merit Aid Likelihood predictions',
+          '   • Admission Fit (Reach/Match/Likely) based on your test scores and GPA',
           '   • Financial Safety analysis',
         ],
       },
@@ -359,7 +357,7 @@ CollegeTools.Instructions = (function() {
           '',
           '🎓 APPLICATION STRATEGY:',
           '   • Aim for a balanced list: reach, match, and safety schools',
-          '   • Use the Academic Index Match to gauge competitiveness',
+          '   • Use the Admission Fit column to gauge competitiveness',
           '   • Pay attention to Financial Safety warnings',
           '   • Track all deadlines in the Application Timeline',
         ],

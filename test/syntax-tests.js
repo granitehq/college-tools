@@ -76,16 +76,19 @@ class SyntaxTester {
 
 const tester = new SyntaxTester();
 const srcDir = path.join(__dirname, '../src');
+const projectRoot = path.join(__dirname, '..');
 
 // Test all source files
 const sourceFiles = [
   'config.js',
-  'utils.js', 
-  'colleges.js',
+  'utils.js',
+  'schema.js',
+'colleges.js',
   'admissions.js',
   'dashboard.js',
   'financial.js',
   'formatting.js',
+  'formulas.js',
   'instructions.js',
   'lookup.js',
   'menu.js',
@@ -134,6 +137,38 @@ sourceFiles.forEach(filename => {
 });
 
 // Test specific new features
+tester.test('clasp push order includes every Apps Script source file', () => {
+  const claspConfig = JSON.parse(fs.readFileSync(path.join(projectRoot, '.clasp.json'), 'utf8'));
+  const pushOrder = claspConfig.filePushOrder || [];
+
+  sourceFiles.forEach((filename) => {
+    tester.assert(pushOrder.includes('src/' + filename),
+      'filePushOrder should include src/' + filename);
+  });
+});
+
+tester.test('Dashboard uses schema for Colleges row-2 lookup helpers', () => {
+  const dashboardPath = path.join(srcDir, 'dashboard.js');
+  const content = fs.readFileSync(dashboardPath, 'utf8');
+
+  tester.assert(!content.includes('CollegeTools.Utils.colIndex2'),
+    'Dashboard should use Schema.columnIndex instead of Utils.colIndex2');
+  tester.assert(!content.includes('CollegeTools.Config.HEADERS.COLLEGES'),
+    'Dashboard should use Schema.rangeA1 instead of direct Colleges header arrays');
+});
+
+tester.test('Formula builders are used by dashboard and financial tracker setup', () => {
+  const dashboardContent = fs.readFileSync(path.join(srcDir, 'dashboard.js'), 'utf8');
+  const trackersContent = fs.readFileSync(path.join(srcDir, 'trackers.js'), 'utf8');
+
+  tester.assert(dashboardContent.includes('CollegeTools.Formulas.sheetRef'),
+    'Dashboard should use the shared sheet-name quoting helper');
+  tester.assert(trackersContent.includes('CollegeTools.Formulas.netPriceAfterAid'),
+    'Financial Aid tracker should use the shared net price formula builder');
+  tester.assert(trackersContent.includes('CollegeTools.Formulas.fourYearProjectedCost'),
+    'Financial Aid tracker should use the shared four-year cost formula builder');
+});
+
 tester.test('Config includes Personal Profile sheet', () => {
   const configPath = path.join(srcDir, 'config.js');
   const content = fs.readFileSync(configPath, 'utf8');
@@ -144,7 +179,7 @@ tester.test('Config includes Personal Profile sheet', () => {
 tester.test('Config includes new financial columns', () => {
   const configPath = path.join(srcDir, 'config.js');
   const content = fs.readFileSync(configPath, 'utf8');
-  tester.assert(content.includes('Merit Aid Likelihood'), 'Config should include Merit Aid Likelihood column');
+  tester.assert(content.includes('Admission Fit'), 'Config should include Admission Fit column');
   tester.assert(content.includes('Financial Safety'), 'Config should include Financial Safety column');
   tester.assert(content.includes('4-Year Burden'), 'Config should include 4-Year Burden column');
 });
@@ -168,9 +203,12 @@ tester.test('Menu updated for Financial Intelligence', () => {
 
 tester.test('Admissions module updated for Personal Profile', () => {
   const admissionsPath = path.join(srcDir, 'admissions.js');
-  const content = fs.readFileSync(admissionsPath, 'utf8');
-  tester.assert(content.includes('SAT_Score'), 'Should use SAT_Score named range from Personal Profile');
-  tester.assert(!content.includes('Your_SAT'), 'Should not use old Your_SAT reference');
+  const formulasPath = path.join(srcDir, 'formulas.js');
+  const admissionsContent = fs.readFileSync(admissionsPath, 'utf8');
+  const formulasContent = fs.readFileSync(formulasPath, 'utf8');
+  tester.assert(formulasContent.includes('SAT_Score'), 'Formula builder should use SAT_Score named range from Personal Profile');
+  tester.assert(!admissionsContent.includes('Your_SAT'), 'Should not use old Your_SAT reference');
+  tester.assert(admissionsContent.includes('admissionFit'), 'Admissions module should call the admissionFit formula builder');
 });
 
 const success = tester.summary();

@@ -14,6 +14,8 @@
   "filePushOrder": [
     "src/config.js",
     "src/utils.js",
+    "src/schema.js",
+    "src/formulas.js",
     "src/scorecard.js",
     "src/instructions.js",
     "src/trackers.js",

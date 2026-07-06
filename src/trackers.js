@@ -1,6 +1,6 @@
 /**
  * Tracker sheet management
- * @version 2.0.2
+ * @version 2.6.0
  * @author College Tools
  * @description Creates and manages Financial Aid, Campus Visit, Application, and Scholarship trackers
  */
@@ -71,6 +71,91 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Captures existing tracker rows by college name so repair can preserve user data across row reordering.
+   * Duplicate names are intentionally ignored because name-only matching is ambiguous.
+   * @param {Sheet} sh - Tracker sheet
+   * @returns {Object} Snapshot map keyed by college name
+   * @private
+   */
+  function snapshotRowsByCollegeName_(sh) {
+    var snapshots = {};
+    if (!sh) return snapshots;
+    var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
+    if (!nameCol) return snapshots;
+
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return snapshots;
+
+    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var formulas = [];
+    for (var r = 0; r < values.length; r++) {
+      var rowFormulas = [];
+      for (var c = 1; c <= lastCol; c++) {
+        rowFormulas.push(sh.getRange(r + 2, c).getFormula());
+      }
+      formulas.push(rowFormulas);
+    }
+
+    for (var i = 0; i < values.length; i++) {
+      var collegeName = (values[i][nameCol - 1] || '').toString().trim();
+      if (!collegeName) continue;
+      if (snapshots[collegeName]) {
+        snapshots[collegeName].duplicate = true;
+        snapshots._duplicates = snapshots._duplicates || [];
+        snapshots._duplicates.push(collegeName);
+        continue;
+      }
+      snapshots[collegeName] = {
+        values: values[i],
+        formulas: formulas[i],
+        duplicate: false,
+      };
+    }
+
+    return snapshots;
+  }
+
+  /**
+   * Restores a captured tracker row into a target row when a unique college-name match exists.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {Object} snapshots - Snapshot map keyed by college name
+   * @param {string} collegeName - College display name
+   * @param {number} targetRow - Target row to restore
+   * @private
+   */
+  function restoreTrackerRow_(sh, snapshots, collegeName, targetRow) {
+    if (!sh || !collegeName) return;
+    var snapshot = snapshots[collegeName];
+    if (!snapshot || snapshot.duplicate) return;
+
+    sh.getRange(targetRow, 1, 1, snapshot.values.length).setValues([snapshot.values]);
+    for (var c = 0; c < snapshot.formulas.length; c++) {
+      if (snapshot.formulas[c]) sh.getRange(targetRow, c + 1).setFormula(snapshot.formulas[c]);
+    }
+  }
+
+  /**
+   * Adds duplicate-name snapshot warnings to a repair warning list.
+   * @param {Array<Object>} warnings - Warning accumulator
+   * @param {Object} snapshots - Snapshot map keyed by college name
+   * @param {string} sheetName - Tracker sheet name
+   * @private
+   */
+  function collectDuplicateSnapshotWarnings_(warnings, snapshots, sheetName) {
+    var seen = {};
+    (snapshots._duplicates || []).forEach(function(collegeName) {
+      if (seen[collegeName]) return;
+      seen[collegeName] = true;
+      warnings.push({
+        code: 'duplicate_tracker_name',
+        sheetName: sheetName,
+        collegeName: collegeName,
+      });
+    });
+  }
+
+  /**
    * Creates or updates the Financial Aid Tracker sheet with headers and formulas.
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -98,6 +183,13 @@ CollegeTools.Trackers = (function() {
 
     // Formulas row 2 (user can fill down)
     var r2 = 2;
+    var efcCol = CollegeTools.Utils.colIndex(sh, 'EFC (Expected Family Contribution)');
+    if (efcCol) {
+      // Prefill from the Personal Profile's EFC named range; the family can
+      // override a specific college's row if its aid letter differs.
+      sh.getRange(r2, efcCol).setFormula('=IFERROR(IF(EFC="","",EFC), "")');
+    }
+
     var netCol = CollegeTools.Utils.colIndex(sh, 'Net Price After Aid');
     var oopCol = CollegeTools.Utils.colIndex(sh, 'Out-of-Pocket Cost');
     var fourYearCol = CollegeTools.Utils.colIndex(sh, '4-Year Projected Cost');
@@ -107,22 +199,24 @@ CollegeTools.Trackers = (function() {
     var scholarshipsCol = CollegeTools.Utils.colIndex(sh, 'Outside Scholarships Applied');
 
     if (netCol && coaCol && fedGrantsCol && needAidCol) {
-      var netFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, coaCol) +
-                       '-SUM(' + CollegeTools.Utils.addr(r2, fedGrantsCol) +
-                       ':' + CollegeTools.Utils.addr(r2, needAidCol) + '), "")';
+      var netFormula = CollegeTools.Formulas.netPriceAfterAid(
+        CollegeTools.Utils.addr(r2, coaCol),
+        CollegeTools.Utils.addr(r2, fedGrantsCol),
+        CollegeTools.Utils.addr(r2, needAidCol));
       sh.getRange(r2, netCol).setFormula(netFormula);
     }
 
     if (oopCol && netCol && scholarshipsCol) {
-      var oopFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, netCol) +
-                       '-' + CollegeTools.Utils.addr(r2, scholarshipsCol) + ', "")';
+      var oopFormula = CollegeTools.Formulas.outOfPocketCost(
+        CollegeTools.Utils.addr(r2, netCol),
+        CollegeTools.Utils.addr(r2, scholarshipsCol));
       sh.getRange(r2, oopCol).setFormula(oopFormula);
     }
 
     if (fourYearCol && oopCol) {
       // Four years of cost with 3% annual increases: year1 + year2 + year3 + year4
-      var fourYearFormula = '=IFERROR(' + CollegeTools.Utils.addr(r2, oopCol) +
-                           '*(1+1.03+1.03^2+1.03^3), "")';
+      var fourYearFormula = CollegeTools.Formulas.fourYearProjectedCost(
+        CollegeTools.Utils.addr(r2, oopCol));
       sh.getRange(r2, fourYearCol).setFormula(fourYearFormula);
     }
 
@@ -182,14 +276,11 @@ CollegeTools.Trackers = (function() {
     CollegeTools.Formatting.validateDate(sh, 'Visit Date');
     CollegeTools.Formatting.validateList(sh, 'Visit Type (In-Person/Virtual/College Fair)',
       ['In-Person', 'Virtual', 'College Fair', 'Regional Event']);
-    CollegeTools.Formatting.validateList(sh, 'Tour Quality (1-10)',
-      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
-    CollegeTools.Formatting.validateList(sh, 'Info Session Quality (1-10)',
-      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
-    ['Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested']
+    ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)']
       .forEach(function(h) {
-        CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
+        CollegeTools.Formatting.validateList(sh, h, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
       });
+    CollegeTools.Formatting.validateList(sh, 'Follow-Up Needed', ['Y', 'N']);
   }
 
   /**
@@ -220,33 +311,56 @@ CollegeTools.Trackers = (function() {
     var daysCol = CollegeTools.Utils.colIndex(sh, 'Days Until Deadline (App)');
 
     if (appDeadlineCol && daysCol) {
-      // Collect all formula columns and formulas
-      var deadlineCell = CollegeTools.Utils.addr(2, appDeadlineCol);
-      var formulaCols = [daysCol];
       // Blank deadlines stay blank instead of showing "PAST DUE"
-      var formulas = ['=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
-        '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")'];
+      var deadlineCell = CollegeTools.Utils.addr(2, appDeadlineCol);
+      var daysFormula = '=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
+        '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")';
+      sh.getRange(2, daysCol).setFormula(daysFormula);
+    }
+  }
 
-      // Warning formulas - collect all at once
-      var warningHeaders = ['60-Day Warning', '30-Day Warning', '14-Day Warning', '7-Day Warning'];
-      var warningDays = [60, 30, 14, 7];
+  /**
+   * Applies color-coded conditional formatting to Days Until Deadline (App),
+   * replacing the four separate 60/30/14/7-Day Warning boolean columns with
+   * one column that carries the same signal through color.
+   * @param {Sheet} sheet - The Application Timeline sheet
+   */
+  function enhanceApplicationTimelineFormatting(sheet) {
+    if (!sheet) return;
+    var daysCol = CollegeTools.Utils.colIndex(sheet, 'Days Until Deadline (App)');
+    if (!daysCol) return;
 
-      for (var i = 0; i < warningHeaders.length; i++) {
-        var warnCol = CollegeTools.Utils.colIndex(sh, warningHeaders[i]);
-        if (warnCol) {
-          formulaCols.push(warnCol);
-          // Warn only inside the window: not for blank or already-past deadlines
-          formulas.push('=IF(ISNUMBER(' + deadlineCell + '), AND(' +
-            deadlineCell + '-TODAY()<=' + warningDays[i] + ',' +
-            deadlineCell + '-TODAY()>=0), "")');
+    var lastRow = Math.max(2, sheet.getLastRow());
+    var range = sheet.getRange(2, daysCol, lastRow - 1, 1);
+
+    var rules = (sheet.getConditionalFormatRules() || []).filter(function(rule) {
+      var ranges = rule.getRanges ? rule.getRanges() : [];
+      for (var i = 0; i < ranges.length; i++) {
+        if (ranges[i].getColumn() <= daysCol && ranges[i].getLastColumn() >= daysCol &&
+            ranges[i].getSheet().getSheetId() === sheet.getSheetId()) {
+          return false; // our rule from a prior run -- remove it
         }
       }
+      return true;
+    });
 
-      // Batch set all formulas - much faster than individual setFormula calls
-      for (var j = 0; j < formulaCols.length; j++) {
-        sh.getRange(2, formulaCols[j]).setFormula(formulas[j]);
-      }
-    }
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('PAST DUE').setBackground('#f8d7da').setFontColor('#721c24')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberLessThanOrEqualTo(7).setBackground('#f8d7da').setFontColor('#721c24')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(8, 14).setBackground('#ffeaa7').setFontColor('#b95000')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(15, 30).setBackground('#fff3cd').setFontColor('#856404')
+      .setRanges([range]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule()
+      .whenNumberBetween(31, 60).setBackground('#d1ecf1').setFontColor('#0c5460')
+      .setRanges([range]).build());
+
+    sheet.setConditionalFormatRules(rules);
   }
 
   /**
@@ -269,8 +383,9 @@ CollegeTools.Trackers = (function() {
       CollegeTools.Formatting.validateList(sh, h, ['Y', 'N']);
     });
 
-    // Date validation
-    ['Application Deadline', 'Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
+    // Date validation. Application Deadline lives on Application Timeline
+    // only -- see the sheet-ownership note on APPLICATION_TIMELINE in config.js.
+    ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
       .forEach(function(h) {
         CollegeTools.Formatting.validateDate(sh, h);
       });
@@ -322,9 +437,8 @@ CollegeTools.Trackers = (function() {
     CollegeTools.Formatting.validateList(sh, 'Interview Required', ['Y', 'N']);
     CollegeTools.Formatting.validateList(sh, 'Award Status (Pending/Awarded/Declined)',
       ['Pending', 'Awarded', 'Declined']);
-    CollegeTools.Formatting.validateList(sh, 'Thank You Note Sent', ['Y', 'N']);
 
-    ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Interview Scheduled', 'Interview Completed', 'Decision Date']
+    ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date']
       .forEach(function(h) {
         CollegeTools.Formatting.validateDate(sh, h);
       });
@@ -380,11 +494,12 @@ CollegeTools.Trackers = (function() {
       if (!opts.suppressAlert) {
         SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
       }
-      return {ok: false, count: 0};
+      return {ok: false, count: 0, warnings: warnings};
     }
 
     var lastRow = collegesSheet.getLastRow();
     var processed = 0;
+    var warnings = [];
 
     if (lastRow < 3) {
       if (!opts.suppressAlert) {
@@ -394,8 +509,27 @@ CollegeTools.Trackers = (function() {
           SpreadsheetApp.getUi().ButtonSet.OK,
         );
       }
-      return {ok: true, count: 0};
+      return {ok: true, count: 0, warnings: warnings};
     }
+
+    var faSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    var cvSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+    var atSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    var stSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+    var trackerSnapshots = {
+      financialAid: snapshotRowsByCollegeName_(faSheet),
+      campusVisit: snapshotRowsByCollegeName_(cvSheet),
+      applicationTimeline: snapshotRowsByCollegeName_(atSheet),
+      statusTracker: snapshotRowsByCollegeName_(stSheet),
+    };
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.financialAid,
+      CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.campusVisit,
+      CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.applicationTimeline,
+      CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.statusTracker,
+      CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
 
     // Read all header and data in two bulk reads instead of per-row calls
     var lastCol = collegesSheet.getLastColumn();
@@ -412,20 +546,21 @@ CollegeTools.Trackers = (function() {
       var coa = '';
       if (collegeName) {
         coa = coaIdx >= 0 ? data[i][coaIdx] : '';
+        var trackerRow = getTrackerRowForCollegeRow_(row);
+        restoreTrackerRow_(faSheet, trackerSnapshots.financialAid, collegeName, trackerRow);
+        restoreTrackerRow_(cvSheet, trackerSnapshots.campusVisit, collegeName, trackerRow);
+        restoreTrackerRow_(atSheet, trackerSnapshots.applicationTimeline, collegeName, trackerRow);
+        restoreTrackerRow_(stSheet, trackerSnapshots.statusTracker, collegeName, trackerRow);
         syncCollegeToTrackers({name: collegeName, coa: coa, sourceRow: row});
         processed++;
       }
     }
 
     var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID),
-      firstClearRow, ['College Name', 'Total Cost of Attendance']);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT),
-      firstClearRow, ['College Name']);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE),
-      firstClearRow, ['College Name']);
-    clearTrackerRows_(ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER),
-      firstClearRow, ['College Name']);
+    clearTrackerRows_(faSheet, firstClearRow, ['College Name', 'Total Cost of Attendance']);
+    clearTrackerRows_(cvSheet, firstClearRow, ['College Name']);
+    clearTrackerRows_(atSheet, firstClearRow, ['College Name']);
+    clearTrackerRows_(stSheet, firstClearRow, ['College Name']);
 
     if (!opts.suppressAlert) {
       SpreadsheetApp.getUi().alert(
@@ -436,7 +571,7 @@ CollegeTools.Trackers = (function() {
       );
     }
 
-    return {ok: true, count: processed};
+    return {ok: true, count: processed, warnings: warnings};
   }
 
   /**
@@ -469,8 +604,12 @@ CollegeTools.Trackers = (function() {
 
     var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (collegesSheet) {
-      CollegeTools.Financial.enhanceCollegesFormatting(collegesSheet);
       CollegeTools.Admissions.enhanceAdmissionFormatting(collegesSheet);
+    }
+
+    var timelineSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    if (timelineSheet) {
+      enhanceApplicationTimelineFormatting(timelineSheet);
     }
 
     SpreadsheetApp.getUi().alert('Tracker setup complete!');
@@ -482,5 +621,6 @@ CollegeTools.Trackers = (function() {
     setupAllTrackers: setupAllTrackers,
     syncCollegeToTrackers: syncCollegeToTrackers,
     repairCollegeSync: repairCollegeSync,
+    enhanceApplicationTimelineFormatting: enhanceApplicationTimelineFormatting,
   };
 })();

@@ -120,6 +120,7 @@ class MockRange {
   setBackground() { return this; }
   setFontSize() { return this; }
   setFontColor() { return this; }
+  setFontStyle() { return this; }
   setBorder() { return this; }
   setNote() { return this; }
   setNumberFormat() { return this; }
@@ -299,9 +300,11 @@ function createValidationBuilder() {
 function createFormatRuleBuilder() {
   return {
     whenTextContains() { return this; },
+    whenTextEqualTo() { return this; },
     whenNumberGreaterThan() { return this; },
     whenNumberBetween() { return this; },
     whenNumberLessThan() { return this; },
+    whenNumberLessThanOrEqualTo() { return this; },
     setBackground() { return this; },
     setFontColor() { return this; },
     setRanges() { return this; },

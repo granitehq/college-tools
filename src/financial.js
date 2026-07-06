@@ -1,6 +1,6 @@
 /**
  * Financial Intelligence Suite
- * @version 2.0.2
+ * @version 2.6.0
  * @author College Tools
  * @description Personal Profile sheet and financial analysis features
  */
@@ -84,49 +84,6 @@ CollegeTools.Financial = (function() {
   }
 
   /**
-   * Applies Merit Aid Likelihood formulas to the Colleges sheet (optimized for speed).
-   * @param {Sheet} sheet - The Colleges sheet
-   * @private
-   */
-  function applyMeritAidFormulas(sheet) {
-    var meritCol = CollegeTools.Utils.colIndex2(sheet, 'Merit Aid Likelihood');
-    var sat25Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 25%');
-    var sat75Col = CollegeTools.Utils.colIndex2(sheet, 'SAT 75%');
-    if (!meritCol || !sat25Col || !sat75Col) return;
-
-    var startRow = 3;
-    var endRow = Math.max(3, sheet.getLastRow());
-    var collegeNames = sheet.getRange(startRow, 1, endRow - startRow + 1, 1).getValues();
-    var formulas = [];
-
-    for (var i = 0; i < collegeNames.length; i++) {
-      var row = startRow + i;
-      var collegeName = collegeNames[i][0];
-      if (!collegeName || collegeName === '') {
-        formulas.push(['']);
-        continue;
-      }
-
-      var sat25Cell = CollegeTools.Utils.addr(row, sat25Col);
-      var sat75Cell = CollegeTools.Utils.addr(row, sat75Col);
-      var sat60Cell = '(' + sat25Cell + '+(' + sat75Cell + '-' + sat25Cell + ')*0.6)';
-
-      var formula = '=IF(OR(SAT_Score="",SAT_Score=0),"Enter SAT",' +
-        'IF(' + sat75Cell + '="",' + '"No data",' +
-        'IF(SAT_Score>' + sat75Cell + '+50,"🟢 Very High - Top 10%",' +
-        'IF(SAT_Score>' + sat75Cell + ',"🟢 High - Top 25%",' +
-        'IF(SAT_Score>' + sat60Cell + ',"🟡 Moderate - Consider",' +
-        '"🔴 Low - Unlikely")))))';
-
-      formulas.push([formula]);
-    }
-
-    if (formulas.length > 0) {
-      sheet.getRange(startRow, meritCol, formulas.length, 1).setFormulas(formulas);
-    }
-  }
-
-  /**
    * Applies Financial Safety formulas to the Financial Aid tracker (optimized for speed).
    * @param {Sheet} sheet - The Financial Aid sheet
    * @private
@@ -184,8 +141,7 @@ CollegeTools.Financial = (function() {
 
     var collegesSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (collegesSheet) {
-      CollegeTools.Admissions.setupAdmissionChances();
-      applyMeritAidFormulas(collegesSheet);
+      CollegeTools.Admissions.setupAdmissionFit();
     }
 
     var financialSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
@@ -204,9 +160,8 @@ CollegeTools.Financial = (function() {
       'Setup Financial Intelligence',
       'This will set up:\n\n' +
       '• Personal Profile sheet with your academic/financial info\n' +
-      '• Merit Aid Likelihood calculator (Colleges sheet)\n' +
-      '• Financial Safety analysis (Financial Aid tracker)\n' +
-      '• Academic analysis (Admission Chances + Academic Index)\n\n' +
+      '• Admission Fit (Reach/Match/Likely) on the Colleges sheet\n' +
+      '• Financial Safety analysis (Financial Aid tracker)\n\n' +
       'Continue?',
       ui.ButtonSet.YES_NO,
     );
@@ -321,36 +276,11 @@ CollegeTools.Financial = (function() {
     }
   }
 
-  /**
-   * Enhancement function: adds conditional formatting to Colleges sheet.
-   * @param {Sheet} sheet - The Colleges sheet
-   */
-  function enhanceCollegesFormatting(sheet) {
-    if (!sheet) return;
-
-    // Apply conditional formatting for Merit Aid Likelihood
-    var meritCol = CollegeTools.Utils.colIndex2(sheet, 'Merit Aid Likelihood');
-    if (meritCol) {
-      var startRow = 3;
-      var endRow = Math.max(3, sheet.getLastRow());
-      var range = sheet.getRange(startRow, meritCol, endRow - startRow + 1, 1);
-
-      var rules = removeTextRules_(sheet.getConditionalFormatRules(), ['🟢', '🟡', '🔴']);
-
-      pushTextRule_(rules, range, '🟢', '#d4edda', '#155724');
-      pushTextRule_(rules, range, '🟡', '#fff3cd', '#856404');
-      pushTextRule_(rules, range, '🔴', '#f8d7da', '#721c24');
-
-      sheet.setConditionalFormatRules(rules);
-    }
-  }
-
   // Public API
   return {
     setupFinancialIntelligence: setupFinancialIntelligence,
     runFinancialSetup_: runFinancialSetup_,
     enhancePersonalProfileFormatting: enhancePersonalProfileFormatting,
     enhanceFinancialAidFormatting: enhanceFinancialAidFormatting,
-    enhanceCollegesFormatting: enhanceCollegesFormatting,
   };
 })();

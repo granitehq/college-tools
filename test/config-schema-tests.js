@@ -39,8 +39,8 @@ suite.test('critical Colleges headers snapshot stays stable', () => {
     'Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)',
     'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
     'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
-    'Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match',
-    'Merit Aid Likelihood', 'Campus Setting', 'Notes',
+    'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
+    'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition', 'Notes',
   ];
 
   suite.assertEqual(JSON.stringify(CollegeTools.Config.HEADERS.COLLEGES), JSON.stringify(expected),
@@ -52,7 +52,7 @@ suite.test('formula-dependent fields remain present', () => {
   const finAidHeaders = CollegeTools.Config.HEADERS.FINANCIAL_AID;
   const statusHeaders = CollegeTools.Config.HEADERS.STATUS_TRACKER;
 
-  ['Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match', 'Merit Aid Likelihood']
+  ['Weighted Score', 'Admission Fit', 'Applicable Tuition']
     .forEach((header) => {
       suite.assert(collegeHeaders.includes(header), `${header} should remain in Colleges`);
     });
@@ -76,6 +76,10 @@ suite.test('default weights and API field config remain non-empty', () => {
     'API field list should include school.name');
   suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.cost.attendance.academic_year'),
     'API field list should include total cost');
+  suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.cost.tuition.in_state'),
+    'API field list should include in-state tuition');
+  suite.assert(CollegeTools.Config.API_FIELDS.includes('latest.admissions.test_requirements'),
+    'API field list should include test policy');
 });
 
 const success = suite.summary();

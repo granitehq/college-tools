@@ -43,7 +43,8 @@ const filesToUpdate = [
   'src/scoring.js',
   'src/setup.js',
   'src/trackers.js',
-  'src/utils.js'
+  'src/utils.js',
+  'src/schema.js'
 ];
 
 let updatedFiles = 0;

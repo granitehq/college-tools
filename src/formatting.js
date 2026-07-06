@@ -1,6 +1,6 @@
 /**
  * Sheet formatting and validation
- * @version 2.0.2
+ * @version 2.6.0
  * @author College Tools
  * @description Number formats, dropdowns, and data validation for sheets
  */
@@ -14,15 +14,31 @@ CollegeTools.Formatting = (function() {
   'use strict';
 
   /**
+   * Resolves the header row for a sheet, using schema metadata when available.
+   * @param {Sheet} sh - Target sheet
+   * @param {number=} headerRow - Explicit header row override
+   * @returns {number} Header row number
+   * @private
+   */
+  function resolveHeaderRow_(sh, headerRow) {
+    if (headerRow) return headerRow;
+    if (CollegeTools.Schema && CollegeTools.Schema.getSheetKeyByName) {
+      var sheetKey = CollegeTools.Schema.getSheetKeyByName(sh.getName());
+      if (sheetKey) return CollegeTools.Schema.getSheet(sheetKey).headerRow;
+    }
+    return 1;
+  }
+
+  /**
    * Finds a column by header on a configurable header row.
    * @param {Sheet} sh - Target sheet
    * @param {string} header - Header text
-   * @param {number=} headerRow - Header row number, defaults to 1
+   * @param {number=} headerRow - Header row number, defaults to schema or row 1
    * @returns {number|null} 1-based column index or null if not found
    * @private
    */
   function findColumn_(sh, header, headerRow) {
-    headerRow = headerRow || 1;
+    headerRow = resolveHeaderRow_(sh, headerRow);
     if (headerRow === 1) return CollegeTools.Utils.colIndex(sh, header);
 
     var last = Math.max(1, sh.getLastColumn());
@@ -41,7 +57,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function validateList(sh, header, options, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     var rule = SpreadsheetApp.newDataValidation()
@@ -61,7 +77,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function validateListFromRange(sh, header, sourceSheetName, sourceRange, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
 
@@ -84,7 +100,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function validateDate(sh, header, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     var rule = SpreadsheetApp.newDataValidation().requireDate().build();
@@ -100,7 +116,7 @@ CollegeTools.Formatting = (function() {
    * @param {number=} headerRow - Header row number, defaults to 1
    */
   function formatNumber(sh, header, pattern, headerRow) {
-    var resolvedHeaderRow = headerRow || 1;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var col = findColumn_(sh, header, resolvedHeaderRow);
     if (!col) return;
     sh.getRange(resolvedHeaderRow + 1, col, Math.max(1, sh.getMaxRows() - resolvedHeaderRow))
@@ -133,9 +149,7 @@ CollegeTools.Formatting = (function() {
       ['SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%'].forEach(function(h) {
         formatNumber(col, h, '0', 2);
       });
-      ['Weighted Score', 'Value Score'].forEach(function(h) {
-        formatNumber(col, h, '0.00', 2);
-      });
+      formatNumber(col, 'Weighted Score', '0.00', 2);
 
       ['Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)', 'Safety (1-5)',
         'Campus Culture Fit (1-5)', 'Weather Fit (1-5)', 'Clubs/Activities (1-5)', 'Personal Priority (1-5)']
@@ -179,17 +193,13 @@ CollegeTools.Formatting = (function() {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
       validateListFromRange(cv, 'College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000');
       validateDate(cv, 'Visit Date');
-      ['Tour Quality (1-10)', 'Info Session Quality (1-10)', 'Campus Beauty (1-10)', 'Facilities Quality (1-10)',
-        'Student Happiness (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
+      ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
         .forEach(function(h) {
           formatNumber(cv, h, '0');
         });
       validateList(cv, 'Visit Type (In-Person/Virtual/College Fair)',
         ['In-Person', 'Virtual', 'College Fair', 'Regional Event', 'Other']);
-      ['Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested']
-        .forEach(function(h) {
-          validateList(cv, h, ['Y', 'N']);
-        });
+      validateList(cv, 'Follow-Up Needed', ['Y', 'N']);
     }
 
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
@@ -213,7 +223,7 @@ CollegeTools.Formatting = (function() {
       ['Amount', 'Amount Awarded'].forEach(function(h) {
         formatNumber(sc, h, '$#,##0');
       });
-      ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Interview Scheduled', 'Interview Completed', 'Decision Date']
+      ['Deadline', 'Application Started Date', 'Application Submitted Date', 'Decision Date']
         .forEach(function(h) {
           validateDate(sc, h);
         });
@@ -221,7 +231,7 @@ CollegeTools.Formatting = (function() {
         ['Merit', 'Need', 'Field-Specific', 'Local', 'National', 'Other']);
       validateList(sc, 'Award Type (One-time/Renewable)', ['One-time', 'Renewable', 'Other']);
       ['Financial Need Required', 'Transcript Required', 'FAFSA Required', 'Portfolio/Work Samples',
-        'Interview Required', 'Confirmation Received', 'Thank You Note Sent']
+        'Interview Required']
         .forEach(function(h) {
           validateList(sc, h, ['Y', 'N']);
         });
@@ -238,7 +248,7 @@ CollegeTools.Formatting = (function() {
         .forEach(function(h) {
           validateList(st, h, ['Y', 'N']);
         });
-      ['Application Deadline', 'Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
+      ['Submitted Date', 'Interview Date', 'Campus Visit Date', 'Portfolio Submitted (Date)']
         .forEach(function(h) {
           validateDate(st, h);
         });

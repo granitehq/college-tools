@@ -1,6 +1,6 @@
 /**
  * Configuration and constants for College Tools
- * @version 2.0.2
+ * @version 2.6.0
  * @author College Tools
  * @description Central configuration module with constants, settings, and shared data
  */
@@ -14,7 +14,7 @@ CollegeTools.Config = (function() {
   'use strict';
 
   // Version information
-  var VERSION = '2.0.2';
+  var VERSION = '2.6.0';
 
   // Sheet names
   var SHEET_NAMES = {
@@ -40,7 +40,6 @@ CollegeTools.Config = (function() {
     RETRY_DELAY_BASE: 300, // Base delay in ms for exponential backoff
     RETRY_DELAY_MAX: 10000, // Maximum delay in ms
     CACHE_DURATION: 600, // Cache duration in seconds (10 minutes)
-    DAILY_QUOTA_LIMIT: 1000, // Conservative daily API quota limit
     BATCH_DELAY: 200, // Delay between batch requests in ms
     EXECUTION_TIME_LIMIT: 300000, // 5 minutes in ms (conservative under 6min limit)
   };
@@ -54,6 +53,8 @@ CollegeTools.Config = (function() {
     'latest.earnings.10_yrs_after_entry.median',
     'latest.cost.attendance.academic_year',
     'latest.cost.avg_net_price.overall',
+    'latest.cost.tuition.out_of_state',
+    'latest.cost.tuition.in_state',
     'latest.admissions.sat_scores.25th_percentile.math',
     'latest.admissions.sat_scores.25th_percentile.critical_reading',
     'latest.admissions.sat_scores.75th_percentile.math',
@@ -61,6 +62,7 @@ CollegeTools.Config = (function() {
     'latest.admissions.sat_scores.average.overall',
     'latest.admissions.act_scores.25th_percentile.cumulative',
     'latest.admissions.act_scores.75th_percentile.cumulative',
+    'latest.admissions.test_requirements',
     'latest.aid.pell_grant_rate',
     'latest.aid.median_debt.completers.overall',
   ].join(',');
@@ -83,8 +85,8 @@ CollegeTools.Config = (function() {
       'Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)',
       'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
       'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
-      'Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match',
-      'Merit Aid Likelihood', 'Campus Setting', 'Notes',
+      'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
+      'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition', 'Notes',
     ],
 
     FINANCIAL_AID: [
@@ -102,48 +104,48 @@ CollegeTools.Config = (function() {
     ],
 
     CAMPUS_VISIT: [
-      'College Name', 'Visit Date', 'Visit Type (In-Person/Virtual/College Fair)', 'Registration Confirmation #',
-      'Questions Prepared', 'Departments to Visit', 'People to Meet',
-      'Tour Guide Name', 'Tour Quality (1-10)', 'Info Session Presenter', 'Info Session Quality (1-10)', 'Admissions Officer Met',
-      'Classes Attended', 'Professor Names/Subjects', 'Current Students Met', 'Student Names/Majors',
-      'Dining Halls Visited', 'Dorms Toured', 'Athletic Facilities Seen', 'Library Visited', 'Student Center Visited',
-      'Campus Beauty (1-10)', 'Facilities Quality (1-10)', 'Student Happiness (1-10)',
-      'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
-      'Pros', 'Cons', 'Surprises', 'Concerns', 'Best Feature', 'Worst Feature',
-      'Thank You Email Sent', 'Connected on Social Media', 'Added to Mailing List', 'Additional Info Requested', 'Next Steps',
-      'Visit Score',
+      'College Name', 'Visit Date', 'Visit Type (In-Person/Virtual/College Fair)', 'People Met',
+      'Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
+      'Pros', 'Cons', 'Concerns', 'Follow-Up Needed', 'Next Steps',
+      'Visit Score', 'Notes',
     ],
 
+    // Owns the application deadline and FAFSA/CSS deadlines are owned by
+    // Financial Aid Tracker -- each deadline has exactly one home so manual
+    // entry can't contradict itself across sheets.
     APPLICATION_TIMELINE: [
       'College Name', 'Application Type (ED/ED2/EA/REA/RD)', 'Application Opens', 'Application Deadline',
       'Test Score Deadline', 'Transcript Deadline', 'Counselor Rec Deadline', 'Teacher Rec Deadline',
-      'FAFSA Opens', 'FAFSA Priority Deadline', 'CSS Profile Deadline', 'Merit Scholarship Deadline',
+      'FAFSA Opens', 'Merit Scholarship Deadline',
       'Honors Program Deadline', 'Portfolio/Audition Due', 'Mid-Year Report Due', 'Decision Release Date',
       'Student Visit Day', 'Housing Application Opens', 'Housing Deposit Due', 'Enrollment Deposit Deadline',
       'Orientation Registration Opens', 'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)',
-      '60-Day Warning', '30-Day Warning', '14-Day Warning', '7-Day Warning',
     ],
 
     STATUS_TRACKER: [
-      'College Name', 'Application Status', 'Decision Plan', 'Application Deadline', 'App Portal', 'Submitted Date',
+      'College Name', 'Application Status', 'Decision Plan', 'App Portal', 'Submitted Date',
       'Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete', 'Interview (Y/N)',
       'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Portfolio Required (Y/N)',
       'Portfolio Submitted (Date)', 'Documents Complete', 'Notes',
     ],
 
+    // Post-award/renewal minutiae (renewal terms, credit hours, thank-you
+    // notes, etc.) were removed -- this tracker's job ends at "did we win
+    // money"; renewal terms live in the free-text Notes/Strategy column.
     SCHOLARSHIP_TRACKER: [
       'Scholarship Name', 'Provider/Organization', 'Type (Merit/Need/Field/Local/National)', 'Amount',
       'Award Type (One-time/Renewable)', 'GPA Requirement', 'Test Score Requirement', 'Financial Need Required',
       'Special Criteria', 'Geographic Restrictions', 'Deadline', 'Application Portal/Link', 'Essays Required (#)',
       'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types', 'Transcript Required',
       'FAFSA Required', 'Portfolio/Work Samples', 'Interview Required', 'Application Started Date',
-      'Application Submitted Date', 'Confirmation Received', 'Interview Scheduled', 'Interview Completed',
-      'Decision Date', 'Award Status (Pending/Awarded/Declined)', 'Amount Awarded', 'Thank You Note Sent',
-      'Renewable for # Years', 'GPA to Maintain', 'Credit Hours Required', 'Other Renewal Requirements', 'Notes/Strategy',
+      'Application Submitted Date', 'Decision Date', 'Award Status (Pending/Awarded/Declined)',
+      'Amount Awarded', 'Notes/Strategy',
     ],
   };
 
   // Default scoring weights
+  // Weights only for college ratings — Campus Visit ratings use a plain
+  // average (see CollegeTools.Scoring), so they carry no weight entries.
   var DEFAULT_WEIGHTS = [
     ['Program Fit (1-5)', 2],
     ['Academic Reputation (1-5)', 1.5],
@@ -153,14 +155,6 @@ CollegeTools.Config = (function() {
     ['Weather Fit (1-5)', 0.5],
     ['Clubs/Activities (1-5)', 1],
     ['Personal Priority (1-5)', 2],
-    ['Tour Quality (1-10)', 1],
-    ['Info Session Quality (1-10)', 1],
-    ['Campus Beauty (1-10)', 1],
-    ['Facilities Quality (1-10)', 1],
-    ['Student Happiness (1-10)', 1],
-    ['Academic Vibe (1-10)', 1],
-    ['Social Atmosphere (1-10)', 1],
-    ['Overall Gut Feeling (1-10)', 1],
   ];
 
   // Public API

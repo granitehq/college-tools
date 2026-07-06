@@ -1,6 +1,6 @@
 {
   "name": "college-tools",
-  "version": "2.0.2",
+  "version": "2.6.0",
   "description": "Google Apps Script project for college selection and tracking",
   "main": "src/menu.js",
   "scripts": {
@@ -47,7 +47,7 @@
     "globals": "^17.7.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=24.0.0"
   },
   "repository": {
     "type": "git",

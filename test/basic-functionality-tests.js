@@ -116,7 +116,7 @@ tester.test('Utils module loaded', () => {
 tester.test('Configuration includes new features', () => {
   const config = CollegeTools.Config;
   tester.assert(config.SHEET_NAMES.PERSONAL_PROFILE === 'Personal Profile', 'Personal Profile sheet configured');
-  tester.assert(config.HEADERS.COLLEGES.includes('Merit Aid Likelihood'), 'Merit Aid Likelihood in headers');
+  tester.assert(config.HEADERS.COLLEGES.includes('Admission Fit'), 'Admission Fit in headers');
 });
 
 const success = tester.summary();

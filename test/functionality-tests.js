@@ -125,7 +125,7 @@ const mockSheet = {
         'Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)',
         'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
         'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
-        'Weighted Score', 'Value Score', 'Admission Chances', 'Academic Index Match', 'Merit Aid Likelihood', 'Notes'
+        'Weighted Score', 'Admission Fit', 'Notes'
       ];
       range._value = headers[col - 1] || '';
       range._values = [headers.slice(0, numCols || 1)];
@@ -271,8 +271,7 @@ tester.test('Configuration includes new features', () => {
   tester.assert(config.SHEET_NAMES.PERSONAL_PROFILE === 'Personal Profile', 'Personal Profile sheet name configured');
   
   const collegeHeaders = config.HEADERS.COLLEGES;
-  tester.assert(collegeHeaders.includes('Merit Aid Likelihood'), 'Merit Aid Likelihood in headers');
-  tester.assert(collegeHeaders.includes('Academic Index Match'), 'Academic Index Match in headers');
+  tester.assert(collegeHeaders.includes('Admission Fit'), 'Admission Fit in headers');
   
   const finAidHeaders = config.HEADERS.FINANCIAL_AID;
   tester.assert(finAidHeaders.includes('Financial Safety'), 'Financial Safety in headers');

@@ -136,5 +136,55 @@ suite.test('repairCollegeSync replaces stale tracker names and clears trailing r
     'Trailing stale names should be cleared on every tracker');
 });
 
+suite.test('repairCollegeSync preserves tracker user data when Colleges rows are reordered', () => {
+  const {colleges} = setupWorkbook();
+  const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
+
+  colleges.getRange(3, 1).setValue('Alpha College');
+  colleges.getRange(3, coaCol).setValue(11111);
+  colleges.getRange(4, 1).setValue('Beta College');
+  colleges.getRange(4, coaCol).setValue(22222);
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const deadlineCol = CollegeTools.Utils.colIndex(fa, 'FAFSA Deadline');
+  fa.getRange(2, 1).setValue('Alpha College');
+  fa.getRange(2, deadlineCol).setValue('Alpha deadline');
+  fa.getRange(3, 1).setValue('Beta College');
+  fa.getRange(3, deadlineCol).setValue('Beta deadline');
+
+  colleges.getRange(3, 1).setValue('Beta College');
+  colleges.getRange(3, coaCol).setValue(22222);
+  colleges.getRange(4, 1).setValue('Alpha College');
+  colleges.getRange(4, coaCol).setValue(11111);
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(result.ok, true, 'Repair should succeed');
+  suite.assertEqual(fa.getRange(2, 1).getValue(), 'Beta College',
+    'First tracker row should follow sorted Colleges order');
+  suite.assertEqual(fa.getRange(2, deadlineCol).getValue(), 'Beta deadline',
+    'Beta user-entered tracker fields should stay with Beta');
+  suite.assertEqual(fa.getRange(3, 1).getValue(), 'Alpha College',
+    'Second tracker row should follow sorted Colleges order');
+  suite.assertEqual(fa.getRange(3, deadlineCol).getValue(), 'Alpha deadline',
+    'Alpha user-entered tracker fields should stay with Alpha');
+});
+
+suite.test('repairCollegeSync reports duplicate tracker names instead of silently guessing ownership', () => {
+  const {colleges} = setupWorkbook();
+  colleges.getRange(3, 1).setValue('Alpha College');
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  fa.getRange(2, 1).setValue('Alpha College');
+  fa.getRange(3, 1).setValue('Alpha College');
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assert(result.warnings.some((warning) => warning.code === 'duplicate_tracker_name' &&
+    warning.sheetName === CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID &&
+    warning.collegeName === 'Alpha College'),
+  'Repair should report duplicate tracker names that require manual resolution');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

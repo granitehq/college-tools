@@ -1,6 +1,6 @@
 /**
  * One-time setup and optimization
- * @version 2.0.2
+ * @version 2.6.0
  * @author College Tools
  * @description Consolidated setup functions for optimal performance
  */
@@ -24,9 +24,9 @@ CollegeTools.Setup = (function() {
       'Complete College Tools Setup',
       'This will set up all features in one optimized operation:\n\n' +
       '• All tracker sheets with headers and validation\n' +
-      '• Dashboard with metrics and charts\n' +
-      '• Scoring formulas (Weighted + Value scores)\n' +
-      '• Admission chances calculator\n' +
+      '• Dashboard with key metrics\n' +
+      '• Weighted Score formulas\n' +
+      '• Admission Fit (Reach/Match/Likely) calculator\n' +
       '• Enhanced formatting and dropdowns\n' +
       '• Performance optimization (trim excess rows)\n\n' +
       'This may take 30-60 seconds. Continue?',
@@ -140,9 +140,15 @@ CollegeTools.Setup = (function() {
       var formattingResult = CollegeTools.Formatting.repairValidationsAndFormatting({suppressAlert: true});
       var regionResult = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
 
-      // Rebuild scoring formulas so Value Score normalization picks up
-      // current min/max (constants are baked in at formula-build time).
+      // Rebuild scoring formulas so newly added colleges pick up
+      // Weighted Score, not just pre-existing rows.
       CollegeTools.Scoring.ensureScoring({suppressAlert: true});
+
+      var timelineSheet = SpreadsheetApp.getActive().getSheetByName(
+        CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+      if (timelineSheet) {
+        CollegeTools.Trackers.enhanceApplicationTimelineFormatting(timelineSheet);
+      }
 
       if (SpreadsheetApp.getActive().getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD)) {
         CollegeTools.Dashboard.refreshDashboard();
