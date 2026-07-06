@@ -47,7 +47,7 @@
     "globals": "^17.7.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=24.0.0"
   },
   "repository": {
     "type": "git",
