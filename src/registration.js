@@ -9,6 +9,11 @@
  * CollegeTools.Registration - Phone-home registration module
  * Registers each copied spreadsheet/script project with an internal registry so
  * release pushes can update known copies via the Apps Script API.
+ *
+ * The shared secret below lives in this copy's script properties, which the
+ * copy owner can read. It is a casual-abuse gate, not a security boundary — the
+ * registry treats every entry as self-asserted telemetry. See scripts/
+ * registry-webapp.js for the server-side trust model and input bounds.
  */
 var CollegeTools = CollegeTools || {};
 CollegeTools.Registration = (function() {

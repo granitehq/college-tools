@@ -71,43 +71,45 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
-   * Captures existing tracker rows by college name so repair can preserve user data across row reordering.
-   * Duplicate names are intentionally ignored because name-only matching is ambiguous.
+   * Reads a tracker sheet once and captures both a name-keyed snapshot map (so
+   * repair can follow user data across row reordering) and the raw formula-aware
+   * data block (reused as the rebuild base, avoiding a second read of the same
+   * sheet). Duplicate names are flagged because name-only matching is ambiguous.
    * @param {Sheet} sh - Tracker sheet
-   * @returns {Object} Snapshot map keyed by college name
+   * @returns {{snapshots: Object, block: Array<Array>, lastCol: number}} Capture
    * @private
    */
-  function snapshotRowsByCollegeName_(sh) {
-    var snapshots = {};
-    if (!sh) return snapshots;
+  function captureTrackerSheet_(sh) {
+    var capture = {snapshots: {}, block: [], lastCol: 0};
+    if (!sh) return capture;
     var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
-    if (!nameCol) return snapshots;
-
     var lastRow = sh.getLastRow();
     var lastCol = sh.getLastColumn();
-    if (lastRow < 2 || lastCol < 1) return snapshots;
+    capture.lastCol = lastCol;
+    if (!nameCol || lastRow < 2 || lastCol < 1) return capture;
 
     var range = sh.getRange(2, 1, lastRow - 1, lastCol);
     var values = range.getValues();
     var formulas = range.getFormulas();
+    capture.block = mergeValuesAndFormulas_(values, formulas);
 
     for (var i = 0; i < values.length; i++) {
       var collegeName = (values[i][nameCol - 1] || '').toString().trim();
       if (!collegeName) continue;
-      if (snapshots[collegeName]) {
-        snapshots[collegeName].duplicate = true;
-        snapshots._duplicates = snapshots._duplicates || [];
-        snapshots._duplicates.push(collegeName);
+      if (capture.snapshots[collegeName]) {
+        capture.snapshots[collegeName].duplicate = true;
+        capture.snapshots._duplicates = capture.snapshots._duplicates || [];
+        capture.snapshots._duplicates.push(collegeName);
         continue;
       }
-      snapshots[collegeName] = {
+      capture.snapshots[collegeName] = {
         values: values[i],
         formulas: formulas[i],
         duplicate: false,
       };
     }
 
-    return snapshots;
+    return capture;
   }
 
   /**
@@ -163,43 +165,38 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
-   * Reads a tracker's existing data block, preserving formulas, and pads it out
-   * to the requested height with blank rows.
-   * @param {Sheet} sh - Tracker sheet
-   * @param {number} firstRow - First data row (row 2 for trackers)
-   * @param {number} numRows - Number of rows the write will cover
-   * @param {number} lastCol - Number of columns
-   * @returns {Array<Array>} Merged, padded block
+   * Returns a copy of a merged row with value cells cleared but formula cells
+   * kept. Used for a canonical row assigned to a college with no captured
+   * tracker data, so the new college can't inherit a removed college's entered
+   * values while the row's structural formula columns still survive.
+   * @param {Array} mergedRow - Row from a formula-aware merged block
+   * @returns {Array} Cleaned row
    * @private
    */
-  function readMergedBlock_(sh, firstRow, numRows, lastCol) {
-    var block = [];
-    var existingLastRow = sh.getLastRow();
-    if (existingLastRow >= firstRow) {
-      var readRows = Math.min(existingLastRow, firstRow + numRows - 1) - firstRow + 1;
-      var range = sh.getRange(firstRow, 1, readRows, lastCol);
-      block = mergeValuesAndFormulas_(range.getValues(), range.getFormulas());
-    }
-    while (block.length < numRows) block.push(blankRow_(lastCol));
-    return block;
+  function clearValuesKeepFormulas_(mergedRow) {
+    return mergedRow.map(function(cell) {
+      return (typeof cell === 'string' && cell.charAt(0) === '=') ? cell : '';
+    });
   }
 
   /**
-   * Rebuilds a tracker sheet's data block in a single bulk write. Snapshot rows
-   * are repositioned to their canonical row, linked columns are stamped from the
-   * Colleges sheet, and every other cell keeps its existing value/formula. This
-   * reproduces the prior per-row/per-cell restore behavior at a handful of range
-   * round-trips instead of O(rows x formulaColumns).
+   * Rebuilds a tracker sheet's data block in a single bulk write, reusing the
+   * data block already read by captureTrackerSheet_ (no second read). Each
+   * canonical row is resolved as:
+   *   - unique snapshot for the college  -> restore its captured row (data follows the college)
+   *   - no snapshot (new college)        -> clear entered values, keep formulas
+   *   - duplicate snapshot (ambiguous)   -> leave the physical row in place
+   * then the linked columns (College Name, plus any extras) are stamped on top.
    * @param {Sheet|null} sh - Tracker sheet
-   * @param {Object} snapshots - Snapshot map keyed by college name
+   * @param {{snapshots: Object, block: Array<Array>, lastCol: number}} capture - captureTrackerSheet_ result
    * @param {Array<Object>} assignments - {trackerRow, name, coa} per college, in order
    * @param {function(Object):Object=} extraOverridesFn - Optional per-assignment
    *   header/value map for linked columns beyond College Name
    * @private
    */
-  function rebuildTrackerFromSnapshots_(sh, snapshots, assignments, extraOverridesFn) {
+  function rebuildTrackerFromSnapshots_(sh, capture, assignments, extraOverridesFn) {
     if (!sh || !assignments.length) return;
-    var lastCol = sh.getLastColumn();
+    var lastCol = capture.lastCol || sh.getLastColumn();
     if (lastCol < 1) return;
     var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
     if (!nameCol) return;
@@ -211,14 +208,22 @@ CollegeTools.Trackers = (function() {
     }
     var numRows = lastWriteRow - firstRow + 1;
 
-    var block = readMergedBlock_(sh, firstRow, numRows, lastCol);
+    // Base the write on the block captured in the single read, copied so the
+    // capture stays intact, then padded to the write height.
+    var block = capture.block.slice(0, numRows).map(function(row) {
+      return row.slice();
+    });
+    while (block.length < numRows) block.push(blankRow_(lastCol));
 
+    var snapshots = capture.snapshots;
     for (var a = 0; a < assignments.length; a++) {
       var assignment = assignments[a];
       var offset = assignment.trackerRow - firstRow;
       var snapshot = snapshots[assignment.name];
       if (snapshot && !snapshot.duplicate) {
         block[offset] = mergeSnapshotRow_(snapshot, lastCol);
+      } else if (!snapshot) {
+        block[offset] = clearValuesKeepFormulas_(block[offset]);
       }
       block[offset][nameCol - 1] = assignment.name;
 
@@ -543,19 +548,21 @@ CollegeTools.Trackers = (function() {
     var cvSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     var atSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     var stSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
-    var trackerSnapshots = {
-      financialAid: snapshotRowsByCollegeName_(faSheet),
-      campusVisit: snapshotRowsByCollegeName_(cvSheet),
-      applicationTimeline: snapshotRowsByCollegeName_(atSheet),
-      statusTracker: snapshotRowsByCollegeName_(stSheet),
+    // Read each tracker once, capturing both the name-keyed snapshots and the
+    // raw data block reused as the rebuild base.
+    var trackerCaptures = {
+      financialAid: captureTrackerSheet_(faSheet),
+      campusVisit: captureTrackerSheet_(cvSheet),
+      applicationTimeline: captureTrackerSheet_(atSheet),
+      statusTracker: captureTrackerSheet_(stSheet),
     };
-    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.financialAid,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.financialAid.snapshots,
       CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
-    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.campusVisit,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.campusVisit.snapshots,
       CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
-    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.applicationTimeline,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.applicationTimeline.snapshots,
       CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
-    collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.statusTracker,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.statusTracker.snapshots,
       CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
 
     // Read all header and data in two bulk reads instead of per-row calls
@@ -581,14 +588,15 @@ CollegeTools.Trackers = (function() {
       processed++;
     }
 
-    // One bulk read + write per tracker instead of per-row/per-cell round-trips.
-    rebuildTrackerFromSnapshots_(faSheet, trackerSnapshots.financialAid, assignments,
+    // One bulk write per tracker (reusing the capture read) instead of
+    // per-row/per-cell round-trips.
+    rebuildTrackerFromSnapshots_(faSheet, trackerCaptures.financialAid, assignments,
       function(assignment) {
         return {'Total Cost of Attendance': assignment.coa};
       });
-    rebuildTrackerFromSnapshots_(cvSheet, trackerSnapshots.campusVisit, assignments);
-    rebuildTrackerFromSnapshots_(atSheet, trackerSnapshots.applicationTimeline, assignments);
-    rebuildTrackerFromSnapshots_(stSheet, trackerSnapshots.statusTracker, assignments);
+    rebuildTrackerFromSnapshots_(cvSheet, trackerCaptures.campusVisit, assignments);
+    rebuildTrackerFromSnapshots_(atSheet, trackerCaptures.applicationTimeline, assignments);
+    rebuildTrackerFromSnapshots_(stSheet, trackerCaptures.statusTracker, assignments);
 
     var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
     clearTrackerRows_(faSheet, firstClearRow, ['College Name', 'Total Cost of Attendance']);

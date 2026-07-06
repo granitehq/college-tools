@@ -558,35 +558,59 @@ CollegeTools.Colleges = (function() {
     var range = sh.getRange(3, 1, lastRow-2, sh.getLastColumn());
     var values = range.getValues();
 
-    // Build the full Region column in memory, then write it in one batched
-    // setValues instead of one setValue per changed row. Unchanged/empty rows
-    // keep their existing value (Region is a plain derived column with no
-    // formulas), so rewriting them is a no-op.
-    var regionColumn = [];
-    var changed = 0;
+    // Collect only the rows whose derived Region actually changed, then write
+    // them as contiguous runs. Unchanged and empty rows are never rewritten, so
+    // a stray user formula in the Region column can't be flattened.
+    var updates = [];
     for (var r=0; r<values.length; r++) {
       var rowVals = values[r];
-      var outRegion = rowVals[colRegion-1];
       var name = (rowVals[colName-1]||'').toString().trim();
-      if (name) {
-        var st = (rowVals[colState-1]||'').toString().trim();
-        var currentRegion = (rowVals[colRegion-1]||'').toString().trim();
-        var newRegion = CollegeTools.Utils.getRegionForState(st);
-        if (newRegion && newRegion !== currentRegion) {
-          outRegion = newRegion;
-          changed++;
-        }
+      if (!name) continue; // skip empty rows
+      var st = (rowVals[colState-1]||'').toString().trim();
+      var currentRegion = (rowVals[colRegion-1]||'').toString().trim();
+      var newRegion = CollegeTools.Utils.getRegionForState(st);
+      if (newRegion && newRegion !== currentRegion) {
+        updates.push({row: r + 3, value: newRegion}); // absolute row
       }
-      regionColumn.push([outRegion]);
     }
 
-    if (changed > 0) {
-      sh.getRange(3, colRegion, regionColumn.length, 1).setValues(regionColumn);
-    }
+    writeContiguousColumnRuns_(sh, colRegion, updates);
     if (!opts.suppressAlert) {
-      SpreadsheetApp.getUi().alert('Regions updated for ' + changed + ' row(s).');
+      SpreadsheetApp.getUi().alert('Regions updated for ' + updates.length + ' row(s).');
     }
-    return {ok: true, count: changed};
+    return {ok: true, count: updates.length};
+  }
+
+  /**
+   * Writes single-column updates as contiguous setValues runs, touching only the
+   * changed rows. Runs of adjacent rows collapse into one range write.
+   * @param {Sheet} sh - Target sheet
+   * @param {number} column - 1-based column index
+   * @param {Array<{row: number, value: *}>} updates - Changed row/value pairs
+   * @private
+   */
+  function writeContiguousColumnRuns_(sh, column, updates) {
+    if (!updates.length) return;
+    updates.sort(function(a, b) {
+      return a.row - b.row;
+    });
+
+    var runStart = updates[0].row;
+    var runValues = [[updates[0].value]];
+    var previousRow = updates[0].row;
+
+    for (var i = 1; i < updates.length; i++) {
+      if (updates[i].row === previousRow + 1) {
+        runValues.push([updates[i].value]);
+      } else {
+        sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
+        runStart = updates[i].row;
+        runValues = [[updates[i].value]];
+      }
+      previousRow = updates[i].row;
+    }
+
+    sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
   }
 
   /**

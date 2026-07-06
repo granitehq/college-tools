@@ -44,7 +44,11 @@ suite.test('repairCollegeSync repositions rows, preserves formulas, syncs names/
   fa.getRange(2, faNote).setValue('gamma-note');
   fa.getRange(3, faName).setValue('Beta');
   fa.getRange(3, faNote).setValue('beta-note');
+  // Row 4 belonged to a removed college (Zeta): a stale entered value plus a
+  // structural formula. Delta (new) reuses this row.
   fa.getRange(4, faName).setValue('Zeta');
+  fa.getRange(4, faNote).setValue('zeta-note');
+  fa.getRange(4, faNet).setFormula('=A4+2');
 
   fa.resetCallCounts();
   const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
@@ -58,6 +62,10 @@ suite.test('repairCollegeSync repositions rows, preserves formulas, syncs names/
   suite.assertEqual(fa.getRange(3, faNet).getFormula(), '=A2+1', 'formula preserved on move');
   suite.assertEqual(fa.getRange(2, col(fa, 'Total Cost of Attendance')).getValue(), 20000, 'Beta COA synced');
   suite.assertEqual(fa.getRange(4, col(fa, 'Total Cost of Attendance')).getValue(), '', 'Delta COA 0 -> empty');
+  // Item 3: new college on a reused row starts clean (stale value cleared)...
+  suite.assertEqual(fa.getRange(4, faNote).getValue(), '', 'Delta does not inherit removed college value');
+  // ...but the row's structural formula column survives.
+  suite.assertEqual(fa.getRange(4, faNet).getFormula(), '=A4+2', 'formula on reused row preserved');
   suite.assertEqual(fa.callCounts.setFormula, 0, 'no per-cell setFormula');
   suite.assert(fa.callCounts.setValues <= 2, 'bulk block write (got ' + fa.callCounts.setValues + ')');
 });

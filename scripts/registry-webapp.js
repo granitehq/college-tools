@@ -1,6 +1,13 @@
 /**
  * Standalone Apps Script Web App for the College Tools copy registry.
  *
+ * TRUST MODEL: the shared secret ships inside every distributed copy's script
+ * properties, which a copy owner can read in the Apps Script editor. It is
+ * therefore a low-friction gate against casual/anonymous posts, NOT a real
+ * authenticator — treat every row as untrusted, self-asserted telemetry. The
+ * bounds below (payload size, field length, row cap) limit the blast radius if
+ * the secret leaks; they are not a substitute for per-copy authentication.
+ *
  * Deployment notes:
  * 1. Create a standalone Apps Script project.
  * 2. Set script properties:
@@ -23,6 +30,11 @@ var REGISTRY_HEADERS = [
   'lastSeenTimestamp',
 ];
 
+// Input bounds — keep a leaked secret from ballooning the registry.
+var MAX_PAYLOAD_BYTES = 8192;
+var MAX_FIELD_LENGTH = 2048;
+var MAX_REGISTRY_ROWS = 100000;
+
 /**
  * Receives copy registration posts and upserts them by script ID.
  *
@@ -31,8 +43,13 @@ var REGISTRY_HEADERS = [
  */
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents || '{}');
-    if (data.secret !== getRequiredScriptProperty(SHARED_SECRET_PROPERTY)) {
+    var raw = (e && e.postData && e.postData.contents) || '';
+    if (raw.length > MAX_PAYLOAD_BYTES) {
+      return jsonResponse({status: 'rejected', message: 'payload too large'}, 413);
+    }
+
+    var data = JSON.parse(raw || '{}');
+    if (!constantTimeEquals(data.secret, getRequiredScriptProperty(SHARED_SECRET_PROPERTY))) {
       return jsonResponse({status: 'rejected'}, 403);
     }
 
@@ -48,20 +65,50 @@ function doPost(e) {
 }
 
 /**
+ * Compares two strings without early-exit timing leaks. Not a strong guarantee
+ * in a GC'd runtime, but avoids the trivial length/prefix side channel of !==.
+ *
+ * @param {*} a First value.
+ * @param {*} b Second value.
+ * @return {boolean}
+ */
+function constantTimeEquals(a, b) {
+  a = String(a == null ? '' : a);
+  b = String(b == null ? '' : b);
+  var max = Math.max(a.length, b.length);
+  var diff = a.length ^ b.length;
+  for (var i = 0; i < max; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+/**
+ * Truncates a payload field to a bounded length string.
+ *
+ * @param {*} value Raw field value.
+ * @return {string}
+ */
+function boundedField(value) {
+  var s = String(value == null ? '' : value);
+  return s.length > MAX_FIELD_LENGTH ? s.slice(0, MAX_FIELD_LENGTH) : s;
+}
+
+/**
  * Inserts or updates one registration row.
  *
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet Registry sheet.
  * @param {Object} data Registration payload.
  */
 function upsertRegistration(sheet, data) {
-  var scriptId = requiredPayloadValue(data, 'scriptId');
+  var scriptId = boundedField(requiredPayloadValue(data, 'scriptId'));
   var rowData = [
     scriptId,
-    requiredPayloadValue(data, 'spreadsheetId'),
-    data.spreadsheetUrl || '',
-    data.ownerEmail || '',
-    requiredPayloadValue(data, 'version'),
-    data.timestamp || new Date().toISOString(),
+    boundedField(requiredPayloadValue(data, 'spreadsheetId')),
+    boundedField(data.spreadsheetUrl || ''),
+    boundedField(data.ownerEmail || ''),
+    boundedField(requiredPayloadValue(data, 'version')),
+    boundedField(data.timestamp || new Date().toISOString()),
   ];
   var rows = sheet.getDataRange().getValues();
   var rowIndex = -1;
@@ -76,6 +123,11 @@ function upsertRegistration(sheet, data) {
   if (rowIndex > 0) {
     sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
   } else {
+    // Cap total registrations so a leaked secret can't grow the sheet without
+    // bound. Existing copies (updates) are always allowed through above.
+    if (rows.length - 1 >= MAX_REGISTRY_ROWS) {
+      throw new Error('registry row cap reached');
+    }
     sheet.appendRow(rowData);
   }
 }
