@@ -29,26 +29,11 @@ CollegeTools.Formatting = (function() {
     return 1;
   }
 
-  /**
-   * Clears every existing data validation rule from a sheet's full data
-   * range before the caller reapplies the known set. A structural bug
-   * elsewhere (e.g. a botched column insert), or a sheet whose validation
-   * was only ever set up by hand, can leave stray or inconsistent rules —
-   * for example a dropdown landing on a plain numeric/date column, or a
-   * date picker present on some rows of a column but missing on others.
-   * Clearing first guarantees every row ends up in the same state once the
-   * known dropdowns/dates are reapplied on top.
-   * @param {Sheet} sh - Target sheet
-   * @param {number=} headerRow - Header row number, defaults to schema or row 1
-   * @private
-   */
-  function clearExistingValidation_(sh, headerRow) {
-    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
-    var dataStartRow = resolvedHeaderRow + 1;
-    var lastRow = Math.max(dataStartRow, sh.getLastRow());
-    var lastCol = Math.max(1, sh.getLastColumn());
-    sh.getRange(dataStartRow, 1, lastRow - dataStartRow + 1, lastCol).setDataValidation(null);
-  }
+  // Validation clearing is now folded into applyColumnFormatsAndValidations_
+  // (clearUntargeted): it writes a full-height rule grid in one call, so every
+  // row lands in the same known state without a separate clear pass. This also
+  // repairs stray/inconsistent rules left by botched column inserts or hand
+  // edits — a dropdown on a numeric column, or a date picker on only some rows.
 
   /**
    * Finds a column by header on a configurable header row.
@@ -144,6 +129,121 @@ CollegeTools.Formatting = (function() {
       .setNumberFormat(pattern);
   }
 
+  /**
+   * Builds a dropdown validation rule for a fixed option list.
+   * @param {string[]} options - Allowed values
+   * @returns {DataValidation} Built rule
+   * @private
+   */
+  function listRule_(options) {
+    return SpreadsheetApp.newDataValidation()
+      .requireValueInList(options, true)
+      .setAllowInvalid(false)
+      .build();
+  }
+
+  /**
+   * Builds a date validation rule.
+   * @returns {DataValidation} Built rule
+   * @private
+   */
+  function dateRule_() {
+    return SpreadsheetApp.newDataValidation().requireDate().build();
+  }
+
+  /**
+   * Builds a dropdown validation rule sourced from another sheet's range.
+   * @param {string} sourceSheetName - Source sheet name
+   * @param {string} sourceRange - A1 range in the source sheet
+   * @returns {DataValidation|null} Built rule or null when the source is missing
+   * @private
+   */
+  function rangeRule_(sourceSheetName, sourceRange) {
+    var sourceSheet = SpreadsheetApp.getActive().getSheetByName(sourceSheetName);
+    if (!sourceSheet) return null;
+    return SpreadsheetApp.newDataValidation()
+      .requireValueInRange(sourceSheet.getRange(sourceRange), true)
+      .setAllowInvalid(false)
+      .build();
+  }
+
+  /**
+   * Resolves a header-name to 1-based column map from a single header-row read.
+   * @param {Sheet} sh - Target sheet
+   * @param {number} headerRow - Header row number
+   * @param {number} lastCol - Last column
+   * @returns {Object} Header text to column index
+   * @private
+   */
+  function headerColumnMap_(sh, headerRow, lastCol) {
+    var hdrs = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0];
+    var map = {};
+    for (var i = 0; i < hdrs.length; i++) {
+      var h = (hdrs[i] || '').toString().trim();
+      if (h && !(h in map)) map[h] = i + 1;
+    }
+    return map;
+  }
+
+  /**
+   * Applies per-column number formats and dropdown/date validations to a sheet
+   * in at most one setNumberFormats and one setDataValidations call, instead of
+   * one range write per column. Validation is applied across the full sheet
+   * height so empty rows keep their dropdowns.
+   * @param {Sheet} sh - Target sheet
+   * @param {number=} headerRow - Header row override (schema default otherwise)
+   * @param {Array<{header: string, pattern: string}>=} numberFormats - Format specs
+   * @param {Array<{header: string, rule: DataValidation}>=} validations - Rule specs
+   * @param {boolean=} clearUntargeted - When true, columns without a rule are
+   *   cleared (replacing a prior clear-then-reapply). When false, existing
+   *   validations on untargeted columns are preserved.
+   * @private
+   */
+  function applyColumnFormatsAndValidations_(sh, headerRow, numberFormats, validations, clearUntargeted) {
+    if (!sh) return;
+    var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
+    var dataStart = resolvedHeaderRow + 1;
+    var lastCol = Math.max(1, sh.getLastColumn());
+    var rowCount = Math.max(1, sh.getMaxRows() - resolvedHeaderRow);
+    var colByHeader = headerColumnMap_(sh, resolvedHeaderRow, lastCol);
+
+    if (numberFormats && numberFormats.length) {
+      var fmtRange = sh.getRange(dataStart, 1, rowCount, lastCol);
+      var fmtGrid = fmtRange.getNumberFormats();
+      var wroteFormats = false;
+      numberFormats.forEach(function(spec) {
+        var c = colByHeader[spec.header];
+        if (!c) return;
+        wroteFormats = true;
+        for (var r = 0; r < rowCount; r++) fmtGrid[r][c - 1] = spec.pattern;
+      });
+      if (wroteFormats) fmtRange.setNumberFormats(fmtGrid);
+    }
+
+    if (validations) {
+      var valRange = sh.getRange(dataStart, 1, rowCount, lastCol);
+      var valGrid;
+      if (clearUntargeted) {
+        valGrid = [];
+        for (var r2 = 0; r2 < rowCount; r2++) {
+          var nullRow = [];
+          for (var c2 = 0; c2 < lastCol; c2++) nullRow.push(null);
+          valGrid.push(nullRow);
+        }
+      } else {
+        valGrid = valRange.getDataValidations();
+      }
+      var appliedRule = false;
+      validations.forEach(function(spec) {
+        var c = colByHeader[spec.header];
+        if (!c || !spec.rule) return;
+        appliedRule = true;
+        for (var r3 = 0; r3 < rowCount; r3++) valGrid[r3][c - 1] = spec.rule;
+      });
+      if (appliedRule || clearUntargeted) valRange.setDataValidations(valGrid);
+    }
+  }
+
 
   var STANDARD_VALIDATIONS = {};
   STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID] = {
@@ -211,23 +311,39 @@ CollegeTools.Formatting = (function() {
   };
 
   /**
-   * Applies shared dropdown/date validation specs for tracker sheets.
+   * Builds the validation rule specs for a sheet from STANDARD_VALIDATIONS.
+   * @param {Sheet} sh - Target sheet
+   * @returns {Array<{header: string, rule: DataValidation}>} Rule specs
+   * @private
+   */
+  function buildStandardValidationSpecs_(sh) {
+    var spec = STANDARD_VALIDATIONS[sh.getName()];
+    var specs = [];
+    if (!spec) return specs;
+
+    (spec.range || []).forEach(function(entry) {
+      var rule = rangeRule_(entry[1], entry[2]);
+      if (rule) specs.push({header: entry[0], rule: rule});
+    });
+    (spec.date || []).forEach(function(header) {
+      specs.push({header: header, rule: dateRule_()});
+    });
+    (spec.list || []).forEach(function(entry) {
+      specs.push({header: entry[0], rule: listRule_(entry[1])});
+    });
+    return specs;
+  }
+
+  /**
+   * Applies shared dropdown/date validation specs for tracker sheets in a single
+   * batched write, preserving validations on any columns outside the spec.
    * @param {Sheet} sh - Target sheet
    */
   function applyStandardValidations(sh) {
     if (!sh) return;
-    var spec = STANDARD_VALIDATIONS[sh.getName()];
-    if (!spec) return;
-
-    (spec.range || []).forEach(function(entry) {
-      validateListFromRange(sh, entry[0], entry[1], entry[2]);
-    });
-    (spec.date || []).forEach(function(header) {
-      validateDate(sh, header);
-    });
-    (spec.list || []).forEach(function(entry) {
-      validateList(sh, entry[0], entry[1]);
-    });
+    var validations = buildStandardValidationSpecs_(sh);
+    if (!validations.length) return;
+    applyColumnFormatsAndValidations_(sh, null, null, validations, false);
   }
 
   /**
@@ -280,91 +396,97 @@ CollegeTools.Formatting = (function() {
     var ss = SpreadsheetApp.getActive();
     var sectionsApplied = [];
 
+    /**
+     * Collects {header, pattern} specs for headers sharing one number format.
+     * @param {string[]} headers - Column headers
+     * @param {string} pattern - Number format pattern
+     * @returns {Array<Object>} Format specs
+     */
+    function fmts(headers, pattern) {
+      return headers.map(function(header) {
+        return {header: header, pattern: pattern};
+      });
+    }
+    /**
+     * Collects {header, rule} specs for headers sharing one dropdown list.
+     * @param {string[]} headers - Column headers
+     * @param {string[]} options - Allowed dropdown values
+     * @returns {Array<Object>} Validation specs
+     */
+    function listSpecs(headers, options) {
+      return headers.map(function(header) {
+        return {header: header, rule: listRule_(options)};
+      });
+    }
+
     var col = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (col) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-      clearExistingValidation_(col, 2);
-
-      ['Acceptance Rate', 'First-Year Retention', 'Grad Rate'].forEach(function(h) {
-        formatNumber(col, h, '0.0%', 2);
-      });
-      ['Median Earnings (10yr)', 'Total Cost of Attendance', 'Estimated Net Price']
-        .forEach(function(h) {
-          formatNumber(col, h, '$#,##0', 2);
-        });
-      ['SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%'].forEach(function(h) {
-        formatNumber(col, h, '0', 2);
-      });
-      formatNumber(col, 'Weighted Score', '0.00', 2);
-
-      ['Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)', 'Safety (1-5)',
-        'Campus Culture Fit (1-5)', 'Weather Fit (1-5)', 'Clubs/Activities (1-5)', 'Personal Priority (1-5)']
-        .forEach(function(h) {
-          validateList(col, h, ['1', '2', '3', '4', '5'], 2);
-        });
-
-      validateList(col, 'Type (Public/Private)',
-        ['Public', 'Private (nonprofit)', 'Private (for-profit)', 'Other'], 2);
-      validateList(col, 'Region', ['Northeast', 'Midwest', 'South', 'West'], 2);
-      validateList(col, 'Campus Setting', ['City', 'Suburban', 'Town', 'Rural', 'Other'], 2);
+      var collegeFormats = fmts(['Acceptance Rate', 'First-Year Retention', 'Grad Rate'], '0.0%')
+        .concat(fmts(['Median Earnings (10yr)', 'Total Cost of Attendance', 'Estimated Net Price'], '$#,##0'))
+        .concat(fmts(['SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%'], '0'))
+        .concat(fmts(['Weighted Score'], '0.00'));
+      var collegeValidations = listSpecs(
+        ['Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)', 'Safety (1-5)',
+          'Campus Culture Fit (1-5)', 'Weather Fit (1-5)', 'Clubs/Activities (1-5)', 'Personal Priority (1-5)'],
+        ['1', '2', '3', '4', '5'])
+        .concat([
+          {header: 'Type (Public/Private)',
+            rule: listRule_(['Public', 'Private (nonprofit)', 'Private (for-profit)', 'Other'])},
+          {header: 'Region', rule: listRule_(['Northeast', 'Midwest', 'South', 'West'])},
+          {header: 'Campus Setting', rule: listRule_(['City', 'Suburban', 'Town', 'Rural', 'Other'])},
+        ]);
+      applyColumnFormatsAndValidations_(col, 2, collegeFormats, collegeValidations, true);
     }
 
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
-      clearExistingValidation_(fa, 1);
-      applyStandardValidations(fa);
-      ['Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies', 'Personal Expenses', 'Travel Costs',
-        'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid',
-        'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
-        'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost', 'Outside Scholarships Applied']
-        .forEach(function(h) {
-          formatNumber(fa, h, '$#,##0');
-        });
-      formatNumber(fa, '4-Year Burden', '0.0%');
+      var faFormats = fmts(['Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies',
+        'Personal Expenses', 'Travel Costs', 'Federal Grants', 'State Grants', 'Institutional Grants',
+        'Merit Scholarships', 'Need-Based Aid', 'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
+        'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost', 'Outside Scholarships Applied'], '$#,##0')
+        .concat(fmts(['4-Year Burden'], '0.0%'));
+      applyColumnFormatsAndValidations_(fa, 1, faFormats, buildStandardValidationSpecs_(fa), true);
     }
 
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
-      clearExistingValidation_(cv, 1);
-      applyStandardValidations(cv);
-      ['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)', 'Visit Score']
-        .forEach(function(h) {
-          formatNumber(cv, h, '0');
-        });
+      var cvFormats = fmts(['Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)',
+        'Overall Gut Feeling (1-10)', 'Visit Score'], '0');
+      applyColumnFormatsAndValidations_(cv, 1, cvFormats, buildStandardValidationSpecs_(cv), true);
     }
 
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
-      clearExistingValidation_(at, 1);
-      applyStandardValidations(at);
+      // Date columns are matched dynamically by header name, then merged with
+      // the sheet's standard validation specs.
+      var atValidations = buildStandardValidationSpecs_(at);
       var atHdrs = at.getRange(1, 1, 1, at.getLastColumn()).getValues()[0];
       for (var i = 0; i < atHdrs.length; i++) {
-        var h = (atHdrs[i] || '').toString().trim();
-        if (/(Deadline|Opens|Due|Date)$/i.test(h)) validateDate(at, h);
+        var atHeader = (atHdrs[i] || '').toString().trim();
+        if (/(Deadline|Opens|Due|Date)$/i.test(atHeader)) {
+          atValidations.push({header: atHeader, rule: dateRule_()});
+        }
       }
-      formatNumber(at, 'Days Until Deadline (App)', '0');
-      formatNumber(at, 'Completion Status (%)', '0');
+      var atFormats = fmts(['Days Until Deadline (App)', 'Completion Status (%)'], '0');
+      applyColumnFormatsAndValidations_(at, 1, atFormats, atValidations, true);
     }
 
     var sc = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     if (sc) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
-      clearExistingValidation_(sc, 1);
-      ['Amount', 'Amount Awarded'].forEach(function(h) {
-        formatNumber(sc, h, '$#,##0');
-      });
-      applyStandardValidations(sc);
+      var scFormats = fmts(['Amount', 'Amount Awarded'], '$#,##0');
+      applyColumnFormatsAndValidations_(sc, 1, scFormats, buildStandardValidationSpecs_(sc), true);
     }
 
     var st = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     if (st) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
-      clearExistingValidation_(st, 1);
-      applyStandardValidations(st);
-      formatNumber(st, 'Scholarship Offer ($)', '$#,##0');
+      var stFormats = fmts(['Scholarship Offer ($)'], '$#,##0');
+      applyColumnFormatsAndValidations_(st, 1, stFormats, buildStandardValidationSpecs_(st), true);
     }
 
     if (!opts.suppressAlert) {

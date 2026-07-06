@@ -9,6 +9,7 @@ const tests = [
   'regression-tests.js',
   'template-integrity-tests.js',
   'workbook-repair-tests.js',
+  'perf-batching-tests.js',
   'config-schema-tests.js',
   'schema-metadata-tests.js',
   'formulas-tests.js',

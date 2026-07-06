@@ -558,26 +558,35 @@ CollegeTools.Colleges = (function() {
     var range = sh.getRange(3, 1, lastRow-2, sh.getLastColumn());
     var values = range.getValues();
 
-    var updates = [];
+    // Build the full Region column in memory, then write it in one batched
+    // setValues instead of one setValue per changed row. Unchanged/empty rows
+    // keep their existing value (Region is a plain derived column with no
+    // formulas), so rewriting them is a no-op.
+    var regionColumn = [];
+    var changed = 0;
     for (var r=0; r<values.length; r++) {
       var rowVals = values[r];
+      var outRegion = rowVals[colRegion-1];
       var name = (rowVals[colName-1]||'').toString().trim();
-      if (!name) continue; // skip empty rows
-      var st = (rowVals[colState-1]||'').toString().trim();
-      var currentRegion = (rowVals[colRegion-1]||'').toString().trim();
-      var newRegion = CollegeTools.Utils.getRegionForState(st);
-      if (newRegion && newRegion !== currentRegion) {
-        updates.push({r: r+3, c: colRegion, v: newRegion}); // store absolute position
+      if (name) {
+        var st = (rowVals[colState-1]||'').toString().trim();
+        var currentRegion = (rowVals[colRegion-1]||'').toString().trim();
+        var newRegion = CollegeTools.Utils.getRegionForState(st);
+        if (newRegion && newRegion !== currentRegion) {
+          outRegion = newRegion;
+          changed++;
+        }
       }
+      regionColumn.push([outRegion]);
     }
 
-    updates.forEach(function(u) {
-      sh.getRange(u.r, u.c).setValue(u.v);
-    });
-    if (!opts.suppressAlert) {
-      SpreadsheetApp.getUi().alert('Regions updated for ' + updates.length + ' row(s).');
+    if (changed > 0) {
+      sh.getRange(3, colRegion, regionColumn.length, 1).setValues(regionColumn);
     }
-    return {ok: true, count: updates.length};
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert('Regions updated for ' + changed + ' row(s).');
+    }
+    return {ok: true, count: changed};
   }
 
   /**

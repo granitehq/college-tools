@@ -139,6 +139,50 @@ class MockRange {
     return this.sheet.getCellValidation(this.row, this.col);
   }
 
+  setDataValidations(grid) {
+    this.sheet.callCounts.setDataValidations++;
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        this.sheet.setCellValidation(this.row + r, this.col + c, grid[r][c]);
+      }
+    }
+    return this;
+  }
+
+  getDataValidations() {
+    const grid = [];
+    for (let r = 0; r < this.numRows; r++) {
+      const rowRules = [];
+      for (let c = 0; c < this.numCols; c++) {
+        rowRules.push(this.sheet.getCellValidation(this.row + r, this.col + c));
+      }
+      grid.push(rowRules);
+    }
+    return grid;
+  }
+
+  getNumberFormats() {
+    const grid = [];
+    for (let r = 0; r < this.numRows; r++) {
+      const rowFmts = [];
+      for (let c = 0; c < this.numCols; c++) {
+        rowFmts.push(this.sheet.getCellFormat(this.row + r, this.col + c));
+      }
+      grid.push(rowFmts);
+    }
+    return grid;
+  }
+
+  setNumberFormats(grid) {
+    this.sheet.callCounts.setNumberFormats++;
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        this.sheet.setCellFormat(this.row + r, this.col + c, grid[r][c]);
+      }
+    }
+    return this;
+  }
+
   setFontWeight() { return this; }
   setBackground() { return this; }
   setFontSize() { return this; }
@@ -146,7 +190,12 @@ class MockRange {
   setFontStyle() { return this; }
   setBorder() { return this; }
   setNote() { return this; }
-  setNumberFormat() { return this; }
+  setNumberFormat(pattern) {
+    this._forEachCell((row, col) => {
+      this.sheet.setCellFormat(row, col, pattern);
+    });
+    return this;
+  }
   merge() { return this; }
   setWrap() { return this; }
   setVerticalAlignment() { return this; }
@@ -159,7 +208,7 @@ class MockSheet {
     this.values = {};
     this.formulas = {};
     this.validations = {};
-    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0};
+    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     this.activeRow = 3;
     this.maxRows = 1000;
   }
@@ -194,6 +243,17 @@ class MockSheet {
     return this.validations[this._key(row, col)] || null;
   }
 
+  setCellFormat(row, col, pattern) {
+    this.formats = this.formats || {};
+    this.formats[this._key(row, col)] = pattern;
+  }
+
+  getCellFormat(row, col) {
+    this.formats = this.formats || {};
+    const key = this._key(row, col);
+    return Object.prototype.hasOwnProperty.call(this.formats, key) ? this.formats[key] : '';
+  }
+
   getRange(rowOrA1, col, numRows, numCols) {
     if (typeof rowOrA1 === 'string') {
       const parsed = parseA1(rowOrA1);
@@ -225,7 +285,7 @@ class MockSheet {
   }
 
   resetCallCounts() {
-    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0};
+    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
   }
 
   getActiveCell() {
@@ -242,7 +302,7 @@ class MockSheet {
     this.values = {};
     this.formulas = {};
     this.validations = {};
-    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0};
+    this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     return this;
   }
 

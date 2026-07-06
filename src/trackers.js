@@ -111,22 +111,126 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
-   * Restores a captured tracker row into a target row when a unique college-name match exists.
-   * @param {Sheet} sh - Tracker sheet
-   * @param {Object} snapshots - Snapshot map keyed by college name
-   * @param {string} collegeName - College display name
-   * @param {number} targetRow - Target row to restore
+   * Builds a blank row of the given width.
+   * @param {number} width - Number of columns
+   * @returns {Array} Row of empty strings
    * @private
    */
-  function restoreTrackerRow_(sh, snapshots, collegeName, targetRow) {
-    if (!sh || !collegeName) return;
-    var snapshot = snapshots[collegeName];
-    if (!snapshot || snapshot.duplicate) return;
+  function blankRow_(width) {
+    var row = [];
+    for (var i = 0; i < width; i++) row.push('');
+    return row;
+  }
 
-    sh.getRange(targetRow, 1, 1, snapshot.values.length).setValues([snapshot.values]);
-    for (var c = 0; c < snapshot.formulas.length; c++) {
-      if (snapshot.formulas[c]) sh.getRange(targetRow, c + 1).setFormula(snapshot.formulas[c]);
+  /**
+   * Merges a parallel values/formulas grid into a single write-ready block,
+   * preferring the formula string wherever a cell holds one. This lets a
+   * values-only rewrite round-trip formulas without flattening them to their
+   * last computed result.
+   * @param {Array<Array>} values - getValues() grid
+   * @param {Array<Array>} formulas - getFormulas() grid
+   * @returns {Array<Array>} Merged block
+   * @private
+   */
+  function mergeValuesAndFormulas_(values, formulas) {
+    var out = [];
+    for (var r = 0; r < values.length; r++) {
+      var row = [];
+      for (var c = 0; c < values[r].length; c++) {
+        row.push(formulas[r][c] ? formulas[r][c] : values[r][c]);
+      }
+      out.push(row);
     }
+    return out;
+  }
+
+  /**
+   * Flattens a captured snapshot into a single write-ready row, preferring the
+   * formula string where one was captured.
+   * @param {Object} snapshot - Snapshot with values/formulas arrays
+   * @param {number} width - Number of columns to emit
+   * @returns {Array} Merged row
+   * @private
+   */
+  function mergeSnapshotRow_(snapshot, width) {
+    var row = [];
+    for (var c = 0; c < width; c++) {
+      var formula = snapshot.formulas[c];
+      var value = snapshot.values[c];
+      row.push(formula ? formula : (value === undefined ? '' : value));
+    }
+    return row;
+  }
+
+  /**
+   * Reads a tracker's existing data block, preserving formulas, and pads it out
+   * to the requested height with blank rows.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {number} firstRow - First data row (row 2 for trackers)
+   * @param {number} numRows - Number of rows the write will cover
+   * @param {number} lastCol - Number of columns
+   * @returns {Array<Array>} Merged, padded block
+   * @private
+   */
+  function readMergedBlock_(sh, firstRow, numRows, lastCol) {
+    var block = [];
+    var existingLastRow = sh.getLastRow();
+    if (existingLastRow >= firstRow) {
+      var readRows = Math.min(existingLastRow, firstRow + numRows - 1) - firstRow + 1;
+      var range = sh.getRange(firstRow, 1, readRows, lastCol);
+      block = mergeValuesAndFormulas_(range.getValues(), range.getFormulas());
+    }
+    while (block.length < numRows) block.push(blankRow_(lastCol));
+    return block;
+  }
+
+  /**
+   * Rebuilds a tracker sheet's data block in a single bulk write. Snapshot rows
+   * are repositioned to their canonical row, linked columns are stamped from the
+   * Colleges sheet, and every other cell keeps its existing value/formula. This
+   * reproduces the prior per-row/per-cell restore behavior at a handful of range
+   * round-trips instead of O(rows x formulaColumns).
+   * @param {Sheet|null} sh - Tracker sheet
+   * @param {Object} snapshots - Snapshot map keyed by college name
+   * @param {Array<Object>} assignments - {trackerRow, name, coa} per college, in order
+   * @param {function(Object):Object=} extraOverridesFn - Optional per-assignment
+   *   header/value map for linked columns beyond College Name
+   * @private
+   */
+  function rebuildTrackerFromSnapshots_(sh, snapshots, assignments, extraOverridesFn) {
+    if (!sh || !assignments.length) return;
+    var lastCol = sh.getLastColumn();
+    if (lastCol < 1) return;
+    var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
+    if (!nameCol) return;
+
+    var firstRow = 2;
+    var lastWriteRow = firstRow;
+    for (var k = 0; k < assignments.length; k++) {
+      if (assignments[k].trackerRow > lastWriteRow) lastWriteRow = assignments[k].trackerRow;
+    }
+    var numRows = lastWriteRow - firstRow + 1;
+
+    var block = readMergedBlock_(sh, firstRow, numRows, lastCol);
+
+    for (var a = 0; a < assignments.length; a++) {
+      var assignment = assignments[a];
+      var offset = assignment.trackerRow - firstRow;
+      var snapshot = snapshots[assignment.name];
+      if (snapshot && !snapshot.duplicate) {
+        block[offset] = mergeSnapshotRow_(snapshot, lastCol);
+      }
+      block[offset][nameCol - 1] = assignment.name;
+
+      var overrides = extraOverridesFn ? extraOverridesFn(assignment) : null;
+      for (var header in overrides) {
+        if (!overrides.hasOwnProperty(header)) continue;
+        var c = CollegeTools.Utils.colIndex(sh, header);
+        if (c) block[offset][c - 1] = overrides[header] || '';
+      }
+    }
+
+    sh.getRange(firstRow, 1, numRows, lastCol).setValues(block);
   }
 
   /**
@@ -403,93 +507,6 @@ CollegeTools.Trackers = (function() {
 
 
   /**
-   * Builds a repair-time linked-column write target with header indexes resolved once.
-   * @param {Sheet|null} sh - Tracker sheet
-   * @param {Array<string>} linkedHeaders - Headers repaired from Colleges
-   * @returns {Object|null} Repair sync target
-   * @private
-   */
-  function buildRepairSyncTarget_(sh, linkedHeaders) {
-    if (!sh) return null;
-    var lastCol = sh.getLastColumn();
-    if (lastCol < 1) return null;
-    var headerValues = sh.getRange(1, 1, 1, lastCol).getValues()[0];
-    var columns = {};
-    var values = {};
-
-    linkedHeaders.forEach(function(header) {
-      for (var i = 0; i < headerValues.length; i++) {
-        if ((headerValues[i] || '').toString().trim() === header) {
-          columns[header] = i + 1;
-          values[header] = [];
-          return;
-        }
-      }
-    });
-
-    return {sheet: sh, columns: columns, values: values};
-  }
-
-  /**
-   * Queues linked values for a repair-time tracker update.
-   * @param {Object|null} target - Repair sync target
-   * @param {number} row - Tracker row to update
-   * @param {Object} updates - Header/value map
-   * @private
-   */
-  function queueRepairSync_(target, row, updates) {
-    if (!target) return;
-    for (var header in updates) {
-      if (!updates.hasOwnProperty(header) || !target.columns[header]) continue;
-      target.values[header].push({row: row, value: updates[header] || ''});
-    }
-  }
-
-  /**
-   * Writes queued column updates as contiguous setValues runs.
-   * @param {Sheet} sh - Tracker sheet
-   * @param {number} column - 1-based column index
-   * @param {Array<Object>} entries - Row/value entries
-   * @private
-   */
-  function flushColumnRuns_(sh, column, entries) {
-    if (!entries.length) return;
-    entries.sort(function(a, b) {
-      return a.row - b.row;
-    });
-
-    var runStart = entries[0].row;
-    var runValues = [[entries[0].value]];
-    var previousRow = entries[0].row;
-
-    for (var i = 1; i < entries.length; i++) {
-      if (entries[i].row === previousRow + 1) {
-        runValues.push([entries[i].value]);
-      } else {
-        sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
-        runStart = entries[i].row;
-        runValues = [[entries[i].value]];
-      }
-      previousRow = entries[i].row;
-    }
-
-    sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
-  }
-
-  /**
-   * Flushes queued repair-time linked updates for one tracker sheet.
-   * @param {Object|null} target - Repair sync target
-   * @private
-   */
-  function flushRepairSyncTarget_(target) {
-    if (!target) return;
-    for (var header in target.values) {
-      if (!target.values.hasOwnProperty(header)) continue;
-      flushColumnRuns_(target.sheet, target.columns[header], target.values[header]);
-    }
-  }
-
-  /**
    * Re-syncs all tracker tabs from the canonical Colleges sheet ordering.
    * This repairs stale sample/template names in existing downloaded spreadsheets.
    * @param {Object=} opts - Optional execution flags
@@ -532,12 +549,6 @@ CollegeTools.Trackers = (function() {
       applicationTimeline: snapshotRowsByCollegeName_(atSheet),
       statusTracker: snapshotRowsByCollegeName_(stSheet),
     };
-    var repairSyncTargets = {
-      financialAid: buildRepairSyncTarget_(faSheet, ['College Name', 'Total Cost of Attendance']),
-      campusVisit: buildRepairSyncTarget_(cvSheet, ['College Name']),
-      applicationTimeline: buildRepairSyncTarget_(atSheet, ['College Name']),
-      statusTracker: buildRepairSyncTarget_(stSheet, ['College Name']),
-    };
     collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.financialAid,
       CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     collectDuplicateSnapshotWarnings_(warnings, trackerSnapshots.campusVisit,
@@ -556,32 +567,28 @@ CollegeTools.Trackers = (function() {
     var coaIdx = hdrs.indexOf('Total Cost of Attendance');
     var data = collegesSheet.getRange(3, 1, lastRow - 2, lastCol).getValues();
 
+    // Build the ordered canonical assignment list once; each tracker maps a
+    // Colleges row to the same tracker row, so this drives every sheet's rebuild.
+    var assignments = [];
     for (var i = 0; i < data.length; i++) {
-      var row = i + 3;
       var collegeName = (data[i][0] || '').toString().trim();
-      var coa = '';
-      if (collegeName) {
-        coa = coaIdx >= 0 ? data[i][coaIdx] : '';
-        var trackerRow = getTrackerRowForCollegeRow_(row);
-        restoreTrackerRow_(faSheet, trackerSnapshots.financialAid, collegeName, trackerRow);
-        restoreTrackerRow_(cvSheet, trackerSnapshots.campusVisit, collegeName, trackerRow);
-        restoreTrackerRow_(atSheet, trackerSnapshots.applicationTimeline, collegeName, trackerRow);
-        restoreTrackerRow_(stSheet, trackerSnapshots.statusTracker, collegeName, trackerRow);
-        queueRepairSync_(repairSyncTargets.financialAid, trackerRow, {
-          'College Name': collegeName,
-          'Total Cost of Attendance': coa,
-        });
-        queueRepairSync_(repairSyncTargets.campusVisit, trackerRow, {'College Name': collegeName});
-        queueRepairSync_(repairSyncTargets.applicationTimeline, trackerRow, {'College Name': collegeName});
-        queueRepairSync_(repairSyncTargets.statusTracker, trackerRow, {'College Name': collegeName});
-        processed++;
-      }
+      if (!collegeName) continue;
+      assignments.push({
+        trackerRow: getTrackerRowForCollegeRow_(i + 3),
+        name: collegeName,
+        coa: coaIdx >= 0 ? data[i][coaIdx] : '',
+      });
+      processed++;
     }
 
-    flushRepairSyncTarget_(repairSyncTargets.financialAid);
-    flushRepairSyncTarget_(repairSyncTargets.campusVisit);
-    flushRepairSyncTarget_(repairSyncTargets.applicationTimeline);
-    flushRepairSyncTarget_(repairSyncTargets.statusTracker);
+    // One bulk read + write per tracker instead of per-row/per-cell round-trips.
+    rebuildTrackerFromSnapshots_(faSheet, trackerSnapshots.financialAid, assignments,
+      function(assignment) {
+        return {'Total Cost of Attendance': assignment.coa};
+      });
+    rebuildTrackerFromSnapshots_(cvSheet, trackerSnapshots.campusVisit, assignments);
+    rebuildTrackerFromSnapshots_(atSheet, trackerSnapshots.applicationTimeline, assignments);
+    rebuildTrackerFromSnapshots_(stSheet, trackerSnapshots.statusTracker, assignments);
 
     var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
     clearTrackerRows_(faSheet, firstClearRow, ['College Name', 'Total Cost of Attendance']);
