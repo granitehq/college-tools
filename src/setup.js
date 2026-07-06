@@ -60,6 +60,11 @@ CollegeTools.Setup = (function() {
       // 6. Performance optimization - trim excess rows
       CollegeTools.Utils.trimAllSheets();
 
+      // 7. Register this copy from an authorized menu action when configured.
+      if (CollegeTools.Registration && CollegeTools.Registration.registerIfNeeded) {
+        CollegeTools.Registration.registerIfNeeded();
+      }
+
       ui.alert(
         'Setup Complete! ✅',
         'College Tools is fully configured:\n\n' +

@@ -71,22 +71,22 @@ The Web App is intentionally public so copied spreadsheets can post without a se
    | --- | --- |
    | `COLLEGE_TOOLS_REGISTRY_SECRET` | The same shared secret configured on the standalone registry Web App. |
 
-3. Deploy/push the template code so `src/registration.js` and the updated `onOpen()` are present in the template.
-4. Make a throwaway copy of the template, open it, and verify that a row appears in the registry sheet.
+3. Deploy/push the template code so `src/registration.js`, the **Register for Updates** menu item, and the Complete Setup registration hook are present in the template.
+4. Make a throwaway copy of the template, open it, run **College Tools → Developer & Debug → Register for Updates** or **Complete Setup**, and verify that a row appears in the registry sheet.
 
 ## Verification
 
 After provisioning, test with a throwaway copy before relying on real user copies:
 
 1. Make a copy of the published/template spreadsheet using the same path real users will use.
-2. Open the copy and wait for `onOpen()` to finish.
+2. Open the copy and run **College Tools → Developer & Debug → Register for Updates** or **Complete Setup**.
 3. Confirm the registry sheet has a row with:
    - a non-empty `scriptId`
    - the copied `spreadsheetId`
    - the current `lastSeenVersion`
    - a fresh `lastSeenTimestamp`
 4. Reopen the same copy without changing the app version and confirm no duplicate row is created.
-5. Bump the app version in a test branch and reopen the copy; confirm the same row updates to the new version.
+5. Bump the app version in a test branch, run registration again from the menu, and confirm the same row updates to the new version.
 
 ## Troubleshooting
 

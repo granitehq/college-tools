@@ -20,6 +20,7 @@ const tests = [
   'menu-wiring-tests.js',
   'validation-coverage-tests.js',
   'update-template-link-tests.js',
+  'registration-tests.js',
   'syntax-tests.js',
 ];
 

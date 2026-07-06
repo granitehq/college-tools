@@ -80,7 +80,7 @@ This pushes the current `src/` content to the template script project and create
 Before touching real user copies:
 
 1. Make a throwaway copy of the current template/published spreadsheet.
-2. Open it once.
+2. Open it and run **College Tools → Developer & Debug → Register for Updates** or **Complete Setup**.
 3. Confirm it appears in the registry sheet.
 4. Confirm `lastSeenVersion` matches the version being released.
 
@@ -124,7 +124,7 @@ Remember that `projects.updateContent` replaces the entire file set. Ensure `src
 
 ### 7. Confirm Copies Report the New Version
 
-After pushing, ask or wait for users to open their sheets. On open, each copy should phone home again because its source now contains the new version. Confirm the registry row's `lastSeenVersion` and `lastSeenTimestamp` update.
+After pushing, ask users to run **College Tools → Developer & Debug → Register for Updates**. Each copy should phone home again because its source now contains the new version. Confirm the registry row's `lastSeenVersion` and `lastSeenTimestamp` update.
 
 ## Targeting and Safety Options
 

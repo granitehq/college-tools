@@ -12,8 +12,6 @@
  * Must be global for Google Sheets to find it.
  */
 function onOpen() {
-  CollegeTools.Registration.registerIfNeeded();
-
   SpreadsheetApp.getUi()
     .createMenu('College Tools')
     .addItem('📖 Instructions & Help', 'createInstructionsSheet')
@@ -42,6 +40,7 @@ function onOpen() {
     .addSeparator()
     .addSubMenu(SpreadsheetApp.getUi().createMenu('🛠️ Developer & Debug')
       .addItem('📋 Complete Setup (Re-run)', 'completeSetup')
+      .addItem('Register for Updates', 'registerCopyForUpdates')
       .addItem('DEBUG: Fill row (verbose)', 'debugFillCollegeRow')
       .addItem('Clear API Cache', 'clearApiCache'))
     .addSeparator()
@@ -111,5 +110,8 @@ function createInstructionsSheet() {
 }
 function quickStart() {
   return CollegeTools.Setup.quickStart();
+}
+function registerCopyForUpdates() {
+  return CollegeTools.Registration.registerCurrentCopy();
 }
 /* eslint-enable jsdoc/require-jsdoc, no-implicit-globals */

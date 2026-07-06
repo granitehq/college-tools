@@ -67,21 +67,84 @@ CollegeTools.Registration = (function() {
         muteHttpExceptions: true,
       });
       var responseCode = response.getResponseCode();
+      var responseText = response.getContentText();
+      var registryResponse = parseRegistryResponse(responseText);
 
-      if (responseCode >= 200 && responseCode < 300) {
+      if (responseCode >= 200 && responseCode < 300 && isRegistrySuccess(registryResponse)) {
         documentProperties.setProperty(DOCUMENT_VERSION_PROPERTY, version);
         return {ok: true, skipped: false, reason: 'registered'};
       }
 
-      Logger.log('Registration failed with HTTP ' + responseCode + ': ' + response.getContentText());
-      return {ok: false, skipped: false, reason: 'registry returned HTTP ' + responseCode};
+      Logger.log('Registration failed with HTTP ' + responseCode + ': ' + responseText);
+      return {
+        ok: false,
+        skipped: false,
+        reason: registryFailureReason(responseCode, registryResponse),
+      };
     } catch (err) {
       Logger.log('Registration failed: ' + err);
       return {ok: false, skipped: false, reason: String(err)};
     }
   }
 
+
+  /**
+   * Parses the registry JSON response body.
+   *
+   * @param {string} responseText Registry response body.
+   * @return {Object}
+   */
+  function parseRegistryResponse(responseText) {
+    try {
+      return JSON.parse(responseText || '{}');
+    } catch (err) {
+      return {status: 'error', message: 'invalid registry response JSON'};
+    }
+  }
+
+  /**
+   * Checks whether the registry body confirms a successful upsert.
+   *
+   * @param {Object} body Parsed registry response.
+   * @return {boolean}
+   */
+  function isRegistrySuccess(body) {
+    var bodyCode = Number(body.code || 200);
+    return body.status === 'ok' && bodyCode >= 200 && bodyCode < 300;
+  }
+
+  /**
+   * Builds a diagnostic failure reason from the registry response.
+   *
+   * @param {number} httpCode UrlFetch HTTP status.
+   * @param {Object} body Parsed registry response.
+   * @return {string}
+   */
+  function registryFailureReason(httpCode, body) {
+    if (body && body.message) {
+      return String(body.message);
+    }
+    if (body && body.status) {
+      return 'registry returned status ' + body.status;
+    }
+    return 'registry returned HTTP ' + httpCode;
+  }
+
+  /**
+   * Runs registration from an explicit menu action and reports the result.
+   *
+   * @return {{ok: boolean, skipped: boolean, reason: string}}
+   */
+  function registerCurrentCopy() {
+    var result = registerIfNeeded();
+    var ui = SpreadsheetApp.getUi();
+    var title = result.ok ? 'Registration Complete' : 'Registration Not Complete';
+    ui.alert(title, result.reason, ui.ButtonSet.OK);
+    return result;
+  }
+
   return {
     registerIfNeeded: registerIfNeeded,
+    registerCurrentCopy: registerCurrentCopy,
   };
 })();
