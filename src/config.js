@@ -53,6 +53,8 @@ CollegeTools.Config = (function() {
     'latest.earnings.10_yrs_after_entry.median',
     'latest.cost.attendance.academic_year',
     'latest.cost.avg_net_price.overall',
+    'latest.cost.tuition.out_of_state',
+    'latest.cost.tuition.in_state',
     'latest.admissions.sat_scores.25th_percentile.math',
     'latest.admissions.sat_scores.25th_percentile.critical_reading',
     'latest.admissions.sat_scores.75th_percentile.math',
@@ -60,6 +62,7 @@ CollegeTools.Config = (function() {
     'latest.admissions.sat_scores.average.overall',
     'latest.admissions.act_scores.25th_percentile.cumulative',
     'latest.admissions.act_scores.75th_percentile.cumulative',
+    'latest.admissions.test_requirements',
     'latest.aid.pell_grant_rate',
     'latest.aid.median_debt.completers.overall',
   ].join(',');
@@ -82,7 +85,8 @@ CollegeTools.Config = (function() {
       'Program Fit (1-5)', 'Academic Reputation (1-5)', 'Research Opportunities (1-5)',
       'Safety (1-5)', 'Campus Culture Fit (1-5)', 'Weather Fit (1-5)',
       'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
-      'Weighted Score', 'Admission Fit', 'Campus Setting', 'Notes',
+      'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
+      'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition', 'Notes',
     ],
 
     FINANCIAL_AID: [

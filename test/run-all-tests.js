@@ -12,6 +12,8 @@ const tests = [
   'config-schema-tests.js',
   'schema-metadata-tests.js',
   'formulas-tests.js',
+  'college-scorecard-fields-tests.js',
+  'dashboard-decision-tests.js',
   'formatting-schema-integration-tests.js',
   'menu-wiring-tests.js',
   'validation-coverage-tests.js',

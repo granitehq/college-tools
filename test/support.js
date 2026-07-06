@@ -120,6 +120,7 @@ class MockRange {
   setBackground() { return this; }
   setFontSize() { return this; }
   setFontColor() { return this; }
+  setFontStyle() { return this; }
   setBorder() { return this; }
   setNote() { return this; }
   setNumberFormat() { return this; }

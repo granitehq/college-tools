@@ -76,12 +76,17 @@ CollegeTools.Schema = (function() {
         ['WEIGHTED_SCORE', 'Weighted Score'],
         ['ADMISSION_FIT', 'Admission Fit'],
         ['CAMPUS_SETTING', 'Campus Setting'],
+        ['TEST_OPTIONAL', 'Test Optional'],
+        ['IN_STATE_TUITION', 'In-State Tuition'],
+        ['OUT_OF_STATE_TUITION', 'Out-of-State Tuition'],
+        ['APPLICABLE_TUITION', 'Applicable Tuition'],
         ['NOTES', 'Notes'],
       ]),
       apiColumns: setFromKeys([
         'CITY', 'STATE', 'REGION', 'TYPE', 'ACCEPTANCE_RATE', 'RETENTION_RATE',
         'GRAD_RATE', 'EARNINGS_10YR', 'TOTAL_COST', 'NET_PRICE', 'LINK',
         'SAT_25', 'SAT_75', 'ACT_25', 'ACT_75', 'CAMPUS_SETTING',
+        'TEST_OPTIONAL', 'IN_STATE_TUITION', 'OUT_OF_STATE_TUITION',
       ]),
       userColumns: setFromKeys([
         'COLLEGE_NAME', 'PROGRAM_FIT', 'ACADEMIC_REPUTATION', 'RESEARCH_OPPORTUNITIES',
@@ -89,7 +94,7 @@ CollegeTools.Schema = (function() {
         'PERSONAL_PRIORITY', 'NOTES',
       ]),
       formulaColumns: setFromKeys([
-        'WEIGHTED_SCORE', 'ADMISSION_FIT',
+        'WEIGHTED_SCORE', 'ADMISSION_FIT', 'APPLICABLE_TUITION',
       ]),
       linkedColumns: {},
     },
@@ -101,6 +106,9 @@ CollegeTools.Schema = (function() {
       columns: keyMap(CollegeTools.Config.HEADERS.FINANCIAL_AID, [
         ['COLLEGE_NAME', 'College Name'],
         ['TOTAL_COST', 'Total Cost of Attendance'],
+        ['SUBSIDIZED_LOANS', 'Subsidized Loans'],
+        ['UNSUBSIDIZED_LOANS', 'Unsubsidized Loans'],
+        ['PARENT_PLUS_LOANS', 'Parent PLUS Loans'],
         ['NET_PRICE_AFTER_AID', 'Net Price After Aid'],
         ['OUT_OF_POCKET_COST', 'Out-of-Pocket Cost'],
         ['FOUR_YEAR_PROJECTED_COST', '4-Year Projected Cost'],
@@ -151,6 +159,7 @@ CollegeTools.Schema = (function() {
       headers: CollegeTools.Config.HEADERS.STATUS_TRACKER,
       columns: keyMap(CollegeTools.Config.HEADERS.STATUS_TRACKER, [
         ['COLLEGE_NAME', 'College Name'],
+        ['DECISION_RESULT', 'Decision/Result'],
         ['DOCUMENTS_COMPLETE', 'Documents Complete'],
       ]),
       apiColumns: {},

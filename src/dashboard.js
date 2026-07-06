@@ -37,12 +37,291 @@ CollegeTools.Dashboard = (function() {
     return range || 'Z1:Z1';
   }
 
+
+  /**
+   * Returns a normalized midnight timestamp for date comparisons.
+   * @param {Date} value - Date-like value
+   * @returns {number|null} Timestamp or null when not a valid date
+   * @private
+   */
+  function dateTime_(value) {
+    if (!value) return null;
+    var d = value instanceof Date ? value : new Date(value);
+    if (isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }
+
+  /**
+   * Finds a row-1 column index by header.
+   * @param {Array<string>} headers - Header row values
+   * @param {string} label - Header label
+   * @returns {number} Zero-based column index or -1
+   * @private
+   */
+  function headerIndex_(headers, label) {
+    return headers.map(function(h) {
+      return (h || '').toString().trim();
+    }).indexOf(label);
+  }
+
+  /**
+   * Returns whether a tracker header represents an actionable dated item.
+   * @param {string} header - Header label
+   * @returns {boolean} True for date/deadline/open/due columns
+   * @private
+   */
+  function isDateItemHeader_(header) {
+    return /(Deadline|Due|Date|Opens)$/i.test((header || '').toString().trim());
+  }
+
+  /**
+   * Reads a sheet into header and data arrays.
+   * @param {Sheet|null} sheet - Sheet to read
+   * @returns {Object|null} Header/data payload
+   * @private
+   */
+  function readRow1Sheet_(sheet) {
+    if (!sheet || sheet.getLastColumn() < 1) return null;
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+      .map(function(h) {
+        return (h || '').toString().trim();
+      });
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return {headers: headers, rows: []};
+    return {
+      headers: headers,
+      rows: sheet.getRange(2, 1, lastRow - 1, lastCol).getValues(),
+    };
+  }
+
+  /**
+   * Infers completion for a dated tracker item from nearby/source-specific status fields.
+   * @param {string} sheetName - Tracker sheet name
+   * @param {string} header - Date item header
+   * @param {Array<string>} headers - Header labels
+   * @param {Array<*>} row - Row values
+   * @returns {string} Yes/No display value
+   * @private
+   */
+  function doneForDateItem_(sheetName, header, headers, row) {
+    /**
+     * Checks whether a status cell has an affirmative completion value.
+     * @param {string} label - Header label
+     * @returns {boolean} True when the cell looks complete
+     */
+    function hasYes(label) {
+      var idx = headerIndex_(headers, label);
+      return idx !== -1 && /^(y|yes|submitted|complete|completed|awarded)$/i.test((row[idx] || '').toString().trim());
+    }
+    /**
+     * Checks whether a row has any value for a header.
+     * @param {string} label - Header label
+     * @returns {boolean} True when present and non-empty
+     */
+    function hasValue(label) {
+      var idx = headerIndex_(headers, label);
+      return idx !== -1 && row[idx] !== '' && row[idx] !== null && row[idx] !== undefined;
+    }
+
+    if (sheetName === CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID) {
+      if (header === 'FAFSA Deadline') return hasYes('FAFSA Submitted (Y/N)') ? 'Yes' : 'No';
+      if (header === 'CSS Deadline') return hasYes('CSS Profile Submitted (Y/N)') ? 'Yes' : 'No';
+      if (header === 'Priority Deadline') return hasYes('Aid Requirements Complete') ? 'Yes' : 'No';
+    }
+
+    if (sheetName === CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE) {
+      var completionIdx = headerIndex_(headers, 'Completion Status (%)');
+      var completion = completionIdx !== -1 ? Number(row[completionIdx]) : 0;
+      return completion >= 100 ? 'Yes' : 'No';
+    }
+
+    if (sheetName === CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER) {
+      if (header === 'Submitted Date') return hasValue('Submitted Date') ? 'Yes' : 'No';
+      if (header === 'Portfolio Submitted (Date)') return hasValue('Portfolio Submitted (Date)') ? 'Yes' : 'No';
+      return hasYes('Documents Complete') ? 'Yes' : 'No';
+    }
+
+    if (sheetName === CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER) {
+      var awardIdx = headerIndex_(headers, 'Award Status (Pending/Awarded/Declined)');
+      var award = awardIdx !== -1 ? (row[awardIdx] || '').toString().trim() : '';
+      if (/^(Awarded|Declined)$/i.test(award)) return 'Yes';
+      if (header === 'Application Submitted Date') return hasValue('Application Submitted Date') ? 'Yes' : 'No';
+      return 'No';
+    }
+
+    return 'No';
+  }
+
+  /**
+   * Builds the next-60-days deadline table across tracker sheets.
+   * @param {Spreadsheet} ss - Workbook
+   * @param {Date=} todayOverride - Optional test/control date
+   * @returns {Array<Array<*>>} Due-next rows
+   * @private
+   */
+  function buildDueNextRows_(ss, todayOverride) {
+    var today = dateTime_(todayOverride || new Date());
+    var cutoff = today + (60 * 24 * 60 * 60 * 1000);
+    var cn = CollegeTools.Config.SHEET_NAMES;
+    var sources = [
+      {sheetName: cn.FINANCIAL_AID, sourceLabel: 'Financial Aid Tracker', nameHeader: 'College Name'},
+      {sheetName: cn.APPLICATION_TIMELINE, sourceLabel: 'Application Timeline', nameHeader: 'College Name'},
+      {sheetName: cn.STATUS_TRACKER, sourceLabel: 'Application Status Tracker', nameHeader: 'College Name'},
+      {sheetName: cn.CAMPUS_VISIT, sourceLabel: 'Campus Visit Tracker', nameHeader: 'College Name'},
+      {sheetName: cn.SCHOLARSHIP_TRACKER, sourceLabel: 'Scholarship Tracker', nameHeader: 'Scholarship Name'},
+    ];
+    var out = [];
+
+    sources.forEach(function(source) {
+      var sheet = ss.getSheetByName(source.sheetName);
+      var data = readRow1Sheet_(sheet);
+      if (!data) return;
+      var nameIdx = headerIndex_(data.headers, source.nameHeader);
+      if (nameIdx === -1) return;
+
+      data.headers.forEach(function(header, dateIdx) {
+        if (!isDateItemHeader_(header)) return;
+        data.rows.forEach(function(row) {
+          var name = row[nameIdx];
+          var dateValue = row[dateIdx];
+          var due = dateTime_(dateValue);
+          if (!name || due === null || due < today || due > cutoff) return;
+          out.push([
+            name,
+            source.sourceLabel + ': ' + header,
+            dateValue,
+            Math.round((due - today) / (24 * 60 * 60 * 1000)),
+            doneForDateItem_(source.sheetName, header, data.headers, row),
+          ]);
+        });
+      });
+    });
+
+    out.sort(function(a, b) {
+      return dateTime_(a[2]) - dateTime_(b[2]) || String(a[0]).localeCompare(String(b[0]));
+    });
+    return out;
+  }
+
+  /**
+   * Builds a map keyed by college name from a row-1 sheet.
+   * @param {Sheet|null} sheet - Source sheet
+   * @returns {Object} Map of college name to row payload
+   * @private
+   */
+  function mapRowsByCollege_(sheet) {
+    var data = readRow1Sheet_(sheet);
+    var out = {};
+    if (!data) return out;
+    var nameIdx = headerIndex_(data.headers, 'College Name');
+    if (nameIdx === -1) return out;
+    data.rows.forEach(function(row) {
+      var name = (row[nameIdx] || '').toString().trim();
+      if (name) out[name] = {headers: data.headers, row: row};
+    });
+    return out;
+  }
+
+  /**
+   * Builds a map of Colleges sheet weighted scores keyed by college name.
+   * @param {Sheet|null} collegesSheet - Colleges sheet
+   * @returns {Object} Weighted scores by college name
+   * @private
+   */
+  function weightedScoresByCollege_(collegesSheet) {
+    var out = {};
+    if (!collegesSheet || collegesSheet.getLastRow() < 3) return out;
+    var nameCol = CollegeTools.Schema.columnIndex('COLLEGES', 'COLLEGE_NAME', collegesSheet);
+    var scoreCol = CollegeTools.Schema.columnIndex('COLLEGES', 'WEIGHTED_SCORE', collegesSheet);
+    if (!nameCol || !scoreCol) return out;
+    var rows = collegesSheet.getRange(3, 1, collegesSheet.getLastRow() - 2, collegesSheet.getLastColumn()).getValues();
+    rows.forEach(function(row) {
+      var name = (row[nameCol - 1] || '').toString().trim();
+      if (name) out[name] = row[scoreCol - 1];
+    });
+    return out;
+  }
+
+  /**
+   * Builds the accepted-offer comparison table.
+   * @param {Spreadsheet} ss - Workbook
+   * @returns {Array<Array<*>>} Offer rows
+   * @private
+   */
+  function buildOfferComparisonRows_(ss) {
+    var cn = CollegeTools.Config.SHEET_NAMES;
+    var status = readRow1Sheet_(ss.getSheetByName(cn.STATUS_TRACKER));
+    if (!status) return [];
+    var nameIdx = headerIndex_(status.headers, 'College Name');
+    var decisionIdx = headerIndex_(status.headers, 'Decision/Result');
+    if (nameIdx === -1 || decisionIdx === -1) return [];
+
+    var financialByName = mapRowsByCollege_(ss.getSheetByName(cn.FINANCIAL_AID));
+    var scoresByName = weightedScoresByCollege_(ss.getSheetByName(cn.COLLEGES));
+    var out = [];
+
+    status.rows.forEach(function(statusRow) {
+      var decision = (statusRow[decisionIdx] || '').toString().toLowerCase();
+      if (decision.indexOf('accept') === -1 && decision.indexOf('admit') === -1) return;
+      var name = (statusRow[nameIdx] || '').toString().trim();
+      if (!name) return;
+      var fin = financialByName[name];
+      var headers = fin ? fin.headers : [];
+      var row = fin ? fin.row : [];
+      /**
+       * Reads the financial row value for a header.
+       * @param {string} label - Header label
+       * @returns {*} Cell value or blank
+       */
+      function value(label) {
+        var idx = headerIndex_(headers, label);
+        return idx === -1 ? '' : row[idx];
+      }
+      var annualNet = value('Out-of-Pocket Cost');
+      var fourYear = value('4-Year Projected Cost');
+      var loanBurden = (Number(value('Subsidized Loans')) || 0) +
+        (Number(value('Unsubsidized Loans')) || 0) +
+        (Number(value('Parent PLUS Loans')) || 0);
+      loanBurden = loanBurden ? loanBurden * 4 : '';
+      out.push([name, annualNet, fourYear, loanBurden, scoresByName[name] || '']);
+    });
+
+    out.sort(function(a, b) {
+      var ac = Number(a[2]) || Number.MAX_SAFE_INTEGER;
+      var bc = Number(b[2]) || Number.MAX_SAFE_INTEGER;
+      return ac - bc || String(a[0]).localeCompare(String(b[0]));
+    });
+    return out;
+  }
+
+  /**
+   * Writes a compact dashboard table.
+   * @param {Sheet} sh - Dashboard sheet
+   * @param {number} startRow - Table header row
+   * @param {Array<string>} headers - Table headers
+   * @param {Array<Array<*>>} rows - Table rows
+   * @param {string} emptyMessage - Message when no rows are available
+   * @private
+   */
+  function writeDashboardTable_(sh, startRow, headers, rows, emptyMessage) {
+    sh.getRange(startRow, 1, 1, headers.length).setValues([headers]);
+    sh.getRange(startRow, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f3f4');
+    if (!rows.length) {
+      sh.getRange(startRow + 1, 1).setValue(emptyMessage).setFontStyle('italic').setFontColor('#666666');
+      return;
+    }
+    sh.getRange(startRow + 1, 1, rows.length, headers.length).setValues(rows);
+  }
+
   /**
    * Creates or updates the Dashboard sheet with key metrics and visualizations.
    * @param {Spreadsheet} ss - The spreadsheet object
+   * @param {Object=} opts - Optional execution settings
    * @private
    */
-  function createOrUpdateDashboard(ss) {
+  function createOrUpdateDashboard(ss, opts) {
+    opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
     var cn = CollegeTools.Config.SHEET_NAMES;
@@ -180,7 +459,7 @@ CollegeTools.Dashboard = (function() {
     if (scholarshipSheet && scholarshipSheet.getLastRow() > 1 &&
         scholarshipSheet.getLastColumn() >= scholarshipHeaderCount) {
       sh.getRange(row, 1).setValue('Total Applied:');
-      sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER + '!A2:A1000), 0)');
+      sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!A2:A1000), 0)');
       row++;
 
       sh.getRange(row, 1).setValue('Pending Applications:');
@@ -209,33 +488,59 @@ CollegeTools.Dashboard = (function() {
       sh.getRange(row, 1).setFontStyle('italic').setFontColor('#666666');
     }
 
+    // Section 6: real next-deadline table. Fixed rows keep the dashboard scannable.
+    row = 31;
+    sh.getRange(row, 1).setValue('What\'s Due Next').setFontWeight('bold').setFontSize(14);
+    writeDashboardTable_(sh, row + 2,
+      ['College/Source', 'Item', 'Date', 'Days Left', 'Done?'],
+      buildDueNextRows_(ss, opts && opts.today).slice(0, 15),
+      'No dated tracker items due in the next 60 days.');
+    sh.getRange(row + 3, 3, 16, 1).setNumberFormat('m/d/yyyy');
+
+    // Section 7: decision-time accepted-offer comparison.
+    row = 52;
+    sh.getRange(row, 1).setValue('Accepted Offer Comparison').setFontWeight('bold').setFontSize(14);
+    writeDashboardTable_(sh, row + 2,
+      ['College', 'Annual Net Cost', '4-Year Total', 'Loan Burden at Graduation', 'Weighted Score'],
+      buildOfferComparisonRows_(ss),
+      'No accepted offers recorded yet.');
+    sh.getRange(row + 3, 2, 20, 3).setNumberFormat('$#,##0');
+    sh.getRange(row + 3, 5, 20, 1).setNumberFormat('0.00');
+
     // Auto-resize columns
-    for (var c = 1; c <= 2; c++) {
+    for (var c = 1; c <= 5; c++) {
       sh.autoResizeColumn(c);
     }
 
     // Set column widths for better display
-    sh.setColumnWidth(1, 200);
-    sh.setColumnWidth(2, 150);
+    sh.setColumnWidth(1, 220);
+    sh.setColumnWidth(2, 220);
+    sh.setColumnWidth(3, 140);
+    sh.setColumnWidth(4, 160);
+    sh.setColumnWidth(5, 120);
   }
 
   /**
    * Creates or updates the Dashboard sheet with all metrics and data.
+   * @param {Object=} opts - Optional execution settings
    */
-  function setupDashboard() {
+  function setupDashboard(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
-    createOrUpdateDashboard(ss);
-    SpreadsheetApp.getUi().alert('Dashboard created!');
+    createOrUpdateDashboard(ss, opts);
+    if (!opts.suppressAlert) SpreadsheetApp.getUi().alert('Dashboard created!');
   }
 
   /**
    * Refreshes all dashboard data. All Dashboard values are live formulas, so
    * this rebuilds the sheet to pick up any schema/header changes since setup.
+   * @param {Object=} opts - Optional execution settings
    */
-  function refreshDashboard() {
+  function refreshDashboard(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
-    createOrUpdateDashboard(ss);
-    SpreadsheetApp.getUi().alert('Dashboard data refreshed!');
+    createOrUpdateDashboard(ss, opts);
+    if (!opts.suppressAlert) SpreadsheetApp.getUi().alert('Dashboard data refreshed!');
   }
 
   // Public API

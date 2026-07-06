@@ -58,6 +58,24 @@ CollegeTools.Colleges = (function() {
     return !trimmed || /^\d+\.\d+\.\d+\s*\|/.test(trimmed);
   }
 
+
+  /**
+   * Maps College Scorecard test requirement codes to a simple Test Optional value.
+   * @param {*} code - Scorecard test requirement code or label
+   * @returns {string} Yes/No/Unknown display value
+   * @private
+   */
+  function testOptionalFromRequirement_(code) {
+    if (code === null || code === undefined || code === '') return '';
+    var value = String(code).toLowerCase().trim();
+    if (value === '1' || value === 'required') return 'No';
+    if (value === '2' || value.indexOf('recommend') !== -1) return 'No';
+    if (value === '3' || value === '4' || value === '5' ||
+        value.indexOf('optional') !== -1 || value.indexOf('not required') !== -1 ||
+        value.indexOf('neither') !== -1 || value.indexOf('considered') !== -1) return 'Yes';
+    return 'Unknown';
+  }
+
   /**
    * Returns whether a Colleges header should be preserved when refreshing a row.
    * User-entered rating columns and formula columns should survive replacing a college.
@@ -268,6 +286,10 @@ CollegeTools.Colleges = (function() {
         ACT25: columnIndexes.ACT25,
         ACT75: columnIndexes.ACT75,
         CAMPUS_SETTING: columnIndexes.CAMPUS_SETTING,
+        TEST_OPTIONAL: columnIndexes.TEST_OPTIONAL,
+        IN_STATE_TUITION: columnIndexes.IN_STATE_TUITION,
+        OUT_OF_STATE_TUITION: columnIndexes.OUT_OF_STATE_TUITION,
+        APPLICABLE_TUITION: columnIndexes.APPLICABLE_TUITION,
         NOTES: columnIndexes.NOTES,
       };
       idxRegion0 = columnIndexes.REGION !== -1 ? columnIndexes.REGION - 1 : -1;
@@ -296,6 +318,10 @@ CollegeTools.Colleges = (function() {
         ACT25: requireCol_(hdrs, 'ACT 25%'),
         ACT75: requireCol_(hdrs, 'ACT 75%'),
         CAMPUS_SETTING: hdrs.indexOf('Campus Setting') !== -1 ? requireCol_(hdrs, 'Campus Setting') : -1,
+        TEST_OPTIONAL: hdrs.indexOf('Test Optional') !== -1 ? requireCol_(hdrs, 'Test Optional') : -1,
+        IN_STATE_TUITION: hdrs.indexOf('In-State Tuition') !== -1 ? requireCol_(hdrs, 'In-State Tuition') : -1,
+        OUT_OF_STATE_TUITION: hdrs.indexOf('Out-of-State Tuition') !== -1 ? requireCol_(hdrs, 'Out-of-State Tuition') : -1,
+        APPLICABLE_TUITION: hdrs.indexOf('Applicable Tuition') !== -1 ? requireCol_(hdrs, 'Applicable Tuition') : -1,
         NOTES: requireCol_(hdrs, 'Notes'),
       };
       idxRegion0 = hdrs.indexOf('Region');
@@ -341,6 +367,9 @@ CollegeTools.Colleges = (function() {
     var earnings10 = r['latest.earnings.10_yrs_after_entry.median'] || '';
     var coa = r['latest.cost.attendance.academic_year'] || '';
     var netPrice = r['latest.cost.avg_net_price.overall'] || '';
+    var inStateTuition = r['latest.cost.tuition.in_state'] || '';
+    var outOfStateTuition = r['latest.cost.tuition.out_of_state'] || '';
+    var testOptional = testOptionalFromRequirement_(r['latest.admissions.test_requirements']);
 
     /**
      * Converts value to number or null if empty.
@@ -387,7 +416,16 @@ CollegeTools.Colleges = (function() {
       [COL.ACT75, act75],
     ];
     if (COL.CAMPUS_SETTING !== -1) writes.push([COL.CAMPUS_SETTING, campusSetting]);
+    if (COL.TEST_OPTIONAL !== -1) writes.push([COL.TEST_OPTIONAL, testOptional]);
+    if (COL.IN_STATE_TUITION !== -1) writes.push([COL.IN_STATE_TUITION, inStateTuition]);
+    if (COL.OUT_OF_STATE_TUITION !== -1) writes.push([COL.OUT_OF_STATE_TUITION, outOfStateTuition]);
     if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
+    if (COL.APPLICABLE_TUITION !== -1 && COL.IN_STATE_TUITION !== -1 && COL.OUT_OF_STATE_TUITION !== -1) {
+      sh.getRange(row, COL.APPLICABLE_TUITION).setFormula('=IF(State_Residency=' +
+        CollegeTools.Utils.addr(row, COL.STATE) + ',' +
+        CollegeTools.Utils.addr(row, COL.IN_STATE_TUITION) + ',' +
+        CollegeTools.Utils.addr(row, COL.OUT_OF_STATE_TUITION) + ')');
+    }
     writes.forEach(function(w) {
       sh.getRange(row, w[0]).setValue(w[1] || '');
     });
@@ -578,6 +616,10 @@ CollegeTools.Colleges = (function() {
       ACT25: requireCol_(hdrs, 'ACT 25%'),
       ACT75: requireCol_(hdrs, 'ACT 75%'),
       CAMPUS_SETTING: hdrs.indexOf('Campus Setting') !== -1 ? requireCol_(hdrs, 'Campus Setting') : -1,
+      TEST_OPTIONAL: hdrs.indexOf('Test Optional') !== -1 ? requireCol_(hdrs, 'Test Optional') : -1,
+      IN_STATE_TUITION: hdrs.indexOf('In-State Tuition') !== -1 ? requireCol_(hdrs, 'In-State Tuition') : -1,
+      OUT_OF_STATE_TUITION: hdrs.indexOf('Out-of-State Tuition') !== -1 ? requireCol_(hdrs, 'Out-of-State Tuition') : -1,
+      APPLICABLE_TUITION: hdrs.indexOf('Applicable Tuition') !== -1 ? requireCol_(hdrs, 'Applicable Tuition') : -1,
       NOTES: requireCol_(hdrs, 'Notes'),
       REGION: hdrs.indexOf('Region') !== -1 ? hdrs.indexOf('Region') + 1 : -1,
       HEADERS: hdrs,
