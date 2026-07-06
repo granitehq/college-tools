@@ -27,6 +27,7 @@
     "src/colleges.js",
     "src/admissions.js",
     "src/setup.js",
+    "src/registration.js",
     "src/menu.js"
   ],
   "skipSubdirectories": false

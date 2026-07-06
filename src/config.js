@@ -16,6 +16,12 @@ CollegeTools.Config = (function() {
   // Version information
   var VERSION = '2.6.3';
 
+  // Copy registration configuration. Leave ENDPOINT_URL blank in local/dev
+  // builds; set it to the deployed registry Web App URL for release builds.
+  var REGISTRATION_CONFIG = {
+    ENDPOINT_URL: '',
+  };
+
   // Sheet names
   var SHEET_NAMES = {
     INSTRUCTIONS: 'Instructions',
@@ -161,6 +167,7 @@ CollegeTools.Config = (function() {
   // Public API
   return {
     VERSION: VERSION,
+    REGISTRATION_CONFIG: REGISTRATION_CONFIG,
     SHEET_NAMES: SHEET_NAMES,
     API_CONFIG: API_CONFIG,
     API_FIELDS: API_FIELDS,
