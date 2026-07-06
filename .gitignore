@@ -103,3 +103,8 @@ test/coverage/
 **/ScorecardAPIKey*
 **/*apikey*
 **/*secret*
+
+# Direct push workflow local credentials/backups
+credentials.json
+token.json
+backups/

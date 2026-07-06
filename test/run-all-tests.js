@@ -9,6 +9,7 @@ const tests = [
   'regression-tests.js',
   'template-integrity-tests.js',
   'workbook-repair-tests.js',
+  'perf-batching-tests.js',
   'config-schema-tests.js',
   'schema-metadata-tests.js',
   'formulas-tests.js',
@@ -20,6 +21,8 @@ const tests = [
   'menu-wiring-tests.js',
   'validation-coverage-tests.js',
   'update-template-link-tests.js',
+  'push-updates-tests.js',
+  'registration-tests.js',
   'syntax-tests.js',
 ];
 

@@ -433,6 +433,27 @@ CollegeTools.Dashboard = (function() {
   }
 
   /**
+   * Writes a run of label/formula statistic rows (column A label, column B
+   * formula) in a single setValues call instead of two range writes per row,
+   * then applies any per-row number formats.
+   * @param {Sheet} sh - Dashboard sheet
+   * @param {number} startRow - First stat row
+   * @param {Array<{label: string, formula: string, numberFormat: (string|undefined)}>} entries - Stat rows
+   * @returns {number} First row after the block
+   * @private
+   */
+  function writeStatRows_(sh, startRow, entries) {
+    var block = entries.map(function(entry) {
+      return [entry.label, entry.formula];
+    });
+    sh.getRange(startRow, 1, block.length, 2).setValues(block);
+    entries.forEach(function(entry, i) {
+      if (entry.numberFormat) sh.getRange(startRow + i, 2).setNumberFormat(entry.numberFormat);
+    });
+    return startRow + block.length;
+  }
+
+  /**
    * Creates or updates the Dashboard sheet with key metrics and visualizations.
    * @param {Spreadsheet} ss - The spreadsheet object
    * @param {Object=} opts - Optional execution settings
@@ -473,100 +494,76 @@ CollegeTools.Dashboard = (function() {
     var row = 3;
     sh.getRange(row, 1).setValue('📈 Key Statistics').setFontWeight('bold').setFontSize(14);
     row += 2;
-
-    // College count
-    sh.getRange(row, 1).setValue('Total Colleges:');
-    sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) + '), 0)');
-    row++;
-
-    // Average acceptance rate
-    sh.getRange(row, 1).setValue('Average Acceptance Rate:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rAcceptance) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('0.0%');
-    row++;
-
-    // Average total cost
-    sh.getRange(row, 1).setValue('Average Total Cost:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rTotalCost) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('$#,##0');
-    row++;
-
-    // Average net price
-    sh.getRange(row, 1).setValue('Average Net Price:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('$#,##0');
-    row++;
-
-    // Average weighted score
-    sh.getRange(row, 1).setValue('Average Weighted Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('0.00');
-    row += 2;
+    row = writeStatRows_(sh, row, [
+      {label: 'Total Colleges:',
+        formula: '=IFERROR(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) + '), 0)'},
+      {label: 'Average Acceptance Rate:',
+        formula: '=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rAcceptance) + '), "No data")',
+        numberFormat: '0.0%'},
+      {label: 'Average Total Cost:',
+        formula: '=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rTotalCost) + '), "No data")',
+        numberFormat: '$#,##0'},
+      {label: 'Average Net Price:',
+        formula: '=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")',
+        numberFormat: '$#,##0'},
+      {label: 'Average Weighted Score:',
+        formula: '=IFERROR(AVERAGE(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")',
+        numberFormat: '0.00'},
+    ]);
+    row += 1;
 
     // Section 2: Cost Analysis
     sh.getRange(row, 1).setValue('💰 Cost Analysis').setFontWeight('bold').setFontSize(14);
     row += 2;
-
-    sh.getRange(row, 1).setValue('Lowest Cost College:');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MIN(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
-      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")');
-    row++;
-
-    sh.getRange(row, 1).setValue('Lowest Net Price:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MIN(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('$#,##0');
-    row++;
-
-    sh.getRange(row, 1).setValue('Highest Cost College:');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
-      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")');
-    row++;
-
-    sh.getRange(row, 1).setValue('Highest Net Price:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('$#,##0');
-    row += 2;
+    row = writeStatRows_(sh, row, [
+      {label: 'Lowest Cost College:',
+        formula: '=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+          ',MATCH(MIN(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
+          CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")'},
+      {label: 'Lowest Net Price:',
+        formula: '=IFERROR(MIN(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")',
+        numberFormat: '$#,##0'},
+      {label: 'Highest Cost College:',
+        formula: '=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+          ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '),' +
+          CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + ',0)), "No data")'},
+      {label: 'Highest Net Price:',
+        formula: '=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rNetPrice) + '), "No data")',
+        numberFormat: '$#,##0'},
+    ]);
+    row += 1;
 
     // Section 3: Top Performers
     sh.getRange(row, 1).setValue('🏆 Top Performers').setFontWeight('bold').setFontSize(14);
     row += 2;
-
-    sh.getRange(row, 1).setValue('Highest Weighted Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
-      ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '),' +
-      CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + ',0)), "No data")');
-    row++;
-
-    sh.getRange(row, 1).setValue('Top Score:');
-    sh.getRange(row, 2).setFormula('=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")');
-    sh.getRange(row, 2).setNumberFormat('0.00');
-    row += 2;
+    row = writeStatRows_(sh, row, [
+      {label: 'Highest Weighted Score:',
+        formula: '=IFERROR(INDEX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rCollegeName) +
+          ',MATCH(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '),' +
+          CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + ',0)), "No data")'},
+      {label: 'Top Score:',
+        formula: '=IFERROR(MAX(' + CollegeTools.Formulas.sheetRef(cn.COLLEGES) + '!' + safeRange_(rWeighted) + '), "No data")',
+        numberFormat: '0.00'},
+    ]);
+    row += 1;
 
     // Section 4: Progress Tracking
     sh.getRange(row, 1).setValue('📋 Progress Tracking').setFontWeight('bold').setFontSize(14);
     row += 2;
-
-    // Application Progress
-    sh.getRange(row, 1).setValue('Application Documents:');
-    sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
-      ',"*✅*")&"/"&COUNTA(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) + ')&" Complete", "No data")');
-    row++;
-
-    // Financial Aid Progress
-    sh.getRange(row, 1).setValue('Financial Aid Requirements:');
-    sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
-      ',"*✅*")&"/"&COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + ')&" Complete", "No data")');
-    row++;
-
-    // Overall Progress Percentage
-    sh.getRange(row, 1).setValue('Overall Completion:');
-    sh.getRange(row, 2).setFormula('=IFERROR(ROUND((COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
-      ',"*✅*")+COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
-      ',"*✅*"))/(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) +
-      ')+COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + '))*100,0)&"%", "No data")');
-    row += 3;
+    row = writeStatRows_(sh, row, [
+      {label: 'Application Documents:',
+        formula: '=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
+          ',"*✅*")&"/"&COUNTA(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) + ')&" Complete", "No data")'},
+      {label: 'Financial Aid Requirements:',
+        formula: '=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
+          ',"*✅*")&"/"&COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + ')&" Complete", "No data")'},
+      {label: 'Overall Completion:',
+        formula: '=IFERROR(ROUND((COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rDocuments) +
+          ',"*✅*")+COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rAidReq) +
+          ',"*✅*"))/(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.STATUS_TRACKER) + '!' + safeRange_(rStName) +
+          ')+COUNTA(' + CollegeTools.Formulas.sheetRef(cn.FINANCIAL_AID) + '!' + safeRange_(rFaName) + '))*100,0)&"%", "No data")'},
+    ]);
+    row += 2;
 
     // Section 5: Scholarship Summary
     sh.getRange(row, 1).setValue('🎓 Scholarship Summary').setFontWeight('bold').setFontSize(14);
@@ -576,29 +573,22 @@ CollegeTools.Dashboard = (function() {
     var scholarshipHeaderCount = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER.length;
     if (scholarshipSheet && scholarshipSheet.getLastRow() > 1 &&
         scholarshipSheet.getLastColumn() >= scholarshipHeaderCount) {
-      sh.getRange(row, 1).setValue('Total Applied:');
-      sh.getRange(row, 2).setFormula('=IFERROR(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!A2:A1000), 0)');
-      row++;
-
-      sh.getRange(row, 1).setValue('Pending Applications:');
-      sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Pending"), 0)');
-      row++;
-
-      sh.getRange(row, 1).setValue('Awards Received:');
-      sh.getRange(row, 2).setFormula('=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Awarded"), 0)');
-      row++;
-
-      sh.getRange(row, 1).setValue('Total Amount Awarded:');
-      sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
-        ',"Awarded",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAmtAwarded) + '), 0)');
-      sh.getRange(row, 2).setNumberFormat('$#,##0');
-      row++;
-
-      sh.getRange(row, 1).setValue('Potential Amount (Pending):');
-      sh.getRange(row, 2).setFormula('=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
-        ',"Pending",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rSkAmount) + '), 0)');
-      sh.getRange(row, 2).setNumberFormat('$#,##0');
-      row++;
+      row = writeStatRows_(sh, row, [
+        {label: 'Total Applied:',
+          formula: '=IFERROR(COUNTA(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!A2:A1000), 0)'},
+        {label: 'Pending Applications:',
+          formula: '=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Pending"), 0)'},
+        {label: 'Awards Received:',
+          formula: '=IFERROR(COUNTIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) + ',"Awarded"), 0)'},
+        {label: 'Total Amount Awarded:',
+          formula: '=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
+            ',"Awarded",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAmtAwarded) + '), 0)',
+          numberFormat: '$#,##0'},
+        {label: 'Potential Amount (Pending):',
+          formula: '=IFERROR(SUMIF(' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rAwardStatus) +
+            ',"Pending",' + CollegeTools.Formulas.sheetRef(cn.SCHOLARSHIP_TRACKER) + '!' + safeRange_(rSkAmount) + '), 0)',
+          numberFormat: '$#,##0'},
+      ]);
     } else if (scholarshipSheet) {
       sh.getRange(row, 1).setValue('(Scholarship Tracker is empty - run "Add/Update Trackers" to set it up)');
       sh.getRange(row, 1).setFontStyle('italic').setFontColor('#666666');

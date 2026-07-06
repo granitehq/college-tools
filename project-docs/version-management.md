@@ -31,7 +31,7 @@ There are two Google Sheets in play, analogous to non-production and production:
 
 ### Why only the website holds the ID
 
-`README.md`, `GEMINI.md`, `project-docs/Offering-Options.md`, and the in-sheet "Get the latest template" link (`src/instructions.js`) all point to `https://college-tools.granite-hq.com/getting-started` instead of a raw Sheets URL. That page is the only place with the actual current published Sheets ID. This means:
+`README.md`, `GEMINI.md`, `project-docs/offering-options.md`, and the in-sheet "Get the latest template" link (`src/instructions.js`) all point to `https://college-tools.granite-hq.com/getting-started` instead of a raw Sheets URL. That page is the only place with the actual current published Sheets ID. This means:
 
 - Promoting a release only requires editing 3 HTML files, not 5+ scattered locations.
 - There's no chicken-and-egg problem — code shipped inside a spreadsheet copy can safely reference "the website" without knowing its own future published ID in advance.
@@ -71,7 +71,7 @@ Only do this once you've verified the template (formulas, dashboard, Setup/Repai
 5. Run `npm run release:promote -- <new-id>` — this rewrites the "Copy Template" link in `docs/index.html`, `docs/features.html`, and `docs/getting-started.html` in one shot (`scripts/update-template-link.js`).
 6. Review with `git diff`, commit, and push — Cloudflare Pages redeploys the website automatically.
 
-Existing users who already copied an older published version are unaffected either way — each copy has its own independent Apps Script project frozen at copy time. There's no auto-update mechanism for already-distributed copies (see `ARCHITECTURE_REVIEW.md` item A5 for the closest planned thing, a deadline email digest, which is unrelated to code updates).
+Existing users who already copied an older published version are unaffected either way — each copy has its own independent Apps Script project frozen at copy time. There's no auto-update mechanism for already-distributed copies (see `archive/architecture-review.md` item A5 for the closest planned thing, a deadline email digest, which is unrelated to code updates).
 
 You can leave old published copies in Drive indefinitely (they cost nothing and don't need to be deleted) or trash them — nothing references them once the website link is updated.
 
