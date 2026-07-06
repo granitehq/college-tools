@@ -1,6 +1,6 @@
 /**
  * Workbook schema metadata and column ownership boundaries.
- * @version 2.6.3
+ * @version 2.6.4
  * @author College Tools
  * @description Central sheet schema definitions for safe refactoring
  */
