@@ -1,6 +1,6 @@
 /**
  * College Scorecard API client with hardening features
- * @version 2.6.1
+ * @version 2.6.2
  * @author College Tools
  * @description Hardened API client with retry logic, caching, and an execution-time guard
  */
