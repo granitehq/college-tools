@@ -83,6 +83,7 @@ CollegeTools.Schema = (function() {
         ['TYPICAL_DEBT', 'Typical Debt at Graduation'],
         ['PELL_GRANT_RATE', 'Pell Grant Rate'],
         ['NOTES', 'Notes'],
+        ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: setFromKeys([
         'CITY', 'STATE', 'REGION', 'TYPE', 'ACCEPTANCE_RATE', 'RETENTION_RATE',
@@ -99,6 +100,7 @@ CollegeTools.Schema = (function() {
       formulaColumns: setFromKeys([
         'WEIGHTED_SCORE', 'ADMISSION_FIT', 'APPLICABLE_TUITION',
       ]),
+      systemColumns: setFromKeys(['COLLEGE_ID']),
       linkedColumns: {},
     },
 
@@ -150,6 +152,7 @@ CollegeTools.Schema = (function() {
         ['FINANCIAL_SAFETY', 'Financial Safety'],
         ['FOUR_YEAR_BURDEN', '4-Year Burden'],
         ['AID_REQUIREMENTS_COMPLETE', 'Aid Requirements Complete'],
+        ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: {},
       userColumns: {},
@@ -157,7 +160,8 @@ CollegeTools.Schema = (function() {
         'NET_PRICE_AFTER_AID', 'OUT_OF_POCKET_COST', 'FOUR_YEAR_PROJECTED_COST',
         'FINANCIAL_SAFETY', 'FOUR_YEAR_BURDEN', 'AID_REQUIREMENTS_COMPLETE',
       ]),
-      linkedColumns: setFromKeys(['COLLEGE_NAME', 'TOTAL_COST']),
+      systemColumns: setFromKeys(['COLLEGE_ID']),
+      linkedColumns: setFromKeys(['COLLEGE_NAME', 'TOTAL_COST', 'COLLEGE_ID']),
     },
     CAMPUS_VISIT: {
       sheetName: CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT,
@@ -167,11 +171,13 @@ CollegeTools.Schema = (function() {
       columns: keyMap(CollegeTools.Config.HEADERS.CAMPUS_VISIT, [
         ['COLLEGE_NAME', 'College Name'],
         ['VISIT_SCORE', 'Visit Score'],
+        ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: {},
       userColumns: {},
       formulaColumns: setFromKeys(['VISIT_SCORE']),
-      linkedColumns: setFromKeys(['COLLEGE_NAME']),
+      systemColumns: setFromKeys(['COLLEGE_ID']),
+      linkedColumns: setFromKeys(['COLLEGE_NAME', 'COLLEGE_ID']),
     },
     APPLICATION_TIMELINE: {
       sheetName: CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE,
@@ -181,11 +187,13 @@ CollegeTools.Schema = (function() {
       columns: keyMap(CollegeTools.Config.HEADERS.APPLICATION_TIMELINE, [
         ['COLLEGE_NAME', 'College Name'],
         ['DAYS_UNTIL_DEADLINE', 'Days Until Deadline (App)'],
+        ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: {},
       userColumns: {},
       formulaColumns: setFromKeys(['DAYS_UNTIL_DEADLINE']),
-      linkedColumns: setFromKeys(['COLLEGE_NAME']),
+      systemColumns: setFromKeys(['COLLEGE_ID']),
+      linkedColumns: setFromKeys(['COLLEGE_NAME', 'COLLEGE_ID']),
     },
     STATUS_TRACKER: {
       sheetName: CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER,
@@ -196,11 +204,13 @@ CollegeTools.Schema = (function() {
         ['COLLEGE_NAME', 'College Name'],
         ['DECISION_RESULT', 'Decision/Result'],
         ['DOCUMENTS_COMPLETE', 'Documents Complete'],
+        ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: {},
       userColumns: {},
       formulaColumns: setFromKeys(['DOCUMENTS_COMPLETE']),
-      linkedColumns: setFromKeys(['COLLEGE_NAME']),
+      systemColumns: setFromKeys(['COLLEGE_ID']),
+      linkedColumns: setFromKeys(['COLLEGE_NAME', 'COLLEGE_ID']),
     },
     SCHOLARSHIP_TRACKER: {
       sheetName: CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER,
@@ -386,6 +396,9 @@ CollegeTools.Schema = (function() {
     },
     isLinkedColumn: function(sheetKey, columnKey) {
       return hasColumn('linkedColumns', sheetKey, columnKey);
+    },
+    isSystemColumn: function(sheetKey, columnKey) {
+      return hasColumn('systemColumns', sheetKey, columnKey);
     },
     validateHeaderRow: validateHeaderRow,
     validateWorkbookShape: validateWorkbookShape,

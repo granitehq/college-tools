@@ -61,10 +61,16 @@ the two-branch rule because `origin/main` has not been updated.
 5. **Manual live-sheet smoke test before release.** Run Repair Validations &
    Dropdowns, Repair Entire Workbook, Refresh Dashboard Data, Fill Regions,
    Complete Setup, direct-push dry run, and a throwaway-copy push.
+6. **Stable college identity.** A `College ID` (UUID) column on Colleges and the
+   four per-college trackers; `repairCollegeSync` keys off it instead of College
+   Name, with a one-time name bridge for pre-migration rows and automatic,
+   non-destructive backfill on old workbooks. Renames and duplicate names no
+   longer corrupt tracker data. See
+   `project-docs/plans/2026-07-06-stable-college-identity.md`.
 
 ## Prioritized Backlog
 
-Architecture/refactoring items remain separate backlog entries for priority tracking. The detailed implementation sequence for those related items lives in `project-docs/appscript-refactoring-plan.md`; use that plan as the child plan when executing items 7-13 below.
+Architecture/refactoring items remain separate backlog entries for priority tracking. The detailed implementation sequence for those related items lives in `project-docs/appscript-refactoring-plan.md`; use that plan as the child plan when executing items 7-12 below.
 
 1. **Release current development after smoke testing.** Merge `development`
    into `main`, then verify from `main` before deploying. This closes the
@@ -88,26 +94,22 @@ Architecture/refactoring items remain separate backlog entries for priority trac
    `latest.*` fields don't expose which actual year "latest" resolves to
    without querying the dictionary/metadata separately — decide whether that
    extra API call is worth it before adding it to the notes.
-7. **Introduce stable college identity.** Add hidden/protected stable keys to
-   Colleges and trackers, migrate existing rows, and replace positional tracker
-   sync with keyed repair/sync. Detailed child plan: Apps Script Refactoring
-   Plan Phase 6.
-8. **Finish service/menu separation.** Move prompts, alerts, locks, and final
+7. **Finish service/menu separation.** Move prompts, alerts, locks, and final
    summaries to menu adapters; have service modules return structured results.
    Detailed child plan: Apps Script Refactoring Plan Phase 1.
-9. **Add diagnostics and scoped locks.** Provide structured diagnostics for
+8. **Add diagnostics and scoped locks.** Provide structured diagnostics for
    setup/repair/fill failures and prevent overlapping mutating workflows. This
    overlaps with service result objects in Apps Script Refactoring Plan Phase 1,
    but scoped locks still need their own implementation detail before coding.
-10. **Create a declarative setup plan.** Put setup, repair, formatting,
-    formulas, dashboard refresh, and performance actions on one step registry
-    with tested ordering. Detailed child plan: Apps Script Refactoring Plan
-    Phase 2.
-11. **Add a shared execution budget.** Replace separate Scorecard and batch-fill
+9. **Create a declarative setup plan.** Put setup, repair, formatting,
+   formulas, dashboard refresh, and performance actions on one step registry
+   with tested ordering. Detailed child plan: Apps Script Refactoring Plan
+   Phase 2.
+10. **Add a shared execution budget.** Replace separate Scorecard and batch-fill
     timers with one workflow budget so long-running fills/searches stop
     predictably before Apps Script limits. Detailed child plan: Apps Script
     Refactoring Plan Phase 3.
-12. **(Not a must-have) Move API key storage toward user properties.** Keep the
+11. **(Not a must-have) Move API key storage toward user properties.** Keep the
     legacy sheet as a migration fallback, but add visible warnings and a
     one-click migration path. Detailed child plan: Apps Script Refactoring Plan
     Phase 4. Deliberately deferred: it's a credential/plumbing change on the
@@ -118,17 +120,17 @@ Architecture/refactoring items remain separate backlog entries for priority trac
     harness can't fully validate (see Testing Limits in CLAUDE.md) — a live
     smoke test would be required before trusting it. Pick this up only if the
     current sheet-based key storage becomes an active problem, not proactively.
-13. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
+12. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
     render-model cleanup, move remaining inline formulas into `Formulas`, and
     migrate `scoring.js` off legacy column helpers when that file is touched.
     Detailed child plan: Apps Script Refactoring Plan Phases 5 and 7.
-14. **Harden low-trust registry operations if scale increases.** Current bounds
+13. **Harden low-trust registry operations if scale increases.** Current bounds
     are enough for internal telemetry; use per-copy server-issued tokens or
     stronger ownership checks if registry integrity becomes important.
-15. **Prepare Marketplace/legal launch materials.** Host Privacy/Terms pages,
+14. **Prepare Marketplace/legal launch materials.** Host Privacy/Terms pages,
     update contact/jurisdiction URLs, prepare app assets/screenshots/listing
     copy, configure the Google Cloud project, and run multi-user testing.
-16. **Defer lower-value feature ideas.** Calendar export, scholarship import
+15. **Defer lower-value feature ideas.** Calendar export, scholarship import
     forms, Quick Compare, and an apps-directory site remain future ideas until
     the core tracker/release work is stable.
 

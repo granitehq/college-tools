@@ -89,6 +89,53 @@ CollegeTools.Colleges = (function() {
   }
 
   /**
+   * Auto-appends the College ID column to older Colleges sheets that predate
+   * stable college identity, the same way ensureCollegesRegionColumn_ backfills
+   * Region. Existing IDs (if any) are left untouched.
+   * @param {Sheet} sh - Colleges sheet
+   * @returns {Array<string>} Refreshed row-2 headers
+   * @private
+   */
+  function ensureCollegesIdColumn_(sh) {
+    var lastCol = Math.max(1, sh.getLastColumn());
+    var hdrs = sh.getRange(2, 1, 1, lastCol).getValues()[0]
+      .map(function(x) {
+        return (x || '').toString().trim();
+      });
+
+    if (hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID')) !== -1) return hdrs;
+
+    var idCol = lastCol + 1;
+    sh.getRange(2, idCol).setValue(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID'));
+
+    lastCol = Math.max(1, sh.getLastColumn());
+    return sh.getRange(2, 1, 1, lastCol).getValues()[0]
+      .map(function(x) {
+        return (x || '').toString().trim();
+      });
+  }
+
+  /**
+   * Returns a Colleges row's stable College ID, generating one if the cell is
+   * currently blank. Never overwrites an existing ID. Callers are responsible
+   * for persisting the returned id (fillCollegeRowCore folds it into its
+   * batched row write) rather than this helper writing the cell directly, so
+   * a single row refresh still performs one setValues() call instead of two
+   * separate writes.
+   * @param {Sheet} sh - Colleges sheet
+   * @param {number} row - 1-based row number
+   * @param {number} idCol - 1-based College ID column index
+   * @returns {string} The row's College ID
+   * @private
+   */
+  function ensureCollegeIdForRow_(sh, row, idCol) {
+    if (!idCol || idCol === -1) return '';
+    var existing = (sh.getRange(row, idCol).getValue() || '').toString().trim();
+    if (existing) return existing;
+    return Utilities.getUuid();
+  }
+
+  /**
    * Builds the canonical Colleges column map used by single-row and batch fill.
    * @param {Array<string>} hdrs - Row-2 Colleges headers
    * @returns {Object} Column map
@@ -120,6 +167,7 @@ CollegeTools.Colleges = (function() {
       PELL_GRANT_RATE: optionalCollegeColumn_(hdrs, 'PELL_GRANT_RATE'),
       NOTES: requiredCollegeColumn_(hdrs, 'NOTES'),
       REGION: optionalCollegeColumn_(hdrs, 'REGION'),
+      COLLEGE_ID: optionalCollegeColumn_(hdrs, 'COLLEGE_ID'),
       HEADERS: hdrs,
     };
   }
@@ -136,6 +184,7 @@ CollegeTools.Colleges = (function() {
     'Personal Priority (1-5)': true,
     'Weighted Score': true,
     'Admission Fit': true,
+    'College ID': true,
     // Preserved so the auto-stamp check in fillCollegeRowCore can decide:
     // user-entered notes survive a re-fill, auto-stamps get refreshed.
     'Notes': true,
@@ -336,6 +385,7 @@ CollegeTools.Colleges = (function() {
     var hdrs = opts.columnIndexes ? opts.columnIndexes.HEADERS : null;
     if (!hdrs) {
       hdrs = ensureCollegesRegionColumn_(sh);
+      hdrs = ensureCollegesIdColumn_(sh);
     }
     var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
     var idxRegion0 = COL.REGION !== -1 ? COL.REGION - 1 : -1;
@@ -361,6 +411,13 @@ CollegeTools.Colleges = (function() {
       }
     }
     nextRowValues[COL.NAME - 1] = sanitizedName;
+    var collegeId = ensureCollegeIdForRow_(sh, row, COL.COLLEGE_ID);
+    if (COL.COLLEGE_ID !== -1) {
+      // ensureCollegeIdForRow_ only computes the id; fold it into
+      // nextRowValues so the batched rowRange.setValues() below is what
+      // actually persists it, keeping this a single-write row refresh.
+      nextRowValues[COL.COLLEGE_ID - 1] = collegeId;
+    }
 
     // Fetch college data via API
     var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName, {
@@ -377,6 +434,7 @@ CollegeTools.Colleges = (function() {
       if (!opts.skipTrackerSetup) {
         CollegeTools.Trackers.syncCollegeToTrackers({
           name: sanitizedName,
+          id: collegeId,
           sourceRow: row,
         });
         if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
@@ -492,6 +550,7 @@ CollegeTools.Colleges = (function() {
       CollegeTools.Trackers.syncCollegeToTrackers({
         name: (usedName||name),
         coa: coa,
+        id: collegeId,
         sourceRow: row,
       });
       if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
@@ -724,6 +783,7 @@ CollegeTools.Colleges = (function() {
     showVersion: showVersion,
     debugFillCollegeRow: debugFillCollegeRow,
     fillCollegeRow: fillCollegeRow,
+    fillCollegeRowCore: fillCollegeRowCore,
     fillSelectedRows: fillSelectedRows,
     fillRegionsAllRows: fillRegionsAllRows,
   };

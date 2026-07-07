@@ -30,6 +30,21 @@ suite.test('schema declares row conventions for Colleges and tracker sheets', ()
     });
 });
 
+suite.test('schema declares a system-owned College ID column for Colleges and per-college trackers', () => {
+  const sheetKeys = ['COLLEGES', 'FINANCIAL_AID', 'CAMPUS_VISIT', 'APPLICATION_TIMELINE', 'STATUS_TRACKER'];
+  sheetKeys.forEach((key) => {
+    suite.assertEqual(CollegeTools.Schema.header(key, 'COLLEGE_ID'), 'College ID',
+      `${key} should declare a College ID column`);
+    suite.assert(CollegeTools.Schema.isSystemColumn(key, 'COLLEGE_ID'),
+      `${key}.COLLEGE_ID should be a system column`);
+  });
+
+  const trackerKeys = ['FINANCIAL_AID', 'CAMPUS_VISIT', 'APPLICATION_TIMELINE', 'STATUS_TRACKER'];
+  trackerKeys.forEach((key) => {
+    suite.assert(CollegeTools.Schema.isLinkedColumn(key, 'COLLEGE_ID'),
+      `${key}.COLLEGE_ID should be a tracker-linked column`);
+  });
+});
 
 suite.test('schema declares Travel Planner row convention and key columns', () => {
   const travelPlanner = CollegeTools.Schema.getSheet('TRAVEL_PLANNER');

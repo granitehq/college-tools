@@ -10,6 +10,7 @@ const tests = [
   'template-integrity-tests.js',
   'workbook-repair-tests.js',
   'setup-registry-tests.js',
+  'college-identity-tests.js',
   'perf-batching-tests.js',
   'tracker-column-migration-tests.js',
   'config-schema-tests.js',
