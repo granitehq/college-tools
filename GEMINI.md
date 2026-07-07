@@ -16,7 +16,7 @@ Key directories:
 - `src/` - Apps Script source.
 - `test/` - Node regression harness with mocked Apps Script globals.
 - `scripts/` - local release, website, registry, and push-update helpers.
-- `docs/` - static website.
+- `website/` - static website.
 - `project-docs/` - runbooks and backlog; filenames are lowercase kebab-case.
 
 Source modules use the `CollegeTools` namespace/IIFE pattern. Google Sheets menu
@@ -54,7 +54,7 @@ support. The registry is low-trust telemetry, not strong authentication.
 - `npm run push` - run checks and push Apps Script via clasp.
 - `npm run pull` - pull Apps Script via clasp.
 - `npm run build` - stamp static website git hashes only.
-- `npm run dev` - serve `docs/` locally.
+- `npm run dev` - serve `website/` locally.
 - `npm run release:prepare` - checks then patch-version update.
 - `npm run release:tag` - create `v<package.json version>` tag.
 - `npm run release:clasp` - checks, clasp push, Apps Script version.

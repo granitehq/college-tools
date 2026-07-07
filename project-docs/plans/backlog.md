@@ -64,6 +64,8 @@ the two-branch rule because `origin/main` has not been updated.
 
 ## Prioritized Backlog
 
+Architecture/refactoring items remain separate backlog entries for priority tracking. The detailed implementation sequence for those related items lives in `project-docs/appscript-refactoring-plan.md`; use that plan as the child plan when executing items 7-13 below.
+
 1. **Release current development after smoke testing.** Merge `development`
    into `main`, then verify from `main` before deploying. This closes the
    direct-push and performance-review gap.
@@ -78,42 +80,57 @@ the two-branch rule because `origin/main` has not been updated.
 5. **Build the weekly deadline email digest.** Add a time-driven trigger only
    after the service/menu boundary is cleaner, so the trigger can run without
    UI prompts or nested alerts.
-6. **Clarify cost data age and income context.** Show the Scorecard year/cohort
-   where available, distinguish blended net price from household-specific cost,
-   and decide whether to request income-bracket net price fields.
+6. **Surface the Scorecard cohort year.** The household-vs-average cost
+   distinction is done (cell notes on Colleges' Total Cost/Net Price/Median
+   Earnings/Typical Debt/Pell Grant Rate and Financial Aid Tracker's
+   EFC/Net Price After Aid clarify which figures are national averages vs.
+   your own household estimate). Still open: the College Scorecard API's
+   `latest.*` fields don't expose which actual year "latest" resolves to
+   without querying the dictionary/metadata separately — decide whether that
+   extra API call is worth it before adding it to the notes.
 7. **Introduce stable college identity.** Add hidden/protected stable keys to
    Colleges and trackers, migrate existing rows, and replace positional tracker
-   sync with keyed repair/sync.
+   sync with keyed repair/sync. Detailed child plan: Apps Script Refactoring
+   Plan Phase 6.
 8. **Finish service/menu separation.** Move prompts, alerts, locks, and final
    summaries to menu adapters; have service modules return structured results.
+   Detailed child plan: Apps Script Refactoring Plan Phase 1.
 9. **Add diagnostics and scoped locks.** Provide structured diagnostics for
-   setup/repair/fill failures and prevent overlapping mutating workflows.
+   setup/repair/fill failures and prevent overlapping mutating workflows. This
+   overlaps with service result objects in Apps Script Refactoring Plan Phase 1,
+   but scoped locks still need their own implementation detail before coding.
 10. **Create a declarative setup plan.** Put setup, repair, formatting,
     formulas, dashboard refresh, and performance actions on one step registry
-    with tested ordering.
-11. **(Not a must-have) Move API key storage toward user properties.** Keep the
+    with tested ordering. Detailed child plan: Apps Script Refactoring Plan
+    Phase 2.
+11. **Add a shared execution budget.** Replace separate Scorecard and batch-fill
+    timers with one workflow budget so long-running fills/searches stop
+    predictably before Apps Script limits. Detailed child plan: Apps Script
+    Refactoring Plan Phase 3.
+12. **(Not a must-have) Move API key storage toward user properties.** Keep the
     legacy sheet as a migration fallback, but add visible warnings and a
-    one-click migration path. Deliberately deferred: it's a credential/plumbing
-    change on the single most-used code path (every Fill Row/Fill Selected
-    Rows call), the Apps Script User/Document/Script Properties scoping needs
-    to work correctly across copied-template users (a real architecture
-    decision, not a mechanical edit), and it's exactly the kind of change the
-    mock-based test harness can't fully validate (see Testing Limits in
-    CLAUDE.md) — a live smoke test would be required before trusting it. Pick
-    this up only if the current sheet-based key storage becomes an active
-    problem, not proactively.
-12. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
+    one-click migration path. Detailed child plan: Apps Script Refactoring Plan
+    Phase 4. Deliberately deferred: it's a credential/plumbing change on the
+    single most-used code path (every Fill Row/Fill Selected Rows call), the
+    Apps Script User/Document/Script Properties scoping needs to work correctly
+    across copied-template users (a real architecture decision, not a
+    mechanical edit), and it's exactly the kind of change the mock-based test
+    harness can't fully validate (see Testing Limits in CLAUDE.md) — a live
+    smoke test would be required before trusting it. Pick this up only if the
+    current sheet-based key storage becomes an active problem, not proactively.
+13. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
     render-model cleanup, move remaining inline formulas into `Formulas`, and
     migrate `scoring.js` off legacy column helpers when that file is touched.
-13. **Harden low-trust registry operations if scale increases.** Current bounds
+    Detailed child plan: Apps Script Refactoring Plan Phases 5 and 7.
+14. **Harden low-trust registry operations if scale increases.** Current bounds
     are enough for internal telemetry; use per-copy server-issued tokens or
     stronger ownership checks if registry integrity becomes important.
-14. **Prepare Marketplace/legal launch materials.** Host Privacy/Terms pages,
+15. **Prepare Marketplace/legal launch materials.** Host Privacy/Terms pages,
     update contact/jurisdiction URLs, prepare app assets/screenshots/listing
     copy, configure the Google Cloud project, and run multi-user testing.
-15. **Defer lower-value feature ideas.** Travel-cost estimates, calendar export,
-    scholarship import forms, Quick Compare, and an apps-directory site remain
-    future ideas until the core tracker/release work is stable.
+16. **Defer lower-value feature ideas.** Calendar export, scholarship import
+    forms, Quick Compare, and an apps-directory site remain future ideas until
+    the core tracker/release work is stable.
 
 ## Source Documents Consolidated
 

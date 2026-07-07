@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const DOCS_DIR = path.join(__dirname, '..', 'docs');
+const WEBSITE_DIR = path.join(__dirname, '..', 'website');
 
 // Get git commit hash
 function getGitHash() {
@@ -55,7 +55,7 @@ function buildWebsite() {
     let updatedCount = 0;
     
     htmlFiles.forEach(file => {
-        const filePath = path.join(DOCS_DIR, file);
+        const filePath = path.join(WEBSITE_DIR, file);
         if (updateGitHashInFile(filePath)) {
             console.log(`✅ Updated ${file}`);
             updatedCount++;

@@ -7,7 +7,7 @@ keep this file aligned with it when durable project rules change.
 
 `college-tools` is a Google Apps Script V8 project for a Google Sheets college
 research and application tracker. Source lives in `src/`, tests in `test/`,
-helper scripts in `scripts/`, static website files in `docs/`, and project docs
+helper scripts in `scripts/`, static website files in `website/`, and project docs
 in `project-docs/`.
 
 Apps Script modules use the global namespace/IIFE pattern:
@@ -70,7 +70,7 @@ changes.
 - `npm run check` - lint with zero warnings, then run tests.
 - `npm run push` - run checks, then `npx clasp push`.
 - `npm run build` - stamp website git hashes only; no compilation.
-- `npm run dev` - serve `docs/` locally.
+- `npm run dev` - serve `website/` locally.
 - `npm run release:prepare` - checks then patch-version update.
 - `npm run release:clasp` - checks, clasp push, Apps Script version.
 - `npm run release:promote -- <sheet-id>` - update website template link.
