@@ -9,6 +9,7 @@ const harness = createHarness([
   'utils.js',
   'schema.js',
   'formatting.js',
+  'travel.js',
   'trackers.js',
   'colleges.js',
   'setup.js',
@@ -54,6 +55,10 @@ suite.test('repairEntireWorkbook combines sync, validations, regions, and dashbo
     'Workbook repair should resync tracker names');
   suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'West',
     'Workbook repair should refill regions');
+  var travel = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+  suite.assert(travel, 'Workbook repair should create or refresh Travel Planner');
+  suite.assertEqual(travel.getRange(2, 1).getValue(), 'Alpha College',
+    'Travel Planner should stay aligned with Colleges rows during repair');
   suite.assert(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'College Name')).getDataValidation(),
     'Workbook repair should reapply validations');
   suite.assert(CollegeTools.Dashboard.refreshed, 'Workbook repair should refresh dashboard data when present');

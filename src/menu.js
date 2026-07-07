@@ -23,22 +23,21 @@ function onOpen() {
       .addSeparator()
       .addItem('Search College Names', 'searchCollegeNames'))
     .addSeparator()
-    .addSubMenu(SpreadsheetApp.getUi().createMenu('🔧 Setup & Customization')
+    .addSubMenu(SpreadsheetApp.getUi().createMenu('🛠️ Advanced / Setup')
       .addItem('Add/Update Trackers', 'setupAllTrackers')
       .addItem('Setup Dashboard', 'setupDashboard')
       .addItem('Setup Financial Intelligence', 'setupFinancialIntelligence')
       .addItem('Ensure Scoring Formulas', 'ensureScoring')
-      .addItem('Enhance: Formats & Dropdowns', 'enhanceFormatsDropdowns'))
-    .addSeparator()
-    .addSubMenu(SpreadsheetApp.getUi().createMenu('⚡ Performance & Maintenance')
+      .addItem('Enhance: Formats & Dropdowns', 'enhanceFormatsDropdowns')
+      .addSeparator()
       .addItem('Optimize Performance', 'optimizePerformance')
       .addItem('Refresh Dashboard Data', 'refreshDashboard')
+      .addItem('Refresh Travel Planner', 'refreshTravelPlanner')
       .addItem('Repair Validations & Dropdowns', 'repairValidationsAndFormatting')
       .addItem('Repair College Sync Across Tabs', 'repairCollegeSync')
       .addItem('Repair Entire Workbook', 'repairEntireWorkbook')
-      .addItem('Fill Regions (all rows)', 'fillRegionsAllRows'))
-    .addSeparator()
-    .addSubMenu(SpreadsheetApp.getUi().createMenu('🛠️ Developer & Debug')
+      .addItem('Fill Regions (all rows)', 'fillRegionsAllRows')
+      .addSeparator()
       .addItem('📋 Complete Setup (Re-run)', 'completeSetup')
       .addItem('Register for Updates', 'registerCopyForUpdates')
       .addItem('DEBUG: Fill row (verbose)', 'debugFillCollegeRow')
@@ -71,6 +70,9 @@ function setupDashboard() {
 }
 function refreshDashboard() {
   return CollegeTools.Dashboard.refreshDashboard();
+}
+function refreshTravelPlanner() {
+  return CollegeTools.Travel.createOrUpdateTravelPlanner();
 }
 function enhanceFormatsDropdowns() {
   return CollegeTools.Formatting.enhanceFormatsDropdowns();

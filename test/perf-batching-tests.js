@@ -165,14 +165,14 @@ suite.test('dashboard stat sections keep exact rows and formulas without per-cel
   CollegeTools.Dashboard.refreshDashboard({suppressAlert: true});
 
   const label = function(row) { return dash.getRange(row, 1).getValue(); };
-  suite.assertEqual(label(5), 'Total Colleges:', 'stat @5');
-  suite.assertEqual(label(11), '💰 Cost Analysis', 'Section2 header @11');
-  suite.assertEqual(label(18), '🏆 Top Performers', 'Section3 header @18');
-  suite.assertEqual(label(23), '📋 Progress Tracking', 'Section4 header @23');
-  suite.assertEqual(label(30), '🎓 Scholarship Summary', 'Section5 header @30');
-  suite.assertEqual(label(32), 'Total Applied:', 'stat @32');
-  suite.assertEqual(label(36), 'Potential Amount (Pending):', 'stat @36');
-  suite.assert(String(dash.getRange(5, 2).getFormula()).charAt(0) === '=', 'stat B-cell is a formula');
+  suite.assertEqual(label(7), 'Total Colleges:', 'stat @7');
+  suite.assertEqual(label(13), '💰 Cost Analysis', 'Section2 header @13');
+  suite.assertEqual(label(20), '🏆 Top Performers', 'Section3 header @20');
+  suite.assertEqual(label(25), '📋 Progress Tracking', 'Section4 header @25');
+  suite.assertEqual(label(32), '🎓 Scholarship Summary', 'Section5 header @32');
+  suite.assertEqual(label(34), 'Total Applied:', 'stat @34');
+  suite.assertEqual(label(38), 'Potential Amount (Pending):', 'stat @38');
+  suite.assert(String(dash.getRange(7, 2).getFormula()).charAt(0) === '=', 'stat B-cell is a formula');
   suite.assertEqual(dash.callCounts.setFormula, 0, 'no per-cell setFormula on dashboard');
 });
 

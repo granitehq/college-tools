@@ -56,6 +56,21 @@ CollegeTools.Formatting = (function() {
   }
 
   /**
+   * Attaches explanatory notes to header cells so cost/data-source context
+   * travels with the column itself, without adding new columns.
+   * @param {Sheet} sh - Target sheet
+   * @param {number} headerRow - Header row number
+   * @param {Array<{header: string, note: string}>} noteSpecs - Header/note pairs
+   * @private
+   */
+  function setHeaderNotes_(sh, headerRow, noteSpecs) {
+    noteSpecs.forEach(function(spec) {
+      var colIdx = findColumn_(sh, spec.header, headerRow);
+      if (colIdx) sh.getRange(headerRow, colIdx).setNote(spec.note);
+    });
+  }
+
+  /**
    * Applies dropdown data validation to a column.
    * @param {Sheet} sh - The sheet to apply validation to
    * @param {string} header - Column header to find
@@ -250,15 +265,11 @@ CollegeTools.Formatting = (function() {
     range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
     date: ['FAFSA Deadline', 'CSS Deadline', 'Priority Deadline'],
     list: [
-      ['CSS Profile Required (Y/N)', ['Y', 'N']],
       ['FAFSA Submitted (Y/N)', ['Y', 'N']],
-      ['CSS Profile Submitted (Y/N)', ['Y', 'N']],
-      ['IDOC Required (Y/N)', ['Y', 'N']],
-      ['IDOC Submitted (Y/N)', ['Y', 'N']],
-      ['Verification Required (Y/N)', ['Y', 'N']],
-      ['Verification Submitted (Y/N)', ['Y', 'N']],
+      ['CSS Profile Status', ['Not Required', 'Not Started', 'Submitted']],
+      ['IDOC Status', ['Not Required', 'Not Started', 'Submitted']],
+      ['Verification Status', ['Not Required', 'Not Started', 'Submitted']],
       ['Work-Study Offered', ['Y', 'N']],
-      ['Appeal Status', ['Not Started', 'In Progress', 'Submitted', 'Approved', 'Denied', 'Other']],
     ],
   };
   STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT] = {
@@ -301,11 +312,6 @@ CollegeTools.Formatting = (function() {
     list: [
       ['Type (Merit/Need/Field/Local/National)', ['Merit', 'Need', 'Field-Specific', 'Local', 'National', 'Other']],
       ['Award Type (One-time/Renewable)', ['One-time', 'Renewable', 'Other']],
-      ['Financial Need Required', ['Y', 'N']],
-      ['Transcript Required', ['Y', 'N']],
-      ['FAFSA Required', ['Y', 'N']],
-      ['Portfolio/Work Samples', ['Y', 'N']],
-      ['Interview Required', ['Y', 'N']],
       ['Award Status (Pending/Awarded/Declined)', ['Pending', 'Awarded', 'Declined', 'Waitlisted', 'Other']],
     ],
   };
@@ -437,6 +443,41 @@ CollegeTools.Formatting = (function() {
           {header: 'Campus Setting', rule: listRule_(['City', 'Suburban', 'Town', 'Rural', 'Other'])},
         ]);
       applyColumnFormatsAndValidations_(col, 2, collegeFormats, collegeValidations, true);
+      setHeaderNotes_(col, 2, [
+        {header: 'Total Cost of Attendance',
+          note: 'Source: U.S. Dept. of Education College Scorecard, most recently reported class year. ' +
+            'This is the sticker price before aid — see the Financial Aid Tracker for your household\'s ' +
+            'actual out-of-pocket estimate.'},
+        {header: 'Estimated Net Price',
+          note: 'Source: College Scorecard\'s average net price across all aid recipients at this school ' +
+            '(most recently reported class year) — a national benchmark, not your family\'s specific cost. ' +
+            'Use the school\'s own Net Price Calculator and the Financial Aid Tracker for a household-specific ' +
+            'estimate.'},
+        {header: 'Median Earnings (10yr)',
+          note: 'Source: U.S. Dept. of Education College Scorecard, most recently reported cohort.'},
+        {header: 'Typical Debt at Graduation',
+          note: 'Source: U.S. Dept. of Education College Scorecard, most recently reported completers.'},
+        {header: 'Pell Grant Rate',
+          note: 'Source: U.S. Dept. of Education College Scorecard, most recently reported class year.'},
+      ]);
+    }
+
+
+    var travel = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+    if (travel) {
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+      var travelFormats = fmts(['Distance from Home (mi)'], '0')
+        .concat(fmts(['Estimated Drive Time', 'Estimated Flight/Travel Time'], '0.0'))
+        .concat(fmts(['Travel Cost per Trip', 'Annual Travel Cost'], '$#,##0'))
+        .concat(fmts(['Trips Home Per Year'], '0'));
+      var travelValidations = [
+        {header: 'Likely Travel Mode', rule: listRule_(['Drive', 'Drive or Fly', 'Fly'])},
+      ];
+      applyColumnFormatsAndValidations_(travel, 1, travelFormats, travelValidations, true);
+      travel.getRange(2, 16).setNumberFormat('$0.00');
+      travel.getRange(3, 16, 2, 1).setNumberFormat('0');
+      travel.getRange(5, 16, 2, 1).setNumberFormat('$#,##0');
+      travel.getRange(7, 16).setNumberFormat('0');
     }
 
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
@@ -448,6 +489,14 @@ CollegeTools.Formatting = (function() {
         'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost', 'Outside Scholarships Applied'], '$#,##0')
         .concat(fmts(['4-Year Burden'], '0.0%'));
       applyColumnFormatsAndValidations_(fa, 1, faFormats, buildStandardValidationSpecs_(fa), true);
+      setHeaderNotes_(fa, 1, [
+        {header: 'EFC (Expected Family Contribution)',
+          note: 'Pulled from your Personal Profile. This is household-specific (your own FAFSA/CSS estimate), ' +
+            'unlike the Colleges sheet\'s Estimated Net Price, which is a school-wide average.'},
+        {header: 'Net Price After Aid',
+          note: 'Calculated from the actual cost and aid figures you enter below for this college — your real, ' +
+            'household-specific estimate, not the school-wide average shown on the Colleges sheet.'},
+      ]);
     }
 
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);

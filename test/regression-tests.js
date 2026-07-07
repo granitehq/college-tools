@@ -116,7 +116,7 @@ suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', (
 
   suite.assertEqual(fa.getRange(3, 1).getValue(), 'Updated College',
     'Financial Aid tracker should map Colleges row 4 to tracker row 3');
-  suite.assertEqual(fa.getRange(3, 12).getValue(), 12345,
+  suite.assertEqual(fa.getRange(3, CollegeTools.Utils.colIndex(fa, 'Total Cost of Attendance')).getValue(), 12345,
     'Financial Aid tracker should receive cost of attendance');
   suite.assertEqual(cv.getRange(3, 1).getValue(), 'Updated College',
     'Campus Visit tracker should stay aligned');
@@ -197,7 +197,7 @@ suite.test('repairCollegeSync batches linked tracker updates after row restore',
   suite.assertEqual(result.ok, true, 'Repair should succeed');
   suite.assertEqual(fa.getRange(2, 1).getValue(), 'Alpha College',
     'Financial Aid tracker should still receive the first college name');
-  suite.assertEqual(fa.getRange(3, 12).getValue(), 22222,
+  suite.assertEqual(fa.getRange(3, CollegeTools.Utils.colIndex(fa, 'Total Cost of Attendance')).getValue(), 22222,
     'Financial Aid tracker should still receive linked COA values');
   suite.assertEqual(fa.callCounts.setValue, 0,
     'Repair should not use single-cell setValue for Financial Aid linked updates');
@@ -237,7 +237,7 @@ suite.test('repairCollegeSync replaces stale tracker names and clears trailing r
     'Second tracker row should match Colleges row 4');
   suite.assertEqual(fa.getRange(4, 1).getValue(), '',
     'Trailing stale tracker rows should be cleared');
-  suite.assertEqual(fa.getRange(2, 12).getValue(), 11111,
+  suite.assertEqual(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'Total Cost of Attendance')).getValue(), 11111,
     'Repair should propagate linked cost fields');
   suite.assertEqual(cv.getRange(4, 1).getValue(), '',
     'Trailing stale names should be cleared on every tracker');
@@ -373,7 +373,7 @@ suite.test('setupAllTrackers repairs stale sample tracker names from Colleges', 
     'Setup should repair Application Timeline tracker names from Colleges row 3');
   suite.assertEqual(st.getRange(2, 1).getValue(), 'The University of Texas at Austin',
     'Setup should repair Application Status tracker names from Colleges row 3');
-  suite.assertEqual(fa.getRange(2, 12).getValue(), 31000,
+  suite.assertEqual(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'Total Cost of Attendance')).getValue(), 31000,
     'Setup should repair linked tracker fields from Colleges row 3');
 });
 

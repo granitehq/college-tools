@@ -189,7 +189,15 @@ class MockRange {
   setFontColor() { return this; }
   setFontStyle() { return this; }
   setBorder() { return this; }
-  setNote() { return this; }
+  setNote(note) {
+    this._forEachCell((row, col) => {
+      this.sheet.setCellNote(row, col, note);
+    });
+    return this;
+  }
+  getNote() {
+    return this.sheet.getCellNote(this.row, this.col);
+  }
   setNumberFormat(pattern) {
     this._forEachCell((row, col) => {
       this.sheet.setCellFormat(row, col, pattern);
@@ -252,6 +260,17 @@ class MockSheet {
     this.formats = this.formats || {};
     const key = this._key(row, col);
     return Object.prototype.hasOwnProperty.call(this.formats, key) ? this.formats[key] : '';
+  }
+
+  setCellNote(row, col, note) {
+    this.notes = this.notes || {};
+    this.notes[this._key(row, col)] = note;
+  }
+
+  getCellNote(row, col) {
+    this.notes = this.notes || {};
+    const key = this._key(row, col);
+    return Object.prototype.hasOwnProperty.call(this.notes, key) ? this.notes[key] : '';
   }
 
   getRange(rowOrA1, col, numRows, numCols) {
@@ -341,6 +360,7 @@ class MockSpreadsheet {
   constructor() {
     this.sheets = {};
     this.activeSheetName = null;
+    this.namedRanges = {};
   }
 
   getSheetByName(name) {
@@ -363,7 +383,9 @@ class MockSpreadsheet {
   }
 
   moveActiveSheet() {}
-  setNamedRange() {}
+  setNamedRange(name, range) {
+    this.namedRanges[name] = {row: range.row, col: range.col};
+  }
   toast() {}
 }
 
@@ -457,6 +479,7 @@ function createHarness(moduleFiles) {
   function resetSheets() {
     mockSpreadsheet.sheets = {};
     mockSpreadsheet.activeSheetName = null;
+    mockSpreadsheet.namedRanges = {};
     mockUi.alerts = [];
   }
 
@@ -478,6 +501,8 @@ function createHarness(moduleFiles) {
     const colleges = ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.COLLEGES, collegeHeaders, 2);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID,
       CollegeTools.Config.HEADERS.FINANCIAL_AID, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER,
+      CollegeTools.Config.HEADERS.TRAVEL_PLANNER, 1);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT,
       CollegeTools.Config.HEADERS.CAMPUS_VISIT, 1);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE,

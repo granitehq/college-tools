@@ -82,8 +82,8 @@ suite.test('core tracker status columns keep dropdown validations', () => {
   const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
   const st = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
 
-  suite.assert(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'CSS Profile Required (Y/N)')).getDataValidation(),
-    'Financial Aid CSS required column should have validation');
+  suite.assert(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'CSS Profile Status')).getDataValidation(),
+    'Financial Aid CSS status column should have validation');
   suite.assert(cv.getRange(2, CollegeTools.Utils.colIndex(cv, 'Visit Type (In-Person/Virtual/College Fair)')).getDataValidation(),
     'Campus Visit type column should have validation');
   suite.assert(st.getRange(2, CollegeTools.Utils.colIndex(st, 'Application Status')).getDataValidation(),
@@ -96,7 +96,7 @@ suite.test('tracker setup and formatting repair apply the same audited dropdown 
   CollegeTools.Trackers.setupAllTrackers();
 
   const checks = [
-    [CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID, 'Appeal Status'],
+    [CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID, 'CSS Profile Status'],
     [CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT, 'Visit Type (In-Person/Virtual/College Fair)'],
     [CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE, 'Application Type (ED/ED2/EA/REA/RD)'],
     [CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE, 'Priority Level'],
@@ -128,14 +128,11 @@ suite.test('select audited dropdowns include flexible Other options where intend
   CollegeTools.Trackers.setupAllTrackers();
   CollegeTools.Formatting.enhanceFormatsDropdowns({suppressAlert: true});
 
-  var fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
   var cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
   var at = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
   var st = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
   var sc = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
 
-  suite.assert(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'Appeal Status')).getDataValidation().options.includes('Other'),
-    'Appeal Status should include Other');
   suite.assert(cv.getRange(2, CollegeTools.Utils.colIndex(cv, 'Visit Type (In-Person/Virtual/College Fair)')).getDataValidation().options.includes('Other'),
     'Visit Type should include Other');
   suite.assert(at.getRange(2, CollegeTools.Utils.colIndex(at, 'Application Type (ED/ED2/EA/REA/RD)')).getDataValidation().options.includes('Other'),

@@ -377,6 +377,9 @@ CollegeTools.Colleges = (function() {
           name: sanitizedName,
           sourceRow: row,
         });
+        if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+          CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+        }
       }
       if (!suppressAlert) SpreadsheetApp.getUi().alert('No match for "' + sanitizedName + '". See Notes.');
       return {ok: false, msg: 'no match'};
@@ -489,6 +492,9 @@ CollegeTools.Colleges = (function() {
         coa: coa,
         sourceRow: row,
       });
+      if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+        CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+      }
     }
 
     return {ok: true, msg: 'ok'};

@@ -126,7 +126,7 @@ CollegeTools.Dashboard = (function() {
 
     if (sheetName === CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID) {
       if (header === 'FAFSA Deadline') return hasYes('FAFSA Submitted (Y/N)') ? 'Yes' : 'No';
-      if (header === 'CSS Deadline') return hasYes('CSS Profile Submitted (Y/N)') ? 'Yes' : 'No';
+      if (header === 'CSS Deadline') return hasYes('CSS Profile Status') ? 'Yes' : 'No';
       if (header === 'Priority Deadline') return hasYes('Aid Requirements Complete') ? 'Yes' : 'No';
     }
 
@@ -154,7 +154,9 @@ CollegeTools.Dashboard = (function() {
   }
 
   /**
-   * Builds the next-60-days deadline table across tracker sheets.
+   * Builds the next-60-days deadline table across tracker sheets, including
+   * items already overdue (negative Days Left) so nothing silently
+   * disappears once its date has passed.
    * @param {Spreadsheet} ss - Workbook
    * @param {Date=} todayOverride - Optional test/control date
    * @returns {Array<Array<*>>} Due-next rows
@@ -163,6 +165,7 @@ CollegeTools.Dashboard = (function() {
   function buildDueNextRows_(ss, todayOverride) {
     var today = dateTime_(todayOverride || new Date());
     var cutoff = today + (60 * 24 * 60 * 60 * 1000);
+    var floor = today - (365 * 24 * 60 * 60 * 1000);
     var cn = CollegeTools.Config.SHEET_NAMES;
     var sources = [
       {sheetName: cn.FINANCIAL_AID, sourceLabel: 'Financial Aid Tracker', nameHeader: 'College Name'},
@@ -186,7 +189,7 @@ CollegeTools.Dashboard = (function() {
           var name = row[nameIdx];
           var dateValue = row[dateIdx];
           var due = dateTime_(dateValue);
-          if (!name || due === null || due < today || due > cutoff) return;
+          if (!name || due === null || due < floor || due > cutoff) return;
           out.push([
             name,
             source.sourceLabel + ': ' + header,
@@ -202,6 +205,50 @@ CollegeTools.Dashboard = (function() {
       return dateTime_(a[2]) - dateTime_(b[2]) || String(a[0]).localeCompare(String(b[0]));
     });
     return out;
+  }
+
+  /**
+   * Builds the single-line "are we on track" readiness summary shown at the
+   * top of the Dashboard, based on overdue and due-soon (7-day) items from
+   * the same data that feeds "What's Due Next".
+   * @param {Spreadsheet} ss - Workbook
+   * @param {Date=} todayOverride - Optional test/control date
+   * @returns {{message: string, background: string, color: string}} Banner content
+   * @private
+   */
+  function buildReadinessSummary_(ss, todayOverride) {
+    var rows = buildDueNextRows_(ss, todayOverride);
+    var overdue = 0;
+    var dueSoon = 0;
+    rows.forEach(function(row) {
+      var daysLeft = row[3];
+      var done = row[4];
+      if (done === 'Yes') return;
+      if (daysLeft < 0) overdue++;
+      else if (daysLeft <= 7) dueSoon++;
+    });
+
+    if (overdue > 0) {
+      return {
+        message: '⚠️ ' + overdue + ' overdue item' + (overdue === 1 ? '' : 's') +
+          ' need' + (overdue === 1 ? 's' : '') + ' attention — see What\'s Due Next below',
+        background: '#f8d7da',
+        color: '#721c24',
+      };
+    }
+    if (dueSoon > 0) {
+      return {
+        message: '🕐 ' + dueSoon + ' item' + (dueSoon === 1 ? '' : 's') +
+          ' due in the next 7 days',
+        background: '#fff3cd',
+        color: '#856404',
+      };
+    }
+    return {
+      message: '✅ On track — nothing overdue or due in the next 7 days',
+      background: '#d4edda',
+      color: '#155724',
+    };
   }
 
   /**
@@ -490,8 +537,15 @@ CollegeTools.Dashboard = (function() {
     sh.getRange('A1').setValue('📊 College Application Dashboard').setFontSize(18).setFontWeight('bold');
     sh.getRange('A1:F1').merge().setHorizontalAlignment('center');
 
-    // Section 1: Key Statistics
+    // Section 0: On-track readiness banner
     var row = 3;
+    var readiness = buildReadinessSummary_(ss, opts && opts.today);
+    sh.getRange(row, 1, 1, 6).merge().setValue(readiness.message)
+      .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center')
+      .setBackground(readiness.background).setFontColor(readiness.color);
+    row += 2;
+
+    // Section 1: Key Statistics
     sh.getRange(row, 1).setValue('📈 Key Statistics').setFontWeight('bold').setFontSize(14);
     row += 2;
     row = writeStatRows_(sh, row, [

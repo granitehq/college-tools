@@ -37,6 +37,7 @@ const filesToUpdate = [
   'src/financial.js',
   'src/formatting.js',
   'src/formulas.js',
+  'src/travel.js',
   'src/instructions.js',
   'src/lookup.js',
   'src/menu.js',

@@ -47,7 +47,7 @@ suite.test('enhanceFormatsDropdowns makes every row consistent for tracker date 
   setupWorkbook();
   const at = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
   const atHdrs = at.getRange(1, 1, 1, at.getLastColumn()).getValues()[0];
-  const honorsCol = atHdrs.indexOf('Honors Program Deadline') + 1;
+  const honorsCol = atHdrs.indexOf('Other Deadline 1 Date') + 1;
 
   // Simulate row 3 missing the date validation that every other row has —
   // e.g. from a column that was only ever set up by hand, inconsistently.
@@ -57,8 +57,29 @@ suite.test('enhanceFormatsDropdowns makes every row consistent for tracker date 
   CollegeTools.Formatting.enhanceFormatsDropdowns({suppressAlert: true});
 
   suite.assert(at.getRange(3, honorsCol).getDataValidation(),
-    'Every row should get the same Honors Program Deadline validation after repair, ' +
+    'Every row should get the same Other Deadline 1 Date validation after repair, ' +
     'not just the rows that happened to have it already');
+});
+
+suite.test('enhanceFormatsDropdowns attaches cost-context notes to Colleges and Financial Aid headers', () => {
+  const {colleges} = setupWorkbook();
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const netPriceCol = getCollegeColumn('Estimated Net Price', colleges);
+  const totalCostCol = getCollegeColumn('Total Cost of Attendance', colleges);
+  const faHdrs = fa.getRange(1, 1, 1, fa.getLastColumn()).getValues()[0];
+  const efcCol = faHdrs.indexOf('EFC (Expected Family Contribution)') + 1;
+  const netAfterAidCol = faHdrs.indexOf('Net Price After Aid') + 1;
+
+  CollegeTools.Formatting.enhanceFormatsDropdowns({suppressAlert: true});
+
+  suite.assert(colleges.getRange(2, netPriceCol).getNote().indexOf('national benchmark') !== -1,
+    'Estimated Net Price header should clarify it is a school-wide average, not household-specific');
+  suite.assert(colleges.getRange(2, totalCostCol).getNote().indexOf('College Scorecard') !== -1,
+    'Total Cost of Attendance header should cite its federal data source');
+  suite.assert(fa.getRange(1, efcCol).getNote().indexOf('Personal Profile') !== -1,
+    'EFC header should clarify it comes from the household Personal Profile');
+  suite.assert(fa.getRange(1, netAfterAidCol).getNote().indexOf('household-specific') !== -1,
+    'Net Price After Aid header should distinguish itself from the Colleges sheet\'s national-average figure');
 });
 
 const success = suite.summary();
