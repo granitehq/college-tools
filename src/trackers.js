@@ -25,14 +25,34 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Auto-appends the College ID column to an older tracker sheet that predates
+   * stable college identity, mirroring Colleges.ensureCollegesIdColumn_.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {string} sheetKey - Schema sheet key for this tracker
+   * @returns {number} 1-based College ID column index
+   * @private
+   */
+  function ensureTrackerIdColumn_(sh, sheetKey) {
+    var label = CollegeTools.Schema.header(sheetKey, 'COLLEGE_ID');
+    var idCol = CollegeTools.Utils.colIndex(sh, label);
+    if (idCol) return idCol;
+
+    var lastCol = Math.max(1, sh.getLastColumn());
+    idCol = lastCol + 1;
+    sh.getRange(1, idCol).setValue(label);
+    return idCol;
+  }
+
+  /**
    * Synchronizes a single canonical Colleges row into a tracker sheet.
    * @param {Sheet} sh - Tracker sheet
    * @param {number} sourceRow - Row number from Colleges
    * @param {string} collegeName - Canonical college name for that row
+   * @param {string} collegeId - Stable College ID for that row
    * @param {Object} updatesObj - Optional header/value updates to write
    * @private
    */
-  function syncCollegeRowToSheet_(sh, sourceRow, collegeName, updatesObj) {
+  function syncCollegeRowToSheet_(sh, sourceRow, collegeName, collegeId, updatesObj) {
     if (!sh || !sourceRow) return;
 
     var trackerRow = getTrackerRowForCollegeRow_(sourceRow);
@@ -40,6 +60,11 @@ CollegeTools.Trackers = (function() {
     if (!nameCol) return;
 
     sh.getRange(trackerRow, nameCol).setValue(collegeName || '');
+
+    var idCol = CollegeTools.Utils.colIndex(sh, 'College ID');
+    if (idCol && collegeId) {
+      sh.getRange(trackerRow, idCol).setValue(collegeId);
+    }
 
     if (!updatesObj) return;
     for (var key in updatesObj) {
@@ -71,18 +96,23 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
-   * Reads a tracker sheet once and captures both a name-keyed snapshot map (so
-   * repair can follow user data across row reordering) and the raw formula-aware
-   * data block (reused as the rebuild base, avoiding a second read of the same
-   * sheet). Duplicate names are flagged because name-only matching is ambiguous.
+   * Reads a tracker sheet once and captures an ID-keyed snapshot map (the
+   * steady-state join key), a name-keyed snapshot map (used only to bridge
+   * rows that predate stable college identity), and the raw formula-aware
+   * data block (reused as the rebuild base, avoiding a second read of the
+   * same sheet). Duplicate names are flagged because name-only matching is
+   * ambiguous; duplicate IDs should never occur but are flagged defensively.
    * @param {Sheet} sh - Tracker sheet
-   * @returns {{snapshots: Object, block: Array<Array>, lastCol: number}} Capture
+   * @param {string} sheetKey - Schema sheet key for this tracker
+   * @returns {{byId: Object, byName: Object, block: Array<Array>, lastCol: number, idCol: number}} Capture
    * @private
    */
-  function captureTrackerSheet_(sh) {
-    var capture = {snapshots: {}, block: [], lastCol: 0};
+  function captureTrackerSheet_(sh, sheetKey) {
+    var capture = {byId: {}, byName: {}, block: [], lastCol: 0, idCol: 0};
     if (!sh) return capture;
     var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
+    var idCol = ensureTrackerIdColumn_(sh, sheetKey);
+    capture.idCol = idCol;
     var lastRow = sh.getLastRow();
     var lastCol = sh.getLastColumn();
     capture.lastCol = lastCol;
@@ -95,18 +125,32 @@ CollegeTools.Trackers = (function() {
 
     for (var i = 0; i < values.length; i++) {
       var collegeName = (values[i][nameCol - 1] || '').toString().trim();
-      if (!collegeName) continue;
-      if (capture.snapshots[collegeName]) {
-        capture.snapshots[collegeName].duplicate = true;
-        capture.snapshots._duplicates = capture.snapshots._duplicates || [];
-        capture.snapshots._duplicates.push(collegeName);
+      var collegeId = (values[i][idCol - 1] || '').toString().trim();
+      if (!collegeName && !collegeId) continue;
+
+      var snapshot = {values: values[i], formulas: formulas[i], duplicate: false};
+
+      if (collegeId) {
+        if (capture.byId[collegeId]) {
+          capture.byId[collegeId].duplicate = true;
+          capture.byId._duplicates = capture.byId._duplicates || [];
+          capture.byId._duplicates.push(collegeId);
+        } else {
+          capture.byId[collegeId] = snapshot;
+        }
         continue;
       }
-      capture.snapshots[collegeName] = {
-        values: values[i],
-        formulas: formulas[i],
-        duplicate: false,
-      };
+
+      // No ID yet -- this row predates stable college identity. Keep it
+      // available for the name-keyed bridge in rebuildTrackerFromSnapshots_.
+      if (!collegeName) continue;
+      if (capture.byName[collegeName]) {
+        capture.byName[collegeName].duplicate = true;
+        capture.byName._duplicates = capture.byName._duplicates || [];
+        capture.byName._duplicates.push(collegeName);
+        continue;
+      }
+      capture.byName[collegeName] = snapshot;
     }
 
     return capture;
@@ -183,15 +227,20 @@ CollegeTools.Trackers = (function() {
    * Rebuilds a tracker sheet's data block in a single bulk write, reusing the
    * data block already read by captureTrackerSheet_ (no second read). Each
    * canonical row is resolved as:
-   *   - unique snapshot for the college  -> restore its captured row (data follows the college)
-   *   - no snapshot (new college)        -> clear entered values, keep formulas
-   *   - duplicate snapshot (ambiguous)   -> leave the physical row in place
-   * then the linked columns (College Name, plus any extras) are stamped on top.
+   *   - unique ID snapshot for the college    -> restore its captured row
+   *     (data follows the college even across a rename)
+   *   - no ID snapshot, unique name snapshot  -> one-time bridge: restore the
+   *     name-matched row and adopt the ID going forward
+   *   - no snapshot at all (new college)      -> clear entered values, keep formulas
+   *   - duplicate snapshot (ambiguous)        -> leave the physical row in place
+   * then the linked columns (College Name, College ID, plus any extras) are
+   * stamped on top.
    * @param {Sheet|null} sh - Tracker sheet
-   * @param {{snapshots: Object, block: Array<Array>, lastCol: number}} capture - captureTrackerSheet_ result
-   * @param {Array<Object>} assignments - {trackerRow, name, coa} per college, in order
+   * @param {{byId: Object, byName: Object, block: Array<Array>, lastCol: number,
+   *   idCol: number}} capture - captureTrackerSheet_ result
+   * @param {Array<Object>} assignments - {trackerRow, name, id, coa} per college, in order
    * @param {function(Object):Object=} extraOverridesFn - Optional per-assignment
-   *   header/value map for linked columns beyond College Name
+   *   header/value map for linked columns beyond College Name/College ID
    * @private
    */
   function rebuildTrackerFromSnapshots_(sh, capture, assignments, extraOverridesFn) {
@@ -200,6 +249,7 @@ CollegeTools.Trackers = (function() {
     if (lastCol < 1) return;
     var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
     if (!nameCol) return;
+    var idCol = capture.idCol || CollegeTools.Utils.colIndex(sh, 'College ID');
 
     var firstRow = 2;
     var lastWriteRow = firstRow;
@@ -215,17 +265,41 @@ CollegeTools.Trackers = (function() {
     });
     while (block.length < numRows) block.push(blankRow_(lastCol));
 
-    var snapshots = capture.snapshots;
     for (var a = 0; a < assignments.length; a++) {
       var assignment = assignments[a];
       var offset = assignment.trackerRow - firstRow;
-      var snapshot = snapshots[assignment.name];
-      if (snapshot && !snapshot.duplicate) {
+      // Resolve ID-first, name-bridge-second. A duplicate candidate (ambiguous
+      // match) is never restored, but it also must not be treated the same as
+      // "no match at all" -- clearing an ambiguous row would destroy data that
+      // simply couldn't be safely auto-matched. So an ambiguous candidate only
+      // suppresses the clear-as-new fallback; it never becomes the applied
+      // snapshot.
+      var idSnapshot = capture.byId[assignment.id];
+      var nameSnapshot = capture.byName[assignment.name];
+      var snapshot = null;
+      var hadAmbiguousCandidate = false;
+      if (idSnapshot) {
+        if (!idSnapshot.duplicate) {
+          snapshot = idSnapshot;
+        } else {
+          hadAmbiguousCandidate = true;
+        }
+      }
+      if (!snapshot && nameSnapshot) {
+        if (!nameSnapshot.duplicate) {
+          snapshot = nameSnapshot;
+        } else {
+          hadAmbiguousCandidate = true;
+        }
+      }
+
+      if (snapshot) {
         block[offset] = mergeSnapshotRow_(snapshot, lastCol);
-      } else if (!snapshot) {
+      } else if (!hadAmbiguousCandidate) {
         block[offset] = clearValuesKeepFormulas_(block[offset]);
       }
       block[offset][nameCol - 1] = assignment.name;
+      if (idCol) block[offset][idCol - 1] = assignment.id;
 
       var overrides = extraOverridesFn ? extraOverridesFn(assignment) : null;
       for (var header in overrides) {
@@ -715,24 +789,28 @@ CollegeTools.Trackers = (function() {
 
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
-      syncCollegeRowToSheet_(fa, sourceRow, info.name, {
+      ensureTrackerIdColumn_(fa, 'FINANCIAL_AID');
+      syncCollegeRowToSheet_(fa, sourceRow, info.name, info.id, {
         'Total Cost of Attendance': info.coa,
       });
     }
 
     var cv = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     if (cv) {
-      syncCollegeRowToSheet_(cv, sourceRow, info.name, {});
+      ensureTrackerIdColumn_(cv, 'CAMPUS_VISIT');
+      syncCollegeRowToSheet_(cv, sourceRow, info.name, info.id, {});
     }
 
     var at = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     if (at) {
-      syncCollegeRowToSheet_(at, sourceRow, info.name, {});
+      ensureTrackerIdColumn_(at, 'APPLICATION_TIMELINE');
+      syncCollegeRowToSheet_(at, sourceRow, info.name, info.id, {});
     }
 
     var st = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     if (st) {
-      syncCollegeRowToSheet_(st, sourceRow, info.name, {});
+      ensureTrackerIdColumn_(st, 'STATUS_TRACKER');
+      syncCollegeRowToSheet_(st, sourceRow, info.name, info.id, {});
     }
   }
 
@@ -774,21 +852,21 @@ CollegeTools.Trackers = (function() {
     var cvSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     var atSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     var stSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
-    // Read each tracker once, capturing both the name-keyed snapshots and the
-    // raw data block reused as the rebuild base.
+    // Read each tracker once, capturing the ID-keyed and name-bridge snapshots
+    // and the raw data block reused as the rebuild base.
     var trackerCaptures = {
-      financialAid: captureTrackerSheet_(faSheet),
-      campusVisit: captureTrackerSheet_(cvSheet),
-      applicationTimeline: captureTrackerSheet_(atSheet),
-      statusTracker: captureTrackerSheet_(stSheet),
+      financialAid: captureTrackerSheet_(faSheet, 'FINANCIAL_AID'),
+      campusVisit: captureTrackerSheet_(cvSheet, 'CAMPUS_VISIT'),
+      applicationTimeline: captureTrackerSheet_(atSheet, 'APPLICATION_TIMELINE'),
+      statusTracker: captureTrackerSheet_(stSheet, 'STATUS_TRACKER'),
     };
-    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.financialAid.snapshots,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.financialAid.byName,
       CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
-    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.campusVisit.snapshots,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.campusVisit.byName,
       CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
-    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.applicationTimeline.snapshots,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.applicationTimeline.byName,
       CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
-    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.statusTracker.snapshots,
+    collectDuplicateSnapshotWarnings_(warnings, trackerCaptures.statusTracker.byName,
       CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
 
     // Read all header and data in two bulk reads instead of per-row calls
@@ -798,21 +876,41 @@ CollegeTools.Trackers = (function() {
         return (x || '').toString().trim();
       });
     var coaIdx = hdrs.indexOf('Total Cost of Attendance');
+    var idIdx = hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID'));
+    if (idIdx === -1) {
+      // Older Colleges sheet: append the column once, same as fillCollegeRowCore's
+      // ensureCollegesIdColumn_, so repair alone can bring an old workbook current.
+      idIdx = lastCol;
+      collegesSheet.getRange(2, lastCol + 1).setValue(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID'));
+      lastCol += 1;
+    }
     var data = collegesSheet.getRange(3, 1, lastRow - 2, lastCol).getValues();
 
     // Build the ordered canonical assignment list once; each tracker maps a
     // Colleges row to the same tracker row, so this drives every sheet's rebuild.
+    // Backfill any missing College ID in the same pass so a workbook with rows
+    // added by typing (not via Fill Row) still gets stable IDs.
+    var idWrites = [];
     var assignments = [];
     for (var i = 0; i < data.length; i++) {
       var collegeName = (data[i][0] || '').toString().trim();
       if (!collegeName) continue;
+      var collegeId = (data[i][idIdx] || '').toString().trim();
+      if (!collegeId) {
+        collegeId = Utilities.getUuid();
+        idWrites.push({row: i + 3, id: collegeId});
+      }
       assignments.push({
         trackerRow: getTrackerRowForCollegeRow_(i + 3),
         name: collegeName,
+        id: collegeId,
         coa: coaIdx >= 0 ? data[i][coaIdx] : '',
       });
       processed++;
     }
+    idWrites.forEach(function(w) {
+      collegesSheet.getRange(w.row, idIdx + 1).setValue(w.id);
+    });
 
     // One bulk write per tracker (reusing the capture read) instead of
     // per-row/per-cell round-trips.

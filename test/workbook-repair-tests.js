@@ -68,5 +68,19 @@ suite.test('repairEntireWorkbook combines sync, validations, regions, and dashbo
   suite.assert(mockUi.alerts.length > 0, 'Workbook repair should notify the user');
 });
 
+suite.test('repairCollegeSync run twice in a row does not change already-assigned College IDs', () => {
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Stable College');
+
+  CollegeTools.Setup.repairEntireWorkbook();
+  const idCol = getCollegeColumn('College ID', colleges);
+  const firstId = colleges.getRange(3, idCol).getValue();
+
+  CollegeTools.Setup.repairEntireWorkbook();
+  const secondId = colleges.getRange(3, idCol).getValue();
+
+  suite.assertEqual(secondId, firstId, 'Repeated repair must not regenerate an existing College ID');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

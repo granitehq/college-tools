@@ -52,5 +52,41 @@ suite.test('ensureCollegesIdColumn_ backfills College ID on an older Colleges sh
   suite.assert(newHeaders.indexOf('College ID') !== -1, 'College ID column should be auto-appended');
 });
 
+suite.test('repairCollegeSync preserves tracker data across a Colleges rename (ID-keyed, not name-keyed)', () => {
+  resetUuidCounter();
+  const {colleges} = setupWorkbook({});
+  const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
+  colleges.getRange(3, 1).setValue('Old Name University');
+  colleges.getRange(3, coaCol).setValue(50000);
+
+  CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  cv.getRange(2, 2).setValue('2026-10-01'); // some user-entered visit data in a non-name column
+
+  // Rename the college -- this is the failure mode the old name-keyed sync had.
+  colleges.getRange(3, 1).setValue('New Name University');
+  CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(cv.getRange(2, 1).getValue(), 'New Name University',
+    'Tracker display name should follow the rename');
+  suite.assertEqual(cv.getRange(2, 2).getValue(), '2026-10-01',
+    'Tracker data entered before the rename must survive it, keyed by College ID');
+});
+
+suite.test('duplicate Colleges names still get distinct College IDs', () => {
+  resetUuidCounter();
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Twin State University');
+  colleges.getRange(4, 1).setValue('Twin State University');
+
+  CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  const idCol = getCollegeColumn('College ID', colleges);
+  const id3 = colleges.getRange(3, idCol).getValue();
+  const id4 = colleges.getRange(4, idCol).getValue();
+  suite.assert(id3 && id4 && id3 !== id4, 'Two Colleges rows with the same name must get distinct IDs');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);
