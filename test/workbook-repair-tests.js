@@ -33,6 +33,36 @@ CollegeTools.Scoring = {
   },
 };
 
+suite.test('repairEntireWorkbook can run as a no-UI service with suppressed alerts', () => {
+  const {colleges} = setupWorkbook({includeCampusSetting: true});
+  var regionCol = getCollegeColumn('Region', colleges);
+
+  colleges.getRange(3, 1).setValue('Alpha College');
+  colleges.getRange(3, 3).setValue('CA');
+  mockUi.alerts = [];
+
+  var result = CollegeTools.Setup.repairEntireWorkbook({suppressAlert: true});
+
+  suite.assert(result.ok, 'Suppressed workbook repair should succeed');
+  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'West',
+    'Suppressed workbook repair should still run repair steps');
+  suite.assertEqual(mockUi.alerts.length, 0,
+    'Suppressed workbook repair should not show confirmation or completion alerts');
+});
+
+suite.test('repairEntireWorkbook returns structured failure without alerts when required sheets are missing', () => {
+  harness.resetSheets();
+  mockUi.alerts = [];
+
+  var result = CollegeTools.Setup.repairEntireWorkbook({suppressAlert: true});
+
+  suite.assert(result && result.ok === false, 'Missing required sheets should produce a failed result');
+  suite.assert(result.details && result.details.steps.length > 0,
+    'Failed repair should include attempted step details');
+  suite.assertEqual(mockUi.alerts.length, 0,
+    'Failed suppressed repair should not alert');
+});
+
 suite.test('repairEntireWorkbook combines sync, validations, regions, and dashboard refresh', () => {
   const {colleges} = setupWorkbook({includeCampusSetting: true});
   var coaCol = getCollegeColumn('Total Cost of Attendance', colleges);

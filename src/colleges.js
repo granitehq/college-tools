@@ -363,7 +363,9 @@ CollegeTools.Colleges = (function() {
     nextRowValues[COL.NAME - 1] = sanitizedName;
 
     // Fetch college data via API
-    var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName);
+    var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName, {
+      executionBudget: opts.executionBudget,
+    });
     if (!apiResult.ok) {
       // Don't clobber user-entered notes with the error message.
       if (isAutoStampNotes_(rowValues[COL.NOTES - 1])) {
@@ -673,7 +675,7 @@ CollegeTools.Colleges = (function() {
 
     // Process each row, stopping early if we approach the execution time limit
     var ok=0; var skipped=0; var failed=0; var timeLimitExceeded=false;
-    var startTime = new Date().getTime();
+    var executionBudget = CollegeTools.ExecutionBudget.start(CollegeTools.Config.API_CONFIG.EXECUTION_TIME_LIMIT);
 
     for (var i=0; i<list.length; i++) {
       var row = list[i];
@@ -683,8 +685,7 @@ CollegeTools.Colleges = (function() {
       }
 
       // Check execution time limit before processing each row
-      var elapsed = new Date().getTime() - startTime;
-      if (elapsed > CollegeTools.Config.API_CONFIG.EXECUTION_TIME_LIMIT) {
+      if (!executionBudget.canContinue()) {
         timeLimitExceeded = true;
         SpreadsheetApp.getUi().alert('Stopping batch processing due to execution time limit. ' +
           'Processed ' + (i) + ' of ' + list.length + ' rows.');
@@ -695,6 +696,7 @@ CollegeTools.Colleges = (function() {
         var res = fillCollegeRowCore(row, {
           suppressAlert: true,
           columnIndexes: columnIndexes,
+          executionBudget: executionBudget,
         });
         if (res && res.ok) {
           ok++;

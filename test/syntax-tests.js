@@ -89,6 +89,7 @@ const sourceFiles = [
   'financial.js',
   'formatting.js',
   'formulas.js',
+  'execution-budget.js',
   'instructions.js',
   'lookup.js',
   'menu.js',

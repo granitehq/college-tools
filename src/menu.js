@@ -96,7 +96,43 @@ function repairCollegeSync() {
   return CollegeTools.Trackers.repairCollegeSync();
 }
 function repairEntireWorkbook() {
-  return CollegeTools.Setup.repairEntireWorkbook();
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.alert(
+    'Repair Entire Workbook',
+    'This will repair the current spreadsheet by:\n\n' +
+    '• Re-syncing tracker college lists from the Colleges tab\n' +
+    '• Reapplying dropdowns and formatting\n' +
+    '• Refilling Regions from State values\n' +
+    '• Rebuilding scoring formulas (custom weights are kept)\n' +
+    '• Refreshing Travel Planner estimates\n' +
+    '• Refreshing dashboard data when present\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO,
+  );
+
+  if (result !== ui.Button.YES) return;
+
+  var repairResult = CollegeTools.Setup.repairEntireWorkbook({suppressAlert: true});
+  var details = repairResult && repairResult.details || {};
+  var steps = details.steps || [];
+  var detailById = {};
+  steps.forEach(function(step) {
+    detailById[step.id] = step.details || {};
+  });
+
+  ui.alert(
+    repairResult && repairResult.ok ? 'Workbook Repair Complete' : 'Workbook Repair Incomplete',
+    'Tracker rows updated: ' + (detailById['tracker-sync'] && detailById['tracker-sync'].count || 0) + '\n' +
+    'Formatted sheets repaired: ' +
+      ((detailById['validation-formatting'] && detailById['validation-formatting'].sectionsApplied || []).length) +
+      '\n' +
+    'Regions refreshed: ' + (detailById.regions && detailById.regions.count || 0) + '\n' +
+    'Travel rows refreshed: ' + (detailById['travel-planner'] && detailById['travel-planner'].count || 0) +
+      '\n\n' +
+    'This is safe to run again if needed.',
+    ui.ButtonSet.OK,
+  );
+  return repairResult;
 }
 function clearApiCache() {
   return CollegeTools.Scorecard.clearCache();

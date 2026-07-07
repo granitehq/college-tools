@@ -16,6 +16,7 @@
     "src/utils.js",
     "src/schema.js",
     "src/formulas.js",
+    "src/execution-budget.js",
     "src/travel.js",
     "src/scorecard.js",
     "src/instructions.js",

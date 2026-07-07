@@ -20,13 +20,34 @@ suite.test('formulas quote sheet names with spaces and apostrophes', () => {
 });
 
 suite.test('formulas build financial tracker formulas from supplied cell references', () => {
+  suite.assertEqual(CollegeTools.Formulas.efcPrefill(),
+    '=IFERROR(IF(EFC="","",EFC), "")', 'EFC prefill should match current tracker behavior');
   suite.assertEqual(CollegeTools.Formulas.netPriceAfterAid('L2', 'N2', 'O2'),
     '=IFERROR(L2-SUM(N2:O2), "")', 'Net price formula should match current tracker behavior');
   suite.assertEqual(CollegeTools.Formulas.outOfPocketCost('AC2', 'X2'),
     '=IFERROR(AC2-X2, "")', 'Out-of-pocket formula should subtract outside scholarships');
+  suite.assertEqual(CollegeTools.Formulas.travelCostsLookup('A2', 'L'),
+    '=IFERROR(INDEX(\'Travel Planner\'!L:L,MATCH(A2,\'Travel Planner\'!A:A,0)), "")',
+    'Travel cost formula should look up annual travel estimate by college name');
   suite.assertEqual(CollegeTools.Formulas.fourYearProjectedCost('AD2'),
     '=IFERROR(AD2*(1+1.03+1.03^2+1.03^3), "")',
     'Four-year projected cost formula should preserve current inflation calculation');
+  suite.assertEqual(CollegeTools.Formulas.aidRequirementsComplete({
+    fafsaSubmitted: 'F2',
+    cssStatus: 'P2',
+    idocStatus: 'Q2',
+    verificationStatus: 'R2',
+  }), '=IF(AND(F2="Y",OR(P2="Not Required",P2="Submitted"),OR(Q2="Not Required",Q2="Submitted"),OR(R2="Not Required",R2="Submitted",R2="")),"✅ Complete","⚠️ Pending")',
+  'Aid requirements formula should preserve strict CSS/IDOC and lenient verification behavior');
+});
+
+suite.test('formulas build timeline and status tracker formulas from supplied cell references', () => {
+  suite.assertEqual(CollegeTools.Formulas.daysUntilDeadline('E2'),
+    '=IF(ISNUMBER(E2), IF(E2-TODAY()>0, E2-TODAY(), "PAST DUE"), "")',
+    'Days-until-deadline formula should keep blank deadlines blank');
+  suite.assertEqual(CollegeTools.Formulas.documentsComplete('C2', 'F2'),
+    '=COUNTIF(C2:F2,"Y")&"/"&COUNTA(C2:F2)&IF(COUNTIF(C2:F2,"N")=0," ✅"," ⚠️")',
+    'Documents complete formula should preserve current Y/N count behavior');
 });
 
 suite.test('admissionFit builds a single Reach/Match/Likely formula from SAT, ACT, and GPA', () => {
