@@ -239,6 +239,77 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Rewrites a tracker sheet's header row and repositions existing data so a
+   * header-layout change (rename, reorder, or removal) never strands data
+   * under the wrong new header. Columns present under the same label in both
+   * old and new headers are moved to their new position; columns removed
+   * without a merge target are dropped (callers that need to preserve their
+   * data first should capture it before calling this).
+   * @param {Sheet} sh - Tracker sheet (already ensured to exist)
+   * @param {Array<string>} newHeaders - Target header row, in order
+   * @param {Object<string, Array<string>>=} mergeMap - Old header label ->
+   *   ordered list of new header labels to receive its value per row (first
+   *   empty new-column slot wins), for old columns that no longer exist
+   * @private
+   */
+  function migrateTrackerHeaders_(sh, newHeaders, mergeMap) {
+    mergeMap = mergeMap || {};
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) {
+      CollegeTools.Utils.setHeaders(sh, newHeaders);
+      return;
+    }
+
+    var oldHeaders = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+      return (h || '').toString().trim();
+    });
+    var alreadyCurrent = oldHeaders.length === newHeaders.length &&
+      oldHeaders.every(function(h, i) {
+        return h === newHeaders[i];
+      });
+    if (alreadyCurrent) return;
+
+    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var formulas = sh.getRange(2, 1, lastRow - 1, lastCol).getFormulas();
+    var block = mergeValuesAndFormulas_(values, formulas);
+
+    var newBlock = block.map(function() {
+      return blankRow_(newHeaders.length);
+    });
+    var newIndex = {};
+    newHeaders.forEach(function(h, i) {
+      newIndex[h] = i;
+    });
+
+    oldHeaders.forEach(function(oldHeader, oldIdx) {
+      if (!oldHeader) return;
+      var targetIdx = newIndex.hasOwnProperty(oldHeader) ? newIndex[oldHeader] : null;
+      var fallbacks = mergeMap[oldHeader];
+      for (var r = 0; r < block.length; r++) {
+        var cellValue = block[r][oldIdx];
+        if (cellValue === '' || cellValue === null || cellValue === undefined) continue;
+        if (targetIdx !== null) {
+          newBlock[r][targetIdx] = cellValue;
+          continue;
+        }
+        if (!fallbacks) continue;
+        for (var f = 0; f < fallbacks.length; f++) {
+          var fIdx = newIndex[fallbacks[f]];
+          if (fIdx === undefined) continue;
+          if (newBlock[r][fIdx] === '' || newBlock[r][fIdx] === null) {
+            newBlock[r][fIdx] = cellValue;
+            break;
+          }
+        }
+      }
+    });
+
+    CollegeTools.Utils.setHeaders(sh, newHeaders);
+    sh.getRange(2, 1, newBlock.length, newHeaders.length).setValues(newBlock);
+  }
+
+  /**
    * Adds duplicate-name snapshot warnings to a repair warning list.
    * @param {Array<Object>} warnings - Warning accumulator
    * @param {Object} snapshots - Snapshot map keyed by college name
@@ -259,6 +330,87 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Migrates the Financial Aid Tracker's old Required/Submitted column pairs
+   * (CSS Profile, IDOC, Verification) into their single 3-state status
+   * columns, and folds any existing Appeal Status text into Notes (appended,
+   * not overwritten) before the header rewrite drops that column. Existing
+   * data that has no old-shape columns to migrate falls through to the
+   * generic header reshape untouched.
+   * @param {Sheet} sh - Financial Aid Tracker sheet (already ensured to exist)
+   * @param {Array<string>} newHeaders - Target header row, in order
+   * @private
+   */
+  function migrateFinancialAidStatusColumns_(sh, newHeaders) {
+    var statusGroups = [
+      {status: 'CSS Profile Status', req: 'CSS Profile Required (Y/N)', sub: 'CSS Profile Submitted (Y/N)'},
+      {status: 'IDOC Status', req: 'IDOC Required (Y/N)', sub: 'IDOC Submitted (Y/N)'},
+      {status: 'Verification Status', req: 'Verification Required (Y/N)', sub: 'Verification Submitted (Y/N)'},
+    ];
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) {
+      migrateTrackerHeaders_(sh, newHeaders, {});
+      return;
+    }
+
+    var oldHeaders = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+      return (h || '').toString().trim();
+    });
+    var hasOldStatusCols = statusGroups.some(function(g) {
+      return oldHeaders.indexOf(g.req) !== -1 || oldHeaders.indexOf(g.sub) !== -1;
+    });
+    var appealIdx = oldHeaders.indexOf('Appeal Status');
+    if (!hasOldStatusCols && appealIdx === -1) {
+      migrateTrackerHeaders_(sh, newHeaders, {});
+      return;
+    }
+
+    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+    var statusValues = {};
+    statusGroups.forEach(function(g) {
+      var reqIdx = oldHeaders.indexOf(g.req);
+      var subIdx = oldHeaders.indexOf(g.sub);
+      statusValues[g.status] = values.map(function(row) {
+        var reqVal = reqIdx === -1 ? '' : (row[reqIdx] || '').toString().trim();
+        var subVal = subIdx === -1 ? '' : (row[subIdx] || '').toString().trim();
+        if (/^(y|yes)$/i.test(subVal)) return 'Submitted';
+        if (/^n$/i.test(reqVal)) return 'Not Required';
+        if (!reqVal && !subVal) return '';
+        return 'Not Started';
+      });
+    });
+
+    var appealAppend = values.map(function(row) {
+      var appeal = appealIdx === -1 ? '' : (row[appealIdx] || '').toString().trim();
+      return appeal ? 'Appeal Status: ' + appeal : '';
+    });
+
+    migrateTrackerHeaders_(sh, newHeaders, {});
+
+    statusGroups.forEach(function(g) {
+      var col = CollegeTools.Utils.colIndex(sh, g.status);
+      if (!col) return;
+      var rows = statusValues[g.status].map(function(v) {
+        return [v];
+      });
+      sh.getRange(2, col, rows.length, 1).setValues(rows);
+    });
+
+    var notesCol = CollegeTools.Utils.colIndex(sh, 'Notes');
+    if (notesCol) {
+      var notesNow = sh.getRange(2, notesCol, appealAppend.length, 1).getValues();
+      var merged = notesNow.map(function(row, i) {
+        var existing = (row[0] || '').toString().trim();
+        var appeal = appealAppend[i];
+        if (!appeal) return [existing];
+        return [existing ? existing + ' | ' + appeal : appeal];
+      });
+      sh.getRange(2, notesCol, merged.length, 1).setValues(merged);
+    }
+  }
+
+  /**
    * Creates or updates the Financial Aid Tracker sheet with headers and formulas.
    * @param {Spreadsheet} ss - The spreadsheet object
    * @private
@@ -266,7 +418,7 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateFinAid(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     var headers = CollegeTools.Config.HEADERS.FINANCIAL_AID;
-    CollegeTools.Utils.setHeaders(sh, headers);
+    migrateFinancialAidStatusColumns_(sh, headers);
 
     CollegeTools.Formatting.applyStandardValidations(sh);
 
@@ -315,39 +467,41 @@ CollegeTools.Trackers = (function() {
       sh.getRange(r2, fourYearCol).setFormula(fourYearFormula);
     }
 
-    // Aid Requirements Complete formula
+    // Aid Requirements Complete formula. CSS/IDOC/Verification are each a
+    // single 3-state status column now (Not Required/Not Started/Submitted).
+    // CSS/IDOC require an explicit "Not Required" or "Submitted" answer, same
+    // as before (a blank/Not Started cell stays pending). Verification keeps
+    // its original leniency: most families are never selected for
+    // verification, so a still-blank cell counts as satisfied there, same as
+    // the old formula treated a blank Verification Required cell.
     var completeCol = CollegeTools.Utils.colIndex(sh, 'Aid Requirements Complete');
     var fafsaSubCol = CollegeTools.Utils.colIndex(sh, 'FAFSA Submitted (Y/N)');
-    var cssReqCol = CollegeTools.Utils.colIndex(sh, 'CSS Profile Required (Y/N)');
-    var cssSubCol = CollegeTools.Utils.colIndex(sh, 'CSS Profile Submitted (Y/N)');
-    var idocReqCol = CollegeTools.Utils.colIndex(sh, 'IDOC Required (Y/N)');
-    var idocSubCol = CollegeTools.Utils.colIndex(sh, 'IDOC Submitted (Y/N)');
-    var verReqCol = CollegeTools.Utils.colIndex(sh, 'Verification Required (Y/N)');
-    var verSubCol = CollegeTools.Utils.colIndex(sh, 'Verification Submitted (Y/N)');
+    var cssStatusCol = CollegeTools.Utils.colIndex(sh, 'CSS Profile Status');
+    var idocStatusCol = CollegeTools.Utils.colIndex(sh, 'IDOC Status');
+    var verStatusCol = CollegeTools.Utils.colIndex(sh, 'Verification Status');
 
-    if (completeCol && fafsaSubCol && cssSubCol) {
+    /**
+     * Builds the OR(...) satisfied-status clause for a status cell.
+     * @param {string} cell - A1 cell reference
+     * @param {boolean=} lenientBlank - Whether a blank cell also counts as satisfied
+     * @returns {string} OR(...) formula fragment
+     */
+    function statusSatisfiedClause(cell, lenientBlank) {
+      return 'OR(' + cell + '="Not Required",' + cell + '="Submitted"' +
+        (lenientBlank ? ',' + cell + '=""' : '') + ')';
+    }
+
+    if (completeCol && fafsaSubCol && cssStatusCol) {
       var fafsaSubCell = CollegeTools.Utils.addr(r2, fafsaSubCol);
-      var cssReqCell = cssReqCol ? CollegeTools.Utils.addr(r2, cssReqCol) : '';
-      var cssSubCell = CollegeTools.Utils.addr(r2, cssSubCol);
-      var idocReqCell = idocReqCol ? CollegeTools.Utils.addr(r2, idocReqCol) : '';
-      var idocSubCell = idocSubCol ? CollegeTools.Utils.addr(r2, idocSubCol) : '';
-      var verReqCell = verReqCol ? CollegeTools.Utils.addr(r2, verReqCol) : '';
-      var verSubCell = verSubCol ? CollegeTools.Utils.addr(r2, verSubCol) : '';
-
-      // Verification counts as satisfied when not required (N or blank) or
-      // when submitted — without the submitted check, verification-required
-      // colleges could never reach Complete.
-      var verClause = '';
-      if (verReqCol) {
-        verClause = ',OR(' + verReqCell + '="N",' + verReqCell + '=""' +
-          (verSubCol ? ',' + verSubCell + '="Y"' : '') + ')';
-      }
+      var cssStatusCell = CollegeTools.Utils.addr(r2, cssStatusCol);
+      var idocStatusCell = idocStatusCol ? CollegeTools.Utils.addr(r2, idocStatusCol) : '';
+      var verStatusCell = verStatusCol ? CollegeTools.Utils.addr(r2, verStatusCol) : '';
 
       var completeFormula = '=IF(AND(' +
         fafsaSubCell + '="Y",' +
-        'OR(' + cssReqCell + '="N",' + cssSubCell + '="Y")' +
-        (idocReqCol ? ',OR(' + idocReqCell + '="N",' + idocSubCell + '="Y")' : '') +
-        verClause +
+        statusSatisfiedClause(cssStatusCell, false) +
+        (idocStatusCol ? ',' + statusSatisfiedClause(idocStatusCell, false) : '') +
+        (verStatusCol ? ',' + statusSatisfiedClause(verStatusCell, true) : '') +
         '),"✅ Complete","⚠️ Pending")';
 
       sh.getRange(r2, completeCol).setFormula(completeFormula);
@@ -375,7 +529,16 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateAppTimeline(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     var headers = CollegeTools.Config.HEADERS.APPLICATION_TIMELINE;
-    CollegeTools.Utils.setHeaders(sh, headers);
+    // Honors Program Deadline / Portfolio-Audition Due / Housing Application
+    // Opens / Orientation Registration Opens were collapsed into two generic
+    // date slots -- migrate any existing dates into the first open slot per
+    // row instead of stranding them under a relabeled column.
+    migrateTrackerHeaders_(sh, headers, {
+      'Honors Program Deadline': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
+      'Portfolio/Audition Due': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
+      'Housing Application Opens': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
+      'Orientation Registration Opens': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
+    });
 
     CollegeTools.Formatting.applyStandardValidations(sh);
 
@@ -476,9 +639,66 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateScholarships(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     var headers = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
-    CollegeTools.Utils.setHeaders(sh, headers);
+    migrateScholarshipRequirementColumns_(sh, headers);
 
     CollegeTools.Formatting.applyStandardValidations(sh);
+  }
+
+  /**
+   * Migrates the 5 removed Scholarship Tracker requirement flag columns
+   * (Financial Need Required, Transcript Required, FAFSA Required,
+   * Portfolio/Work Samples, Interview Required) into the single
+   * "Requirements Checklist" free-text column before the header rewrite,
+   * so a "Y" in any of them survives as readable text instead of being
+   * silently dropped.
+   * @param {Sheet} sh - Scholarship Tracker sheet (already ensured to exist)
+   * @param {Array<string>} newHeaders - Target header row, in order
+   * @private
+   */
+  function migrateScholarshipRequirementColumns_(sh, newHeaders) {
+    var requirementCols = [
+      'Financial Need Required', 'Transcript Required', 'FAFSA Required',
+      'Portfolio/Work Samples', 'Interview Required',
+    ];
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) {
+      migrateTrackerHeaders_(sh, newHeaders, {});
+      return;
+    }
+
+    var oldHeaders = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+      return (h || '').toString().trim();
+    });
+    var hasOldRequirementCols = requirementCols.some(function(h) {
+      return oldHeaders.indexOf(h) !== -1;
+    });
+    if (!hasOldRequirementCols) {
+      migrateTrackerHeaders_(sh, newHeaders, {});
+      return;
+    }
+
+    var values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var checklist = values.map(function(row) {
+      var picked = [];
+      requirementCols.forEach(function(h) {
+        var idx = oldHeaders.indexOf(h);
+        if (idx === -1) return;
+        var val = (row[idx] || '').toString().trim();
+        if (/^(y|yes)$/i.test(val)) picked.push(h.replace(' Required', '').replace(' (Y/N)', ''));
+      });
+      return picked.join(', ');
+    });
+
+    migrateTrackerHeaders_(sh, newHeaders, {});
+
+    var checklistCol = CollegeTools.Utils.colIndex(sh, 'Requirements Checklist');
+    if (checklistCol) {
+      var rows = checklist.map(function(v) {
+        return [v];
+      });
+      sh.getRange(2, checklistCol, rows.length, 1).setValues(rows);
+    }
   }
 
   /**

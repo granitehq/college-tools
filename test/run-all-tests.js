@@ -10,6 +10,7 @@ const tests = [
   'template-integrity-tests.js',
   'workbook-repair-tests.js',
   'perf-batching-tests.js',
+  'tracker-column-migration-tests.js',
   'config-schema-tests.js',
   'schema-metadata-tests.js',
   'formulas-tests.js',

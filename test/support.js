@@ -189,7 +189,15 @@ class MockRange {
   setFontColor() { return this; }
   setFontStyle() { return this; }
   setBorder() { return this; }
-  setNote() { return this; }
+  setNote(note) {
+    this._forEachCell((row, col) => {
+      this.sheet.setCellNote(row, col, note);
+    });
+    return this;
+  }
+  getNote() {
+    return this.sheet.getCellNote(this.row, this.col);
+  }
   setNumberFormat(pattern) {
     this._forEachCell((row, col) => {
       this.sheet.setCellFormat(row, col, pattern);
@@ -252,6 +260,17 @@ class MockSheet {
     this.formats = this.formats || {};
     const key = this._key(row, col);
     return Object.prototype.hasOwnProperty.call(this.formats, key) ? this.formats[key] : '';
+  }
+
+  setCellNote(row, col, note) {
+    this.notes = this.notes || {};
+    this.notes[this._key(row, col)] = note;
+  }
+
+  getCellNote(row, col) {
+    this.notes = this.notes || {};
+    const key = this._key(row, col);
+    return Object.prototype.hasOwnProperty.call(this.notes, key) ? this.notes[key] : '';
   }
 
   getRange(rowOrA1, col, numRows, numCols) {

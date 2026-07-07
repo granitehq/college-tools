@@ -91,8 +91,17 @@ the two-branch rule because `origin/main` has not been updated.
 10. **Create a declarative setup plan.** Put setup, repair, formatting,
     formulas, dashboard refresh, and performance actions on one step registry
     with tested ordering.
-11. **Move API key storage toward user properties.** Keep the legacy sheet as a
-    migration fallback, but add visible warnings and a one-click migration path.
+11. **(Not a must-have) Move API key storage toward user properties.** Keep the
+    legacy sheet as a migration fallback, but add visible warnings and a
+    one-click migration path. Deliberately deferred: it's a credential/plumbing
+    change on the single most-used code path (every Fill Row/Fill Selected
+    Rows call), the Apps Script User/Document/Script Properties scoping needs
+    to work correctly across copied-template users (a real architecture
+    decision, not a mechanical edit), and it's exactly the kind of change the
+    mock-based test harness can't fully validate (see Testing Limits in
+    CLAUDE.md) — a live smoke test would be required before trusting it. Pick
+    this up only if the current sheet-based key storage becomes an active
+    problem, not proactively.
 12. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
     render-model cleanup, move remaining inline formulas into `Formulas`, and
     migrate `scoring.js` off legacy column helpers when that file is touched.

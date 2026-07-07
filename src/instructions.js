@@ -229,8 +229,7 @@ CollegeTools.Instructions = (function() {
         highlightRules: [
           {
             test: function(line) {
-              return line.indexOf('🎓') === 0 || line.indexOf('🔧') === 0 ||
-                line.indexOf('⚡') === 0 || line.indexOf('🛠️') === 0 ||
+              return line.indexOf('🎓') === 0 || line.indexOf('🛠️') === 0 ||
                 line.indexOf('ℹ️') === 0;
             },
             bold: true,
@@ -243,28 +242,28 @@ CollegeTools.Instructions = (function() {
           '   • Fill selected rows: Get data for multiple colleges (batch)',
           '   • Search College Names: Find colleges by name',
           '',
-          '🔧 SETUP & CUSTOMIZATION (For customizing pre-configured features):',
+          '🛠️ ADVANCED / SETUP (rarely needed day-to-day; mostly used when',
+          '   customizing features or troubleshooting):',
           '   • Add/Update Trackers: Create/update all tracking sheets',
           '   • Setup Dashboard: Create summary dashboard',
           '   • Setup Financial Intelligence: Advanced financial analysis',
           '   • Ensure Scoring Formulas: Add/update college scoring',
           '   • Enhance: Formats & Dropdowns: Improve sheet appearance',
-          '',
-          '⚡ PERFORMANCE & MAINTENANCE:',
           '   • Optimize Performance: Clean up and speed up sheets',
           '   • Refresh Dashboard Data: Update dashboard calculations',
+          '   • Refresh Travel Planner: Recalculate travel estimates',
           '   • Repair Validations & Dropdowns: Reapply formatting and dropdown rules',
           '   • Repair College Sync Across Tabs: Re-sync tracker college names',
           '   • Repair Entire Workbook: Run all major repair steps in one pass',
           '   • Fill Regions (all rows): Auto-populate US regions',
-          '   • Travel Planner: Uses optional Home City, Home State, and Trips Home Per Year',
-          '   • Travel estimates are offline approximations and can be overwritten manually',
-          '   • If Home City is blank, travel fields stay blank',
-          '',
-          '🛠️ DEVELOPER & DEBUG:',
           '   • Complete Setup (Re-run): Re-run full setup if troubleshooting',
-          '   • DEBUG: Fill row (verbose): Detailed diagnostic information',
-          '   • Clear API Cache: Reset cached responses',
+          '   • Register for Updates, DEBUG: Fill row (verbose), Clear API Cache:',
+          '     developer/diagnostic tools, safe to ignore otherwise',
+          '',
+          '   Travel Planner notes: uses optional Home City, Home State, and',
+          '   Trips Home Per Year. Travel estimates are offline approximations',
+          '   and can be overwritten manually. If Home City is blank, travel',
+          '   fields stay blank.',
           '',
           'ℹ️ ABOUT:',
           '   • Show version: Current College Tools version',

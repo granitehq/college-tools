@@ -194,5 +194,49 @@ suite.test('dashboard reports Reach Match Likely balance and warns when lopsided
     'Balance guardrail should nudge when the list has no Match schools');
 });
 
+suite.test('dashboard readiness banner reports overdue items and includes them in What\'s Due Next', () => {
+  setupWorkbook();
+  const timeline = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+
+  timeline.getRange(2, col(timeline, 'College Name', 1)).setValue('Alpha University');
+  timeline.getRange(2, col(timeline, 'Application Deadline', 1)).setValue(new Date('2026-06-25T00:00:00'));
+  timeline.getRange(2, col(timeline, 'Completion Status (%)', 1)).setValue(50);
+
+  CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-07-05T00:00:00'), suppressAlert: true});
+  const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
+
+  suite.assertEqual(dashboard.getRange(3, 1).getValue(), '⚠️ 1 overdue item needs attention — see What\'s Due Next below',
+    'Readiness banner should call out overdue items');
+
+  const dueRow = findRow(dashboard, "What's Due Next");
+  suite.assertEqual(dashboard.getRange(dueRow + 3, 1).getValue(), 'Alpha University',
+    'Overdue items should now surface in What\'s Due Next instead of disappearing');
+  suite.assertEqual(dashboard.getRange(dueRow + 3, 4).getValue(), -10,
+    'Overdue items should show a negative Days Left');
+});
+
+suite.test('dashboard readiness banner reports due-soon items when nothing is overdue', () => {
+  setupWorkbook();
+  const timeline = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+
+  timeline.getRange(2, col(timeline, 'College Name', 1)).setValue('Alpha University');
+  timeline.getRange(2, col(timeline, 'Application Deadline', 1)).setValue(new Date('2026-07-10T00:00:00'));
+
+  CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-07-05T00:00:00'), suppressAlert: true});
+  const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
+
+  suite.assertEqual(dashboard.getRange(3, 1).getValue(), '🕐 1 item due in the next 7 days',
+    'Readiness banner should call out due-soon items when nothing is overdue');
+});
+
+suite.test('dashboard readiness banner reports on track when nothing is overdue or due soon', () => {
+  setupWorkbook();
+  CollegeTools.Dashboard.refreshDashboard({today: new Date('2026-07-05T00:00:00'), suppressAlert: true});
+  const dashboard = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
+
+  suite.assertEqual(dashboard.getRange(3, 1).getValue(), '✅ On track — nothing overdue or due in the next 7 days',
+    'Readiness banner should reassure the family when there is nothing urgent');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

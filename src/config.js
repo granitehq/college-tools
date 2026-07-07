@@ -105,18 +105,24 @@ CollegeTools.Config = (function() {
       'Annual Travel Cost', 'Notes',
     ],
 
+    // CSS Profile/IDOC/Verification each used to be two Y/N columns
+    // (Required + Submitted); they're now one 3-state status column each
+    // (Not Required/Not Started/Submitted) -- fewer blank-for-most-rows
+    // columns, same information. FAFSA stays its own Y/N column since every
+    // family deals with FAFSA, unlike the school-specific CSS/IDOC/
+    // Verification requirements. Appeal Status was dropped (low-frequency;
+    // folds into free-text Notes on migration). Outside Scholarships Applied
+    // stays -- it's a live formula input to Out-of-Pocket Cost, not just a
+    // tracking field.
     FINANCIAL_AID: [
-      'College Name', 'FAFSA Deadline', 'CSS Profile Required (Y/N)', 'CSS Deadline', 'Priority Deadline',
-      'FAFSA Submitted (Y/N)', 'CSS Profile Submitted (Y/N)', 'IDOC Required (Y/N)', 'IDOC Submitted (Y/N)', 'Verification Required (Y/N)',
+      'College Name', 'FAFSA Deadline', 'CSS Deadline', 'Priority Deadline',
+      'FAFSA Submitted (Y/N)', 'CSS Profile Status', 'IDOC Status', 'Verification Status',
       'EFC (Expected Family Contribution)',
       'Total Cost of Attendance', 'Tuition & Fees', 'Room & Board', 'Books & Supplies', 'Personal Expenses', 'Travel Costs',
       'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid', 'Work-Study Offered',
       'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
       'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost',
-      'Outside Scholarships Applied', 'Appeal Status', 'Financial Safety', '4-Year Burden', 'Aid Requirements Complete', 'Notes',
-      // Appended (not inserted mid-list) so existing sheets that rerun setup
-      // keep their data columns aligned with the rewritten header row.
-      'Verification Submitted (Y/N)',
+      'Outside Scholarships Applied', 'Financial Safety', '4-Year Burden', 'Aid Requirements Complete', 'Notes',
     ],
 
     CAMPUS_VISIT: [
@@ -129,13 +135,20 @@ CollegeTools.Config = (function() {
     // Owns the application deadline and FAFSA/CSS deadlines are owned by
     // Financial Aid Tracker -- each deadline has exactly one home so manual
     // entry can't contradict itself across sheets.
+    //
+    // Honors Program Deadline, Portfolio/Audition Due, Housing Application
+    // Opens, and Orientation Registration Opens only apply to a minority of
+    // colleges/students; they were collapsed into two generic "Other
+    // Deadline" date columns (note what each one is via a cell note) so the
+    // sheet doesn't carry 4 columns blank for most rows. Both stay real date
+    // columns so they keep surfacing in Dashboard's What's Due Next.
     APPLICATION_TIMELINE: [
       'College Name', 'Application Type (ED/ED2/EA/REA/RD)', 'Application Opens', 'Application Deadline',
       'Test Score Deadline', 'Transcript Deadline', 'Counselor Rec Deadline', 'Teacher Rec Deadline',
       'FAFSA Opens', 'Merit Scholarship Deadline',
-      'Honors Program Deadline', 'Portfolio/Audition Due', 'Mid-Year Report Due', 'Decision Release Date',
-      'Student Visit Day', 'Housing Application Opens', 'Housing Deposit Due', 'Enrollment Deposit Deadline',
-      'Orientation Registration Opens', 'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)',
+      'Other Deadline 1 Date', 'Other Deadline 2 Date', 'Mid-Year Report Due', 'Decision Release Date',
+      'Student Visit Day', 'Housing Deposit Due', 'Enrollment Deposit Deadline',
+      'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)',
     ],
 
     STATUS_TRACKER: [
@@ -148,12 +161,18 @@ CollegeTools.Config = (function() {
     // Post-award/renewal minutiae (renewal terms, credit hours, thank-you
     // notes, etc.) were removed -- this tracker's job ends at "did we win
     // money"; renewal terms live in the free-text Notes/Strategy column.
+    //
+    // Financial Need Required, Transcript Required, FAFSA Required,
+    // Portfolio/Work Samples, and Interview Required were collapsed into one
+    // "Requirements Checklist" free-text column (e.g. "FAFSA, Transcript,
+    // Interview") -- these were 5 separate Y/N columns most scholarships only
+    // used a couple of.
     SCHOLARSHIP_TRACKER: [
       'Scholarship Name', 'Provider/Organization', 'Type (Merit/Need/Field/Local/National)', 'Amount',
-      'Award Type (One-time/Renewable)', 'GPA Requirement', 'Test Score Requirement', 'Financial Need Required',
+      'Award Type (One-time/Renewable)', 'GPA Requirement', 'Test Score Requirement',
       'Special Criteria', 'Geographic Restrictions', 'Deadline', 'Application Portal/Link', 'Essays Required (#)',
-      'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types', 'Transcript Required',
-      'FAFSA Required', 'Portfolio/Work Samples', 'Interview Required', 'Application Started Date',
+      'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types', 'Requirements Checklist',
+      'Application Started Date',
       'Application Submitted Date', 'Decision Date', 'Award Status (Pending/Awarded/Declined)',
       'Amount Awarded', 'Notes/Strategy',
     ],
