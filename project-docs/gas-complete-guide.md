@@ -961,7 +961,7 @@ README.md
 .env
 .eslintrc.json
 package*.json
-docs/**
+website/**
 coverage/**
 ```
 

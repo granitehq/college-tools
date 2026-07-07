@@ -18,6 +18,7 @@ Backlog mapping:
 - Backlog item 12 maps to Phases 5 and 7.
 - Backlog item 13 is related registry hardening work, but remains outside this Apps Script refactor plan unless registration/push code is touched.
 
+
 ## Principles
 
 - Preserve the current user-facing workbook model unless a task explicitly says otherwise.

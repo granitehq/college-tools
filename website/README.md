@@ -9,17 +9,17 @@ Run these commands from the repository root:
 ```bash
 npm run build
 npm run dev
-node docs/validate-docs.mjs
+node website/validate-website.mjs
 ```
 
 Then visit http://localhost:8080.
 
-`npm run build` stamps the current git hash into website footer text. The docs site itself is plain HTML, CSS, assets, Cloudflare Pages metadata, and a small Pages Function for clean URLs.
+`npm run build` stamps the current git hash into website footer text. The website itself is plain HTML, CSS, assets, Cloudflare Pages metadata, and a small Pages Function for clean URLs.
 
 ## Structure
 
 ```text
-docs/
+website/
 ├── index.html              # Landing page
 ├── getting-started.html    # Setup instructions
 ├── features.html           # Feature gallery
@@ -28,7 +28,7 @@ docs/
 ├── _headers                # Cloudflare Pages response headers
 ├── _redirects              # Legacy redirects
 ├── functions/[[path]].js   # Clean URL rewrites
-├── validate-docs.mjs       # Dependency-free static validation
+├── validate-website.mjs    # Dependency-free static validation
 └── assets/
     ├── css/style.css       # Main stylesheet
     ├── favicon/            # Manifest and browser icons
@@ -57,14 +57,14 @@ The HTML files remain in the folder as Cloudflare Pages assets. `functions/[[pat
 
 ## Validation
 
-Run the docs-specific validation before deploying:
+Run the website-specific validation before deploying:
 
 ```bash
-node docs/validate-docs.mjs
+node website/validate-website.mjs
 ```
 
 The validation checks deploy-sensitive issues: third-party-compatible headers, manifest icon references, clean internal URLs, safe new-tab links, supported structured data, and stale maintenance notes.
 
 ## Deployment
 
-Cloudflare Pages should serve `docs/` as the project output directory. Keep `_headers`, `_redirects`, `functions/`, `manifest.json`, `robots.txt`, and `sitemap.xml` in this folder because they are deployment inputs.
+Cloudflare Pages should serve `website/` as the project output directory. Keep `_headers`, `_redirects`, `functions/`, `manifest.json`, `robots.txt`, and `sitemap.xml` in this folder because they are deployment inputs.

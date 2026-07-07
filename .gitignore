@@ -108,3 +108,5 @@ test/coverage/
 credentials.json
 token.json
 backups/
+.claude/worktrees
+.claude/worktrees/*

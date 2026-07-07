@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DOCS_DIR = path.join(__dirname, '..', 'docs');
+const WEBSITE_DIR = path.join(__dirname, '..', 'website');
 const HTML_FILES = ['index.html', 'features.html', 'getting-started.html'];
 const COPY_LINK_PATTERN = /(https:\/\/docs\.google\.com\/spreadsheets\/d\/)([a-zA-Z0-9_-]+)(\/copy)/g;
 
@@ -46,7 +46,7 @@ function main() {
 
   let updatedCount = 0;
   HTML_FILES.forEach((file) => {
-    const filePath = path.join(DOCS_DIR, file);
+    const filePath = path.join(WEBSITE_DIR, file);
     const result = updateFile(filePath, newId);
     if (result.changed) {
       console.log(`✓ Updated ${file}`);

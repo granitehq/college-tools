@@ -25,7 +25,7 @@ Run `npm run version:show` for the current version — don't rely on a hardcoded
 There are two Google Sheets in play, analogous to non-production and production:
 
 - **Template** — the clasp-bound development copy. Its Apps Script project's Script ID matches `scriptId` in `.clasp.json`. This is what `npm run release:clasp` deploys to. This is where you make template structure edits (per the Phase 1 checklist in `product-plan.md`) and verify Setup/Repair before shipping.
-- **Published** — the spreadsheet real users copy. Its Google Sheets file ID is **not** recorded anywhere in this repo except `docs/index.html`, `docs/features.html`, and `docs/getting-started.html` (the "Copy Template" buttons on the public website). Nothing else should ever hardcode this ID — see "Why only the website holds the ID" below.
+- **Published** — the spreadsheet real users copy. Its Google Sheets file ID is **not** recorded anywhere in this repo except `website/index.html`, `website/features.html`, and `website/getting-started.html` (the "Copy Template" buttons on the public website). Nothing else should ever hardcode this ID — see "Why only the website holds the ID" below.
 
 **Copying a spreadsheet in Google Drive always creates a new file ID.** There's no way to push code or content into an existing Drive file's ID from a different file — so promoting a release means the published spreadsheet's ID changes every time. That's expected; the ID rotates, the website is the one place it needs updating.
 
@@ -36,7 +36,7 @@ There are two Google Sheets in play, analogous to non-production and production:
 - Promoting a release only requires editing 3 HTML files, not 5+ scattered locations.
 - There's no chicken-and-egg problem — code shipped inside a spreadsheet copy can safely reference "the website" without knowing its own future published ID in advance.
 
-If you ever need the raw published Sheets ID for a task, get it from the "Copy Template" href in `docs/getting-started.html`, not by grepping the codebase.
+If you ever need the raw published Sheets ID for a task, get it from the "Copy Template" href in `website/getting-started.html`, not by grepping the codebase.
 
 ## Release Workflow
 
@@ -68,7 +68,7 @@ Only do this once you've verified the template (formulas, dashboard, Setup/Repai
 2. **File → Make a copy.** Optionally rename it (e.g. "College Tools vX.Y.Z") — renaming never changes the file ID, so do this freely for your own bookkeeping.
 3. On the new copy, run **Complete Setup** (or **Repair Entire Workbook**) to confirm everything builds cleanly on a fresh copy.
 4. Copy the new file's ID out of its URL (`https://docs.google.com/spreadsheets/d/<ID>/edit`).
-5. Run `npm run release:promote -- <new-id>` — this rewrites the "Copy Template" link in `docs/index.html`, `docs/features.html`, and `docs/getting-started.html` in one shot (`scripts/update-template-link.js`).
+5. Run `npm run release:promote -- <new-id>` — this rewrites the "Copy Template" link in `website/index.html`, `website/features.html`, and `website/getting-started.html` in one shot (`scripts/update-template-link.js`).
 6. Review with `git diff`, commit, and push — Cloudflare Pages redeploys the website automatically.
 
 Existing users who already copied an older published version are unaffected either way — each copy has its own independent Apps Script project frozen at copy time. There's no auto-update mechanism for already-distributed copies (see `archive/architecture-review.md` item A5 for the closest planned thing, a deadline email digest, which is unrelated to code updates).
@@ -110,4 +110,4 @@ A: Clear Apps Script cache and refresh the sheet.
 A: Run `npm run version:update <current-version>` to resync all files.
 
 **Q: I updated the published spreadsheet but the website still links to the old one**
-A: The website (`docs/index.html`, `docs/features.html`, `docs/getting-started.html`) is the only source of truth for the published ID — check those 3 files were updated and pushed.
+A: The website (`website/index.html`, `website/features.html`, `website/getting-started.html`) is the only source of truth for the published ID — check those 3 files were updated and pushed.
