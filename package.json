@@ -5,7 +5,7 @@
   "main": "src/menu.js",
   "scripts": {
     "build": "node scripts/build-website.js",
-    "dev": "npm run build && python3 -m http.server 8080 --directory docs",
+    "dev": "npm run build && python3 -m http.server 8080 --directory website",
     "test": "node test/run-all-tests.js",
     "test:regression": "node test/regression-tests.js",
     "test:template": "node test/template-integrity-tests.js",

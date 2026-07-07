@@ -44,7 +44,7 @@ const appsScriptGlobals = {
 
 export default [
   {
-    ignores: ['node_modules/', 'docs/', 'test/', 'scripts/'],
+    ignores: ['node_modules/', 'website/', 'test/', 'scripts/'],
   },
   {
     files: ['src/**/*.js'],

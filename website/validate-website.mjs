@@ -64,9 +64,9 @@ for (const stalePhrase of [
 }
 
 if (failures.length > 0) {
-  console.error(`docs validation failed with ${failures.length} issue(s):`);
+  console.error(`website validation failed with ${failures.length} issue(s):`);
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('docs validation passed');
+console.log('website validation passed');

@@ -11,14 +11,14 @@ agent surfaces; update all three when durable project guidance changes.
 college research and application tracker. It fetches U.S. Department of
 Education College Scorecard data, writes it into a `Colleges` sheet, maintains
 tracker sheets, scoring formulas, financial analysis, registration/update
-workflows, and a static marketing/docs site under `docs/`.
+workflows, and a static public website under `website/`.
 
 ## Current Architecture
 
 - Runtime: Google Apps Script V8.
 - Apps Script source: `src/`.
 - Deployment metadata: `appsscript.json` and `.clasp.json`.
-- Static website: `docs/`.
+- Static website: `website/`.
 - Local helper scripts: `scripts/`.
 - Node regression harness: `test/`.
 - Project docs and runbooks: `project-docs/`, using lowercase kebab-case file
@@ -189,7 +189,7 @@ Notes:
 
 - Node requirement is `>=24.0.0`.
 - `npm run build` only stamps git hashes into static website footer files.
-- `npm run dev` runs the static website locally from `docs/`.
+- `npm run dev` runs the static website locally from `website/`.
 - `scripts/update-version.js` updates `package.json`, source `@version`
   headers, and `Config.VERSION`.
 - `npm run push` runs `npm run check` before `npx clasp push`.
