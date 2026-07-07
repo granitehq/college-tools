@@ -44,6 +44,79 @@ CollegeTools.Formulas = (function() {
   }
 
   /**
+   * Builds the EFC prefill formula for Financial Aid Tracker rows.
+   * @returns {string} Spreadsheet formula
+   */
+  function efcPrefill() {
+    return '=IFERROR(IF(EFC="","",EFC), "")';
+  }
+
+  /**
+   * Builds the Travel Costs lookup formula using the Travel Planner sheet.
+   * @param {string} collegeNameCell - College name cell in the current row
+   * @param {string} annualCostColumn - Travel Planner annual cost column letter
+   * @returns {string} Spreadsheet formula
+   */
+  function travelCostsLookup(collegeNameCell, annualCostColumn) {
+    var travelSheet = sheetRef(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+    return '=IFERROR(INDEX(' + travelSheet + '!' + annualCostColumn + ':' + annualCostColumn +
+      ',MATCH(' + collegeNameCell + ',' + travelSheet + '!A:A,0)), "")';
+  }
+
+  /**
+   * Builds the Aid Requirements Complete formula for Financial Aid Tracker rows.
+   * @param {Object} refs - Cell references
+   * @param {string} refs.fafsaSubmitted - FAFSA submitted cell
+   * @param {string} refs.cssStatus - CSS Profile status cell
+   * @param {string=} refs.idocStatus - IDOC status cell
+   * @param {string=} refs.verificationStatus - Verification status cell
+   * @returns {string} Spreadsheet formula
+   */
+  function aidRequirementsComplete(refs) {
+    /**
+     * Builds the OR(...) satisfied-status clause for a status cell.
+     * @param {string} cell - A1 cell reference
+     * @param {boolean=} lenientBlank - Whether blank also counts as satisfied
+     * @returns {string} OR(...) formula fragment
+     */
+    function statusSatisfiedClause(cell, lenientBlank) {
+      return 'OR(' + cell + '="Not Required",' + cell + '="Submitted"' +
+        (lenientBlank ? ',' + cell + '=""' : '') + ')';
+    }
+
+    var clauses = [
+      refs.fafsaSubmitted + '="Y"',
+      statusSatisfiedClause(refs.cssStatus, false),
+    ];
+    if (refs.idocStatus) clauses.push(statusSatisfiedClause(refs.idocStatus, false));
+    if (refs.verificationStatus) clauses.push(statusSatisfiedClause(refs.verificationStatus, true));
+
+    return '=IF(AND(' + clauses.join(',') + '),"✅ Complete","⚠️ Pending")';
+  }
+
+  /**
+   * Builds the Days Until Deadline formula for Application Timeline rows.
+   * @param {string} deadlineCell - Deadline date cell
+   * @returns {string} Spreadsheet formula
+   */
+  function daysUntilDeadline(deadlineCell) {
+    return '=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
+      '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")';
+  }
+
+  /**
+   * Builds the Documents Complete formula for Application Status Tracker rows.
+   * @param {string} firstRequiredCell - First Y/N document status cell
+   * @param {string} lastRequiredCell - Last Y/N document status cell
+   * @returns {string} Spreadsheet formula
+   */
+  function documentsComplete(firstRequiredCell, lastRequiredCell) {
+    var range = firstRequiredCell + ':' + lastRequiredCell;
+    return '=COUNTIF(' + range + ',"Y")&"/"&COUNTA(' + range + ')&' +
+      'IF(COUNTIF(' + range + ',"N")=0," ✅"," ⚠️")';
+  }
+
+  /**
    * Builds the four-year projected cost formula.
    * @param {string} outOfPocketCell - Out-of-pocket cost cell reference
    * @returns {string} Spreadsheet formula
@@ -98,9 +171,14 @@ CollegeTools.Formulas = (function() {
 
   return {
     sheetRef: sheetRef,
+    efcPrefill: efcPrefill,
     netPriceAfterAid: netPriceAfterAid,
     outOfPocketCost: outOfPocketCost,
+    travelCostsLookup: travelCostsLookup,
     fourYearProjectedCost: fourYearProjectedCost,
+    aidRequirementsComplete: aidRequirementsComplete,
+    daysUntilDeadline: daysUntilDeadline,
+    documentsComplete: documentsComplete,
     admissionFit: admissionFit,
   };
 })();

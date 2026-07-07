@@ -4,6 +4,20 @@
 **Scope:** Refactor the Google Apps Script code structure without changing workbook behavior.
 **Primary goal:** Make setup, repair, fill, and update flows easier to test and safer to run in live spreadsheets.
 
+## Relationship To `backlog.md`
+
+This is a detailed child plan for several architecture backlog items, not a replacement for the prioritized backlog. Keep `project-docs/backlog.md` as the priority and release-tracking source of truth. Use this document when implementing the related backlog items.
+
+Backlog mapping:
+
+- Backlog item 7 maps to Phase 6.
+- Backlog item 8 maps to Phase 1.
+- Backlog item 9 partially maps to Phases 1 and 3; scoped locks still need a focused implementation detail.
+- Backlog item 10 maps to Phase 2.
+- Backlog item 11 maps to Phase 4.
+- Backlog item 12 maps to Phases 5 and 7.
+- Backlog item 13 is related registry hardening work, but remains outside this Apps Script refactor plan unless registration/push code is touched.
+
 ## Principles
 
 - Preserve the current user-facing workbook model unless a task explicitly says otherwise.
@@ -153,33 +167,48 @@ Use one execution budget object for batch fills and API calls so long-running wo
 - Existing retry/backoff tests still pass.
 - No live network tests are introduced.
 
-## Phase 4: API Key Storage Cleanup
+## Phase 4: API Key Storage Cleanup Contingency
 
-### Objective
+### Status
 
-Move toward safer API key storage while preserving existing `ScorecardAPIKey!A1` compatibility.
+Do not implement this proactively. The current `ScorecardAPIKey!A1` sheet is visible, simple, and reliable, and the College Scorecard key is low sensitivity compared with passwords or payment credentials. Moving this path to Apps Script properties affects every Fill Row, Fill Selected Rows, and Search workflow, and the local harness cannot fully prove live Apps Script user/document/script property behavior across copied templates.
 
-### Tasks
+### Trigger
+
+Only revisit this phase if sheet-based API key storage becomes an active support, privacy, or sharing problem.
+
+### Safe Design If Triggered
 
 1. Add a non-destructive API key resolver.
-   - Check user properties first.
-   - Fall back to `ScorecardAPIKey!A1`.
-   - Return structured status: configured, missing, placeholder, invalid.
+   - Check a per-user property first only after confirming the correct Apps Script property scope in a live copied sheet.
+   - Fall back to `ScorecardAPIKey!A1` forever.
+   - Return structured status: configured, missing, placeholder, invalid, and source.
 
-2. Move UI setup instructions out of `scorecard.js` into menu/setup boundary code.
+2. Keep the legacy sheet path intact.
+   - Do not delete the `ScorecardAPIKey` sheet.
+   - Do not hide the sheet automatically.
+   - Do not break existing copied spreadsheets that already use `ScorecardAPIKey!A1`.
 
-3. Add a migration helper.
-   - Reads the legacy sheet value.
-   - Writes user property only after explicit user action.
-   - Does not delete the legacy sheet automatically.
+3. Add diagnostics before migration.
+   - Add a menu action that reports whether the key is found in user properties, the sheet, or neither.
+   - Do not display the raw key in diagnostics.
 
-4. Add tests for resolver precedence and placeholder handling.
+4. Add an explicit one-click migration only after diagnostics work.
+   - Read the legacy sheet value.
+   - Write the user property only after explicit user action.
+   - Leave the sheet key in place as fallback.
 
-### Acceptance Criteria
+5. Test beyond the Node harness.
+   - Add resolver precedence tests in the harness.
+   - Run a copied-sheet smoke test using a separate Google account.
+   - Confirm Fill current row, Fill selected rows, and Search College Names still work for the owner and a shared user.
+
+### Acceptance Criteria If Triggered
 
 - Existing spreadsheets still work with `ScorecardAPIKey!A1`.
-- New tests prove user properties override the sheet.
-- Scorecard client can be called without directly alerting.
+- A copied-sheet live smoke test proves the chosen property scope behaves correctly.
+- Diagnostics show key source without revealing the key.
+- Migration is optional, reversible by using the sheet fallback, and never destructive.
 
 ## Phase 5: Formula Builder Consolidation
 
@@ -297,7 +326,7 @@ Manual copied-sheet checks are required for:
 2. Phase 2: setup and repair registry.
 3. Phase 3: shared execution budget.
 4. Phase 5: formula builder consolidation.
-5. Phase 4: API key storage cleanup.
+5. Phase 4: API key storage cleanup only if the contingency trigger is met.
 6. Phase 6: stable identity preparation.
 7. Phase 7: incremental JavaScript cleanup as adjacent work.
 
@@ -316,7 +345,7 @@ This plan is complete when:
 - Service modules can run without UI prompts in tests.
 - Setup and repair use a tested step registry.
 - Batch fills and Scorecard requests share one execution budget.
-- API key lookup is structured and backward compatible.
+- API key lookup remains on the sheet unless the Phase 4 contingency trigger is met; if triggered, lookup is structured and backward compatible.
 - Formula builders cover tracker formulas that are currently inline.
 - Stable identity has a separate approved migration plan.
 - All relevant Node tests pass and copied-sheet smoke testing is documented.

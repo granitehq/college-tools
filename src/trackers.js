@@ -428,7 +428,7 @@ CollegeTools.Trackers = (function() {
     if (efcCol) {
       // Prefill from the Personal Profile's EFC named range; the family can
       // override a specific college's row if its aid letter differs.
-      sh.getRange(r2, efcCol).setFormula('=IFERROR(IF(EFC="","",EFC), "")');
+      sh.getRange(r2, efcCol).setFormula(CollegeTools.Formulas.efcPrefill());
     }
 
     var netCol = CollegeTools.Utils.colIndex(sh, 'Net Price After Aid');
@@ -456,8 +456,7 @@ CollegeTools.Trackers = (function() {
     }
 
     if (travelCostsCol) {
-      sh.getRange(r2, travelCostsCol).setFormula(
-        '=IFERROR(INDEX(\'Travel Planner\'!L:L,MATCH(A2,\'Travel Planner\'!A:A,0)), "")');
+      sh.getRange(r2, travelCostsCol).setFormula(CollegeTools.Formulas.travelCostsLookup('A2', 'L'));
     }
 
     if (fourYearCol && oopCol) {
@@ -480,29 +479,13 @@ CollegeTools.Trackers = (function() {
     var idocStatusCol = CollegeTools.Utils.colIndex(sh, 'IDOC Status');
     var verStatusCol = CollegeTools.Utils.colIndex(sh, 'Verification Status');
 
-    /**
-     * Builds the OR(...) satisfied-status clause for a status cell.
-     * @param {string} cell - A1 cell reference
-     * @param {boolean=} lenientBlank - Whether a blank cell also counts as satisfied
-     * @returns {string} OR(...) formula fragment
-     */
-    function statusSatisfiedClause(cell, lenientBlank) {
-      return 'OR(' + cell + '="Not Required",' + cell + '="Submitted"' +
-        (lenientBlank ? ',' + cell + '=""' : '') + ')';
-    }
-
     if (completeCol && fafsaSubCol && cssStatusCol) {
-      var fafsaSubCell = CollegeTools.Utils.addr(r2, fafsaSubCol);
-      var cssStatusCell = CollegeTools.Utils.addr(r2, cssStatusCol);
-      var idocStatusCell = idocStatusCol ? CollegeTools.Utils.addr(r2, idocStatusCol) : '';
-      var verStatusCell = verStatusCol ? CollegeTools.Utils.addr(r2, verStatusCol) : '';
-
-      var completeFormula = '=IF(AND(' +
-        fafsaSubCell + '="Y",' +
-        statusSatisfiedClause(cssStatusCell, false) +
-        (idocStatusCol ? ',' + statusSatisfiedClause(idocStatusCell, false) : '') +
-        (verStatusCol ? ',' + statusSatisfiedClause(verStatusCell, true) : '') +
-        '),"✅ Complete","⚠️ Pending")';
+      var completeFormula = CollegeTools.Formulas.aidRequirementsComplete({
+        fafsaSubmitted: CollegeTools.Utils.addr(r2, fafsaSubCol),
+        cssStatus: CollegeTools.Utils.addr(r2, cssStatusCol),
+        idocStatus: idocStatusCol ? CollegeTools.Utils.addr(r2, idocStatusCol) : '',
+        verificationStatus: verStatusCol ? CollegeTools.Utils.addr(r2, verStatusCol) : '',
+      });
 
       sh.getRange(r2, completeCol).setFormula(completeFormula);
     }
@@ -549,9 +532,7 @@ CollegeTools.Trackers = (function() {
     if (appDeadlineCol && daysCol) {
       // Blank deadlines stay blank instead of showing "PAST DUE"
       var deadlineCell = CollegeTools.Utils.addr(2, appDeadlineCol);
-      var daysFormula = '=IF(ISNUMBER(' + deadlineCell + '), IF(' + deadlineCell +
-        '-TODAY()>0, ' + deadlineCell + '-TODAY(), "PAST DUE"), "")';
-      sh.getRange(2, daysCol).setFormula(daysFormula);
+      sh.getRange(2, daysCol).setFormula(CollegeTools.Formulas.daysUntilDeadline(deadlineCell));
     }
   }
 
@@ -622,12 +603,9 @@ CollegeTools.Trackers = (function() {
       var r2 = 2;
       var transcriptCell = CollegeTools.Utils.addr(r2, transcriptCol);
       var essayCell = CollegeTools.Utils.addr(r2, essayCol);
-      var portfolioRange = transcriptCell + ':' + essayCell;
 
-      var formula = '=COUNTIF(' + portfolioRange + ',"Y")&"/"&COUNTA(' + portfolioRange + ')&' +
-                    'IF(COUNTIF(' + portfolioRange + ',"N")=0," ✅"," ⚠️")';
-
-      sh.getRange(r2, completeCol).setFormula(formula);
+      sh.getRange(r2, completeCol).setFormula(
+        CollegeTools.Formulas.documentsComplete(transcriptCell, essayCell));
     }
   }
 

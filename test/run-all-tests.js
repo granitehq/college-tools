@@ -14,6 +14,7 @@ const tests = [
   'config-schema-tests.js',
   'schema-metadata-tests.js',
   'formulas-tests.js',
+  'execution-budget-tests.js',
   'financial-profile-tests.js',
   'travel-tests.js',
   'scoring-tests.js',

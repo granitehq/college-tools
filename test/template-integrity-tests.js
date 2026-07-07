@@ -8,14 +8,17 @@ const harness = createHarness([
   'config.js',
   'utils.js',
   'schema.js',
+  'execution-budget.js',
   'formatting.js',
   'trackers.js',
   'colleges.js',
 ]);
 const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn} = harness;
 
+const observedBudgets = [];
 CollegeTools.Scorecard = {
-  fetchCollegeData(name) {
+  fetchCollegeData(name, options) {
+    observedBudgets.push(options && options.executionBudget);
     const state = name === 'Second' ? 'NY' : 'CA';
     const locale = name === 'Second' ? 41 : 21;
     return {
@@ -99,6 +102,31 @@ suite.test('batch fill keeps tracker sync enabled', () => {
     'Batch fill should sync the first tracker row');
   suite.assertEqual(cv.getRange(3, 1).getValue(), 'Second University',
     'Batch fill should sync the second tracker row');
+});
+
+suite.test('batch fill passes one shared execution budget through row fetches', () => {
+  observedBudgets.length = 0;
+  const {colleges} = setupWorkbook();
+  colleges.getRange(3, 1).setValue('First');
+  colleges.getRange(4, 1).setValue('Second');
+
+  colleges.getActiveRangeList = function() {
+    return {
+      getRanges: function() {
+        return [{
+          getRow: function() { return 3; },
+          getNumRows: function() { return 2; },
+        }];
+      },
+    };
+  };
+
+  CollegeTools.Colleges.fillSelectedRows();
+
+  suite.assertEqual(observedBudgets.length, 2, 'Both row fetches should receive a budget');
+  suite.assert(observedBudgets[0], 'First row fetch should receive an execution budget');
+  suite.assertEqual(observedBudgets[0], observedBudgets[1], 'Batch rows should share one budget instance');
+  suite.assertEqual(typeof observedBudgets[0].canContinue, 'function', 'Budget should expose canContinue');
 });
 
 const success = suite.summary();

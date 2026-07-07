@@ -24,10 +24,14 @@ CollegeTools.Scorecard = (function() {
 
   /**
    * Checks if we're approaching execution time limits
+   * @param {Object=} options - Optional shared execution options
    * @returns {boolean} True if we should continue, false if approaching limit
    * @private
    */
-  function checkExecutionTimeLimit() {
+  function checkExecutionTimeLimit(options) {
+    options = options || {};
+    if (options.executionBudget) return options.executionBudget.canContinue();
+
     if (!executionState.startTime) {
       executionState.startTime = new Date().getTime();
       return true;
@@ -195,7 +199,7 @@ CollegeTools.Scorecard = (function() {
     }
 
     // Check execution time limit before making API call
-    if (!checkExecutionTimeLimit()) {
+    if (!checkExecutionTimeLimit(options)) {
       return {
         ok: false,
         error: 'Execution time limit approaching',
@@ -318,16 +322,18 @@ CollegeTools.Scorecard = (function() {
    * Searches for colleges by name with fallback strategies and caching
    * @param {string} query - Search query
    * @param {string} state - Optional state filter (2-letter code)
+   * @param {Object=} options - Optional shared execution options
    * @returns {Object} Result object with colleges data
    */
-  function searchColleges(query, state) {
+  function searchColleges(query, state, options) {
+    options = options || {};
     var apiKey = getApiKey();
     if (!apiKey) {
       return {ok: false, error: 'API key not found in ' + CollegeTools.Config.SHEET_NAMES.API_KEY + ' sheet'};
     }
 
-    // Reset execution timer for new operation
-    executionState.startTime = new Date().getTime();
+    // Reset fallback execution timer for new operations without a shared budget.
+    if (!options.executionBudget) executionState.startTime = new Date().getTime();
 
     // Shared request pieces
     var baseParams = {
@@ -366,7 +372,7 @@ CollegeTools.Scorecard = (function() {
     var notes = [];
 
     for (var a=0; a<attempts.length; a++) {
-      var response = fetchJsonWithRetries(attempts[a].url, {useCache: true});
+      var response = fetchJsonWithRetries(attempts[a].url, {useCache: true, executionBudget: options.executionBudget});
 
       if (response.ok && response.data && response.data.results && response.data.results.length) {
         results = response.data.results;
@@ -392,16 +398,18 @@ CollegeTools.Scorecard = (function() {
   /**
    * Fetches detailed college data for filling a row
    * @param {string} collegeName - Name of the college to search for
+   * @param {Object=} options - Optional shared execution options
    * @returns {Object} Result with college data or error info
    */
-  function fetchCollegeData(collegeName) {
+  function fetchCollegeData(collegeName, options) {
+    options = options || {};
     var apiKey = getApiKey();
     if (!apiKey) {
       return {ok: false, error: 'API key not found'};
     }
 
     // Check execution time limit before proceeding
-    if (!checkExecutionTimeLimit()) {
+    if (!checkExecutionTimeLimit(options)) {
       return {
         ok: false,
         error: 'Execution time limit approaching',
@@ -421,7 +429,10 @@ CollegeTools.Scorecard = (function() {
     q1['school.name'] = collegeName;
     var url1 = buildUrl(q1);
 
-    var r1 = fetchJsonWithRetries(url1, {useCache: false}); // Don't cache detailed data
+    var r1 = fetchJsonWithRetries(url1, {
+      useCache: false,
+      executionBudget: options.executionBudget,
+    }); // Don't cache detailed data
     var results = [];
     var noteBits = [];
 
@@ -433,12 +444,12 @@ CollegeTools.Scorecard = (function() {
     }
 
     // Regex fallback if no results and time allows
-    if (!results.length && checkExecutionTimeLimit()) {
+    if (!results.length && checkExecutionTimeLimit(options)) {
       var q2 = JSON.parse(JSON.stringify(baseParams));
       q2['school.name'] = '~.*' + CollegeTools.Utils.escapeRegex(collegeName) + '.*';
       var url2 = buildUrl(q2);
 
-      var r2 = fetchJsonWithRetries(url2, {useCache: false});
+      var r2 = fetchJsonWithRetries(url2, {useCache: false, executionBudget: options.executionBudget});
       if (r2.ok && r2.data && r2.data.results) {
         results = r2.data.results;
         noteBits.push('regex:200');
