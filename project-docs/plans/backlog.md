@@ -9,13 +9,14 @@ is listed as release pending.
 
 ## Branch Audit
 
-- `origin/development`: includes the direct-push workflow, performance batching,
-  and the follow-up review fixes through `1790fc0`.
-- `origin/main`: currently stops at `02b6d96`, before the direct-push,
-  performance batching, and follow-up review fixes.
-- Result: product simplification, dashboard additions, bug-report fixes, and
-  instruction updates below are complete in both branches. Direct-push and
-  latest performance/review fixes are complete in development only.
+- Local `development` and local `main` are aligned at `61fdd06` after the
+  appscript refactor and stable-college-identity merges.
+- `origin/development` and `origin/main` are still behind that local merge state
+  until the branches are pushed.
+- Result: product simplification, dashboard additions, bug-report fixes,
+  instruction updates, direct-push, performance batching, setup registry work,
+  execution-budget work, and stable college identity are merged locally into
+  both target branches. The remaining release step is push/deploy validation.
 
 ## Complete In Both Branches
 
@@ -70,7 +71,7 @@ the two-branch rule because `origin/main` has not been updated.
 
 ## Prioritized Backlog
 
-Architecture/refactoring items remain separate backlog entries for priority tracking. The detailed implementation sequence for those related items lives in `project-docs/appscript-refactoring-plan.md`; use that plan as the child plan when executing items 7-12 below.
+Architecture/refactoring items remain separate backlog entries for priority tracking. The detailed implementation sequence for those related items lives in `project-docs/plans/appscript-refactoring-plan.md`; use that plan as the child plan when executing items 7-12 below.
 
 1. **Release current development after smoke testing.** Merge `development`
    into `main`, then verify from `main` before deploying. This closes the

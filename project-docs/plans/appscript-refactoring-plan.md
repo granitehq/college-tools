@@ -6,17 +6,18 @@
 
 ## Relationship To `backlog.md`
 
-This is a detailed child plan for several architecture backlog items, not a replacement for the prioritized backlog. Keep `project-docs/backlog.md` as the priority and release-tracking source of truth. Use this document when implementing the related backlog items.
+This is a detailed child plan for several architecture backlog items, not a replacement for the prioritized backlog. Keep `project-docs/plans/backlog.md` as the priority and release-tracking source of truth. Use this document when implementing the related backlog items.
 
 Backlog mapping:
 
-- Backlog item 7 maps to Phase 6.
-- Backlog item 8 maps to Phase 1.
-- Backlog item 9 partially maps to Phases 1 and 3; scoped locks still need a focused implementation detail.
-- Backlog item 10 maps to Phase 2.
+- Backlog item 7 maps to Phase 1.
+- Backlog item 8 partially maps to Phases 1 and 3; scoped locks still need a focused implementation detail.
+- Backlog item 9 maps to Phase 2.
+- Backlog item 10 maps to Phase 3.
 - Backlog item 11 maps to Phase 4.
 - Backlog item 12 maps to Phases 5 and 7.
 - Backlog item 13 is related registry hardening work, but remains outside this Apps Script refactor plan unless registration/push code is touched.
+- Phase 6, stable college identity, has shipped and is no longer an open backlog mapping.
 
 
 ## Principles

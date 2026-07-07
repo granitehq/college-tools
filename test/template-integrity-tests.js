@@ -104,6 +104,34 @@ suite.test('batch fill keeps tracker sync enabled', () => {
     'Batch fill should sync the second tracker row');
 });
 
+suite.test('batch fill backfills College ID on older Colleges sheets', () => {
+  const {colleges} = setupWorkbook();
+  const headers = colleges.getRange(2, 1, 1, colleges.getLastColumn()).getValues()[0]
+    .filter((header) => header !== 'College ID');
+  colleges.getRange(2, 1, 1, colleges.getLastColumn()).clearContent();
+  colleges.getRange(2, 1, 1, headers.length).setValues([headers]);
+  colleges.getRange(3, 1).setValue('First');
+  colleges.getRange(4, 1).setValue('Second');
+
+  colleges.getActiveRangeList = function() {
+    return {
+      getRanges: function() {
+        return [{
+          getRow: function() { return 3; },
+          getNumRows: function() { return 2; },
+        }];
+      },
+    };
+  };
+
+  CollegeTools.Colleges.fillSelectedRows();
+
+  const idCol = getCollegeColumn('College ID', colleges);
+  suite.assert(idCol, 'Batch fill should auto-append College ID on older sheets');
+  suite.assert(colleges.getRange(3, idCol).getValue(), 'Batch fill should stamp the first row College ID');
+  suite.assert(colleges.getRange(4, idCol).getValue(), 'Batch fill should stamp the second row College ID');
+});
+
 suite.test('batch fill passes one shared execution budget through row fetches', () => {
   observedBudgets.length = 0;
   const {colleges} = setupWorkbook();

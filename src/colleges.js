@@ -730,6 +730,7 @@ CollegeTools.Colleges = (function() {
 
     // Performance optimization: Read headers once for entire batch operation.
     var hdrs = ensureCollegesRegionColumn_(sh);
+    hdrs = ensureCollegesIdColumn_(sh);
     var columnIndexes = buildCollegesColumnMap_(hdrs);
 
     // Process each row, stopping early if we approach the execution time limit
