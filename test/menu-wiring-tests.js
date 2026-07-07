@@ -51,6 +51,17 @@ suite.test('all non-onOpen global adapters delegate into the CollegeTools namesp
   });
 });
 
+suite.test('repair entire workbook adapter owns confirmation and final alert', () => {
+  const repairBody = /function\s+repairEntireWorkbook\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/.exec(menuSource)[1];
+
+  suite.assert(repairBody.includes('Repair Entire Workbook'),
+    'Repair Entire Workbook adapter should show the menu confirmation text');
+  suite.assert(repairBody.includes('suppressAlert: true'),
+    'Repair Entire Workbook adapter should call the service without nested alerts');
+  suite.assert(repairBody.includes('Workbook Repair Complete'),
+    'Repair Entire Workbook adapter should show the final completion alert');
+});
+
 suite.test('repair menu item is present', () => {
   suite.assert(menuSource.includes("Repair College Sync Across Tabs"),
     'Repair College Sync menu item should be exposed');

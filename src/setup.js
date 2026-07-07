@@ -402,11 +402,14 @@ CollegeTools.Setup = (function() {
    * Repairs the workbook by re-syncing colleges, reapplying validations/formatting,
    * refreshing derived regions, and refreshing the dashboard when present.
    * Safe to run on existing downloaded spreadsheets.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress confirmation and completion alerts
    * @return {Object|undefined} Repair summary
    */
-  function repairEntireWorkbook() {
+  function repairEntireWorkbook(opts) {
+    opts = opts || {};
     var ui = SpreadsheetApp.getUi();
-    var result = ui.alert(
+    var result = opts.suppressAlert ? ui.Button.YES : ui.alert(
       'Repair Entire Workbook',
       'This will repair the current spreadsheet by:\n\n' +
       '• Re-syncing tracker college lists from the Colleges tab\n' +
@@ -428,15 +431,17 @@ CollegeTools.Setup = (function() {
         detailById[step.id] = step.details || {};
       });
 
-      ui.alert(
-        'Workbook Repair Complete',
-        'Tracker rows updated: ' + (detailById['tracker-sync'].count || 0) + '\n' +
-        'Formatted sheets repaired: ' + ((detailById['validation-formatting'].sectionsApplied || []).length) + '\n' +
-        'Regions refreshed: ' + (detailById.regions.count || 0) + '\n' +
-        'Travel rows refreshed: ' + (detailById['travel-planner'].count || 0) + '\n\n' +
-        'This is safe to run again if needed.',
-        ui.ButtonSet.OK,
-      );
+      if (!opts.suppressAlert) {
+        ui.alert(
+          'Workbook Repair Complete',
+          'Tracker rows updated: ' + (detailById['tracker-sync'].count || 0) + '\n' +
+          'Formatted sheets repaired: ' + ((detailById['validation-formatting'].sectionsApplied || []).length) + '\n' +
+          'Regions refreshed: ' + (detailById.regions.count || 0) + '\n' +
+          'Travel rows refreshed: ' + (detailById['travel-planner'].count || 0) + '\n\n' +
+          'This is safe to run again if needed.',
+          ui.ButtonSet.OK,
+        );
+      }
 
       return {
         ok: repairResult.ok,
@@ -448,7 +453,12 @@ CollegeTools.Setup = (function() {
         details: repairResult.details,
       };
     } catch (error) {
-      ui.alert('Repair Error', 'An error occurred during repair: ' + error.toString(), ui.ButtonSet.OK);
+      if (!opts.suppressAlert) {
+        ui.alert('Repair Error', 'An error occurred during repair: ' + error.toString(), ui.ButtonSet.OK);
+      }
+      return result_(false, 'repair_error', 'An error occurred during repair: ' + error.toString(), [], {
+        error: error.toString(),
+      });
     }
   }
 
