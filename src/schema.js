@@ -101,6 +101,38 @@ CollegeTools.Schema = (function() {
       ]),
       linkedColumns: {},
     },
+
+    TRAVEL_PLANNER: {
+      sheetName: CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER,
+      headerRow: 1,
+      dataStartRow: 2,
+      headers: CollegeTools.Config.HEADERS.TRAVEL_PLANNER,
+      columns: keyMap(CollegeTools.Config.HEADERS.TRAVEL_PLANNER, [
+        ['COLLEGE_NAME', 'College Name'],
+        ['COLLEGE_CITY', 'College City'],
+        ['COLLEGE_STATE', 'College State'],
+        ['HOME_CITY', 'Home City'],
+        ['HOME_STATE', 'Home State'],
+        ['DISTANCE_MILES', 'Distance from Home (mi)'],
+        ['LIKELY_TRAVEL_MODE', 'Likely Travel Mode'],
+        ['ESTIMATED_DRIVE_TIME', 'Estimated Drive Time'],
+        ['ESTIMATED_FLIGHT_TIME', 'Estimated Flight/Travel Time'],
+        ['TRAVEL_COST_PER_TRIP', 'Travel Cost per Trip'],
+        ['TRIPS_HOME_PER_YEAR', 'Trips Home Per Year'],
+        ['ANNUAL_TRAVEL_COST', 'Annual Travel Cost'],
+        ['NOTES', 'Notes'],
+      ]),
+      apiColumns: {},
+      userColumns: setFromKeys(['NOTES']),
+      formulaColumns: {},
+      linkedColumns: setFromKeys([
+        'COLLEGE_NAME', 'COLLEGE_CITY', 'COLLEGE_STATE', 'HOME_CITY', 'HOME_STATE',
+        'DISTANCE_MILES', 'LIKELY_TRAVEL_MODE', 'ESTIMATED_DRIVE_TIME',
+        'ESTIMATED_FLIGHT_TIME', 'TRAVEL_COST_PER_TRIP', 'TRIPS_HOME_PER_YEAR',
+        'ANNUAL_TRAVEL_COST',
+      ]),
+    },
+
     FINANCIAL_AID: {
       sheetName: CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID,
       headerRow: 1,

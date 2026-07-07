@@ -29,6 +29,7 @@ CollegeTools.Config = (function() {
     API_KEY: 'ScorecardAPIKey',
     WEIGHTS: 'Weights',
     PERSONAL_PROFILE: 'Personal Profile',
+    TRAVEL_PLANNER: 'Travel Planner',
     LOOKUP: 'Lookup',
     FINANCIAL_AID: 'Financial Aid Tracker',
     CAMPUS_VISIT: 'Campus Visit Tracker',
@@ -94,6 +95,14 @@ CollegeTools.Config = (function() {
       'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
       'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition',
       'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes',
+    ],
+
+
+    TRAVEL_PLANNER: [
+      'College Name', 'College City', 'College State', 'Home City', 'Home State',
+      'Distance from Home (mi)', 'Likely Travel Mode', 'Estimated Drive Time',
+      'Estimated Flight/Travel Time', 'Travel Cost per Trip', 'Trips Home Per Year',
+      'Annual Travel Cost', 'Notes',
     ],
 
     FINANCIAL_AID: [

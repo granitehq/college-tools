@@ -62,5 +62,13 @@ suite.test('repair menu item is present', () => {
     'Repair Validations & Dropdowns menu item should be exposed');
 });
 
+
+suite.test('travel planner refresh menu item is present', () => {
+  suite.assert(menuSource.includes('Refresh Travel Planner'),
+    'Travel Planner refresh menu item should be exposed');
+  suite.assert(menuSource.includes('function refreshTravelPlanner()'),
+    'Travel Planner refresh adapter should exist');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

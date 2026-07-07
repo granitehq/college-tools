@@ -30,6 +30,18 @@ suite.test('sheet names snapshot stays stable', () => {
   });
 });
 
+
+suite.test('travel planner sheet and headers are configured', () => {
+  suite.assertEqual(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER, 'Travel Planner',
+    'Travel Planner sheet name should be configured');
+  suite.assertEqual(JSON.stringify(CollegeTools.Config.HEADERS.TRAVEL_PLANNER), JSON.stringify([
+    'College Name', 'College City', 'College State', 'Home City', 'Home State',
+    'Distance from Home (mi)', 'Likely Travel Mode', 'Estimated Drive Time',
+    'Estimated Flight/Travel Time', 'Travel Cost per Trip', 'Trips Home Per Year',
+    'Annual Travel Cost', 'Notes',
+  ]), 'Travel Planner headers should stay stable');
+});
+
 suite.test('critical Colleges headers snapshot stays stable', () => {
   const expected = [
     'College Name', 'City', 'State', 'Region', 'Type (Public/Private)',

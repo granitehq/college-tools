@@ -32,7 +32,9 @@ CollegeTools.Financial = (function() {
     sheet.getRange(9, 1).setValue('Family Income:');
     sheet.getRange(10, 1).setValue('Expected Family Contribution:');
     sheet.getRange(12, 1).setValue('🎯 Preferences');
-    sheet.getRange(13, 1).setValue('State Residency:');
+    sheet.getRange(13, 1).setValue('Home State:');
+    sheet.getRange(14, 1).setValue('Home City:');
+    sheet.getRange(15, 1).setValue('Trips Home Per Year:');
 
     // Create named ranges - essential for formulas
     ss.setNamedRange('SAT_Score', sheet.getRange(4, 2));
@@ -41,6 +43,9 @@ CollegeTools.Financial = (function() {
     ss.setNamedRange('Family_Income', sheet.getRange(9, 2));
     ss.setNamedRange('EFC', sheet.getRange(10, 2));
     ss.setNamedRange('State_Residency', sheet.getRange(13, 2));
+    ss.setNamedRange('Home_State', sheet.getRange(13, 2));
+    ss.setNamedRange('Home_City', sheet.getRange(14, 2));
+    ss.setNamedRange('Trips_Home_Per_Year', sheet.getRange(15, 2));
   }
 
   /**
@@ -185,8 +190,16 @@ CollegeTools.Financial = (function() {
     sheet.getRange(10, 3).setValue('Optional - helps with aid estimates');
 
     sheet.getRange(13, 2).setBackground('#d1ecf1').setBorder(true, true, true, true, false, false);
-    sheet.getRange(13, 2).setNote('Two-letter state code (e.g., CA, NY, TX)');
-    sheet.getRange(13, 3).setValue('For in-state tuition calculations');
+    sheet.getRange(13, 2).setNote('Two-letter home/residency state code (e.g., CA, NY, TX)');
+    sheet.getRange(13, 3).setValue('Used for in-state tuition and travel estimates');
+
+    sheet.getRange(14, 2).setBackground('#d1ecf1').setBorder(true, true, true, true, false, false);
+    sheet.getRange(14, 2).setNote('Optional home city for approximate travel estimates');
+    sheet.getRange(14, 3).setValue('Optional');
+
+    sheet.getRange(15, 2).setBackground('#d1ecf1').setBorder(true, true, true, true, false, false);
+    sheet.getRange(15, 2).setNote('Optional number of round trips home per year; use 4 if unsure');
+    sheet.getRange(15, 3).setValue('Optional');
 
     // Column widths
     sheet.setColumnWidth(1, 200);
@@ -202,7 +215,9 @@ CollegeTools.Financial = (function() {
       sheet.getRange(6, 2), // GPA
       sheet.getRange(9, 2), // Family Income
       sheet.getRange(10, 2), // EFC
-      sheet.getRange(13, 2), // State
+      sheet.getRange(13, 2), // Home State
+      sheet.getRange(14, 2), // Home City
+      sheet.getRange(15, 2), // Trips Home Per Year
     ];
     protection.setUnprotectedRanges(unprotected);
   }

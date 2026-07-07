@@ -33,6 +33,7 @@ function onOpen() {
     .addSubMenu(SpreadsheetApp.getUi().createMenu('⚡ Performance & Maintenance')
       .addItem('Optimize Performance', 'optimizePerformance')
       .addItem('Refresh Dashboard Data', 'refreshDashboard')
+      .addItem('Refresh Travel Planner', 'refreshTravelPlanner')
       .addItem('Repair Validations & Dropdowns', 'repairValidationsAndFormatting')
       .addItem('Repair College Sync Across Tabs', 'repairCollegeSync')
       .addItem('Repair Entire Workbook', 'repairEntireWorkbook')
@@ -71,6 +72,9 @@ function setupDashboard() {
 }
 function refreshDashboard() {
   return CollegeTools.Dashboard.refreshDashboard();
+}
+function refreshTravelPlanner() {
+  return CollegeTools.Travel.createOrUpdateTravelPlanner();
 }
 function enhanceFormatsDropdowns() {
   return CollegeTools.Formatting.enhanceFormatsDropdowns();

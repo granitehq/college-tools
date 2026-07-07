@@ -30,6 +30,18 @@ suite.test('schema declares row conventions for Colleges and tracker sheets', ()
     });
 });
 
+
+suite.test('schema declares Travel Planner row convention and key columns', () => {
+  const travelPlanner = CollegeTools.Schema.getSheet('TRAVEL_PLANNER');
+  suite.assertEqual(travelPlanner.sheetName, CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER,
+    'Travel Planner schema should use configured sheet name');
+  suite.assertEqual(travelPlanner.headerRow, 1, 'Travel Planner headers should be on row 1');
+  suite.assertEqual(travelPlanner.dataStartRow, 2, 'Travel Planner data should start on row 2');
+  suite.assertEqual(travelPlanner.columns.COLLEGE_NAME, 'College Name', 'College Name key should exist');
+  suite.assertEqual(travelPlanner.columns.ANNUAL_TRAVEL_COST, 'Annual Travel Cost',
+    'Annual Travel Cost key should exist');
+});
+
 suite.test('schema maps stable column keys to current Config headers', () => {
   suite.assertEqual(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_NAME'), 'College Name',
     'College name key should resolve to the current Colleges header');

@@ -66,6 +66,10 @@ CollegeTools.Setup = (function() {
       // 5. Set up financial intelligence suite (no inner prompt — already confirmed above)
       CollegeTools.Financial.runFinancialSetup_();
 
+      if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+        CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+      }
+
       // 6. Performance optimization - trim excess rows
       CollegeTools.Utils.trimAllSheets();
 
@@ -158,6 +162,7 @@ CollegeTools.Setup = (function() {
       '• Reapplying dropdowns and formatting\n' +
       '• Refilling Regions from State values\n' +
       '• Rebuilding scoring formulas (custom weights are kept)\n' +
+      '• Refreshing Travel Planner estimates\n' +
       '• Refreshing dashboard data when present\n\n' +
       'Continue?',
       ui.ButtonSet.YES_NO,
@@ -169,6 +174,10 @@ CollegeTools.Setup = (function() {
       var syncResult = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
       var formattingResult = CollegeTools.Formatting.repairValidationsAndFormatting({suppressAlert: true});
       var regionResult = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
+      var travelResult = {ok: true, count: 0};
+      if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+        travelResult = CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+      }
 
       // Rebuild scoring formulas so newly added colleges pick up
       // Weighted Score, not just pre-existing rows.
@@ -188,7 +197,8 @@ CollegeTools.Setup = (function() {
         'Workbook Repair Complete',
         'Tracker rows updated: ' + syncResult.count + '\n' +
         'Formatted sheets repaired: ' + formattingResult.sectionsApplied.length + '\n' +
-        'Regions refreshed: ' + regionResult.count + '\n\n' +
+        'Regions refreshed: ' + regionResult.count + '\n' +
+        'Travel rows refreshed: ' + travelResult.count + '\n\n' +
         'This is safe to run again if needed.',
         ui.ButtonSet.OK,
       );
@@ -198,6 +208,7 @@ CollegeTools.Setup = (function() {
         trackerRows: syncResult.count,
         formattedSheets: formattingResult.sectionsApplied.length,
         regionRows: regionResult.count,
+        travelRows: travelResult.count,
       };
     } catch (error) {
       ui.alert('Repair Error', 'An error occurred during repair: ' + error.toString(), ui.ButtonSet.OK);

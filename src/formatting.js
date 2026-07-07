@@ -439,6 +439,24 @@ CollegeTools.Formatting = (function() {
       applyColumnFormatsAndValidations_(col, 2, collegeFormats, collegeValidations, true);
     }
 
+
+    var travel = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+    if (travel) {
+      sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+      var travelFormats = fmts(['Distance from Home (mi)'], '0')
+        .concat(fmts(['Estimated Drive Time', 'Estimated Flight/Travel Time'], '0.0'))
+        .concat(fmts(['Travel Cost per Trip', 'Annual Travel Cost'], '$#,##0'))
+        .concat(fmts(['Trips Home Per Year'], '0'));
+      var travelValidations = [
+        {header: 'Likely Travel Mode', rule: listRule_(['Drive', 'Drive or Fly', 'Fly'])},
+      ];
+      applyColumnFormatsAndValidations_(travel, 1, travelFormats, travelValidations, true);
+      travel.getRange(2, 16).setNumberFormat('$0.00');
+      travel.getRange(3, 16, 2, 1).setNumberFormat('0');
+      travel.getRange(5, 16, 2, 1).setNumberFormat('$#,##0');
+      travel.getRange(7, 16).setNumberFormat('0');
+    }
+
     var fa = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     if (fa) {
       sectionsApplied.push(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);

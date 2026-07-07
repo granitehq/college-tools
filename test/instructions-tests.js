@@ -36,5 +36,18 @@ suite.test('Instructions sheet points readers to scholarship discovery resources
   });
 });
 
+
+suite.test('Instructions describe optional Travel Planner fields', () => {
+  CollegeTools.Instructions.createInstructionsSheet();
+  const instructions = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.INSTRUCTIONS);
+  const values = instructions.getRange(1, 1, instructions.getLastRow(), 1).getValues()
+    .map((row) => row[0]).join('\n');
+
+  suite.assert(values.includes('Home City'), 'Instructions should mention Home City');
+  suite.assert(values.includes('Travel Planner'), 'Instructions should mention Travel Planner');
+  suite.assert(values.includes('offline approximations'),
+    'Instructions should disclose that travel estimates are approximate');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

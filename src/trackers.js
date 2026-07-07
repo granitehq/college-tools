@@ -282,6 +282,7 @@ CollegeTools.Trackers = (function() {
     var netCol = CollegeTools.Utils.colIndex(sh, 'Net Price After Aid');
     var oopCol = CollegeTools.Utils.colIndex(sh, 'Out-of-Pocket Cost');
     var fourYearCol = CollegeTools.Utils.colIndex(sh, '4-Year Projected Cost');
+    var travelCostsCol = CollegeTools.Utils.colIndex(sh, 'Travel Costs');
     var coaCol = CollegeTools.Utils.colIndex(sh, 'Total Cost of Attendance');
     var fedGrantsCol = CollegeTools.Utils.colIndex(sh, 'Federal Grants');
     var needAidCol = CollegeTools.Utils.colIndex(sh, 'Need-Based Aid');
@@ -300,6 +301,11 @@ CollegeTools.Trackers = (function() {
         CollegeTools.Utils.addr(r2, netCol),
         CollegeTools.Utils.addr(r2, scholarshipsCol));
       sh.getRange(r2, oopCol).setFormula(oopFormula);
+    }
+
+    if (travelCostsCol) {
+      sh.getRange(r2, travelCostsCol).setFormula(
+        '=IFERROR(INDEX(\'Travel Planner\'!L:L,MATCH(A2,\'Travel Planner\'!A:A,0)), "")');
     }
 
     if (fourYearCol && oopCol) {
@@ -654,10 +660,18 @@ CollegeTools.Trackers = (function() {
       enhanceApplicationTimelineFormatting(timelineSheet);
     }
 
+    var travelResult = null;
+    if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+      travelResult = CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+    }
+
     var syncResult = repairCollegeSync({suppressAlert: true});
     var message = 'Tracker setup complete!';
     if (syncResult && syncResult.ok) {
       message += '\n\nSynced tracker college rows: ' + syncResult.count;
+    }
+    if (travelResult && travelResult.ok) {
+      message += '\nTravel rows refreshed: ' + travelResult.count;
     }
 
     SpreadsheetApp.getUi().alert(message);
