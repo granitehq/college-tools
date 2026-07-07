@@ -471,7 +471,14 @@ function createHarness(moduleFiles) {
     newConditionalFormatRule: () => createFormatRuleBuilder(),
   };
 
-  global.Utilities = {sleep: () => {}};
+  let uuidCounter = 0;
+  global.Utilities = {
+    sleep: () => {},
+    getUuid: () => {
+      uuidCounter += 1;
+      return `uuid-${uuidCounter}`;
+    },
+  };
   global.CollegeTools = {};
 
   (moduleFiles || []).forEach(loadModule);
@@ -532,6 +539,9 @@ function createHarness(moduleFiles) {
     setupWorkbook,
     getCollegeColumn,
     loadModule,
+    resetUuidCounter: () => {
+      uuidCounter = 0;
+    },
   };
 }
 
