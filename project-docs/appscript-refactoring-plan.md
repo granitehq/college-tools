@@ -20,7 +20,7 @@
 2. Setup and repair flows are imperative sequences spread across `setup.js`, `trackers.js`, `formatting.js`, `dashboard.js`, `scoring.js`, `financial.js`, and `colleges.js`.
 3. Execution time checks exist in more than one place and can disagree.
 4. API key lookup still depends on a visible sheet and UI alerts inside the Scorecard client.
-5. Tracker sync is still positional; stable hidden college identity remains deferred.
+5. ~~Tracker sync is still positional; stable hidden college identity remains deferred.~~ Resolved: a stable `College ID` now keys `repairCollegeSync` matching (see Phase 6). Row-position sync in `syncCollegeToTrackers` is intentionally retained.
 6. Formula strings are still partly inline instead of centralized in `formulas.js`.
 7. Some module ownership is blurry, especially debug/about flows and setup side effects.
 
@@ -211,28 +211,40 @@ Move repeated inline formulas into `src/formulas.js` so formula changes can be t
 - `npm run test:regression` passes.
 - Existing sheet formulas remain compatible with current headers.
 
-## Phase 6: Tracker Identity Preparation
+## Phase 6: Stable College Identity (shipped)
 
 ### Objective
 
-Prepare for stable college identity without forcing a destructive migration.
+Give every college a stable `College ID` and key tracker repair/sync off it
+instead of matching by College Name text.
 
-### Tasks
+### Status
 
-1. Define a hidden identity column strategy in a separate migration plan.
-   - Candidate key: Scorecard `id` when available.
-   - Fallback key: generated local stable ID.
+Shipped as a full end-to-end cutover, not the staged "prep only" work this
+phase originally scoped. The prep-only framing (schema metadata only, no live
+columns) has been superseded — see
+`project-docs/plans/2026-07-06-stable-college-identity.md` for the delivered
+design and task breakdown.
 
-2. Add schema metadata for hidden identity columns but do not add columns to live sheets in this phase.
+### What shipped
 
-3. Add tests for key generation helpers.
+- A `College ID` column (UUID via `Utilities.getUuid()`) on Colleges and the
+  four per-college trackers (Financial Aid, Campus Visit, Application Timeline,
+  Application Status Tracker). Scholarship Tracker and Travel Planner are out of
+  scope.
+- `CollegeTools.Schema` `systemColumns` ownership metadata for the new column.
+- `repairCollegeSync` now matches tracker rows to Colleges rows by `College ID`,
+  falling back to the old name logic once as a one-time bridge for pre-migration
+  rows, which then adopt the matched ID.
+- Automatic, non-destructive backfill: old workbooks get the column appended and
+  blank IDs generated on the next repair or Fill Row; existing user data is
+  preserved.
 
-4. Document migration behavior for copied sheets.
+### Acceptance Criteria (met)
 
-### Acceptance Criteria
-
-- No live sheet gets a hidden identity column from this phase.
-- The future migration plan is explicit about preservation and rollback.
+- Tracker data survives a college rename and duplicate-name collisions.
+- No destructive migration: only column-add and blank-ID-fill; existing values
+  are only ever moved through the same snapshot-restore path repair already used.
 
 ## Phase 7: Incremental Modern JavaScript Cleanup
 
@@ -298,7 +310,7 @@ Manual copied-sheet checks are required for:
 3. Phase 3: shared execution budget.
 4. Phase 5: formula builder consolidation.
 5. Phase 4: API key storage cleanup.
-6. Phase 6: stable identity preparation.
+6. Phase 6: stable college identity (shipped).
 7. Phase 7: incremental JavaScript cleanup as adjacent work.
 
 ## Risks And Guardrails

@@ -61,6 +61,12 @@ the two-branch rule because `origin/main` has not been updated.
 5. **Manual live-sheet smoke test before release.** Run Repair Validations &
    Dropdowns, Repair Entire Workbook, Refresh Dashboard Data, Fill Regions,
    Complete Setup, direct-push dry run, and a throwaway-copy push.
+6. **Stable college identity.** A `College ID` (UUID) column on Colleges and the
+   four per-college trackers; `repairCollegeSync` keys off it instead of College
+   Name, with a one-time name bridge for pre-migration rows and automatic,
+   non-destructive backfill on old workbooks. Renames and duplicate names no
+   longer corrupt tracker data. See
+   `project-docs/plans/2026-07-06-stable-college-identity.md`.
 
 ## Prioritized Backlog
 
@@ -81,17 +87,14 @@ the two-branch rule because `origin/main` has not been updated.
 6. **Clarify cost data age and income context.** Show the Scorecard year/cohort
    where available, distinguish blended net price from household-specific cost,
    and decide whether to request income-bracket net price fields.
-7. **Introduce stable college identity.** Add hidden/protected stable keys to
-   Colleges and trackers, migrate existing rows, and replace positional tracker
-   sync with keyed repair/sync.
-8. **Finish service/menu separation.** Move prompts, alerts, locks, and final
+7. **Finish service/menu separation.** Move prompts, alerts, locks, and final
    summaries to menu adapters; have service modules return structured results.
-9. **Add diagnostics and scoped locks.** Provide structured diagnostics for
+8. **Add diagnostics and scoped locks.** Provide structured diagnostics for
    setup/repair/fill failures and prevent overlapping mutating workflows.
-10. **Create a declarative setup plan.** Put setup, repair, formatting,
-    formulas, dashboard refresh, and performance actions on one step registry
-    with tested ordering.
-11. **(Not a must-have) Move API key storage toward user properties.** Keep the
+9. **Create a declarative setup plan.** Put setup, repair, formatting,
+   formulas, dashboard refresh, and performance actions on one step registry
+   with tested ordering.
+10. **(Not a must-have) Move API key storage toward user properties.** Keep the
     legacy sheet as a migration fallback, but add visible warnings and a
     one-click migration path. Deliberately deferred: it's a credential/plumbing
     change on the single most-used code path (every Fill Row/Fill Selected
@@ -102,16 +105,16 @@ the two-branch rule because `origin/main` has not been updated.
     CLAUDE.md) — a live smoke test would be required before trusting it. Pick
     this up only if the current sheet-based key storage becomes an active
     problem, not proactively.
-12. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
+11. **Continue renderer/formula cleanup opportunistically.** Finish dashboard
     render-model cleanup, move remaining inline formulas into `Formulas`, and
     migrate `scoring.js` off legacy column helpers when that file is touched.
-13. **Harden low-trust registry operations if scale increases.** Current bounds
+12. **Harden low-trust registry operations if scale increases.** Current bounds
     are enough for internal telemetry; use per-copy server-issued tokens or
     stronger ownership checks if registry integrity becomes important.
-14. **Prepare Marketplace/legal launch materials.** Host Privacy/Terms pages,
+13. **Prepare Marketplace/legal launch materials.** Host Privacy/Terms pages,
     update contact/jurisdiction URLs, prepare app assets/screenshots/listing
     copy, configure the Google Cloud project, and run multi-user testing.
-15. **Defer lower-value feature ideas.** Travel-cost estimates, calendar export,
+14. **Defer lower-value feature ideas.** Travel-cost estimates, calendar export,
     scholarship import forms, Quick Compare, and an apps-directory site remain
     future ideas until the core tracker/release work is stable.
 
