@@ -183,8 +183,12 @@ CollegeTools.Utils = (function() {
   /**
    * Trims all College Tools sheets to improve performance.
    * Reduces rows to 200 maximum for main sheets, 100 for tracker sheets.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress the completion alert
+   * @returns {Object} Optimization summary
    */
-  function trimAllSheets() {
+  function trimAllSheets(opts) {
+    opts = opts || {};
     // Main sheets - keep more rows for colleges
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.COLLEGES, 200);
 
@@ -195,12 +199,15 @@ CollegeTools.Utils = (function() {
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 150); // Scholarships might need more
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 100);
 
-    SpreadsheetApp.getUi().alert('Sheet Performance Optimization',
-      'Trimmed all sheets to optimal row counts:\n' +
-      '• Colleges: 200 rows\n' +
-      '• Trackers: 100-150 rows\n\n' +
-      'This should significantly improve performance!',
-      SpreadsheetApp.getUi().ButtonSet.OK);
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert('Sheet Performance Optimization',
+        'Trimmed all sheets to optimal row counts:\n' +
+        '• Colleges: 200 rows\n' +
+        '• Trackers: 100-150 rows\n\n' +
+        'This should significantly improve performance!',
+        SpreadsheetApp.getUi().ButtonSet.OK);
+    }
+    return {ok: true, message: 'Trimmed all sheets to optimal row counts'};
   }
 
   /**

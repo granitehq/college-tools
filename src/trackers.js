@@ -824,8 +824,12 @@ CollegeTools.Trackers = (function() {
    * Creates or updates all tracker sheets (Financial Aid, Campus Visit, Application Timeline, Scholarships).
    * Sets up headers, formulas, and data validation for each tracker.
    * Safe to run multiple times - will not overwrite existing data.
+   * @param {Object=} opts - Optional execution flags
+   * @param {boolean=} opts.suppressAlert - Whether to suppress the completion alert
+   * @returns {Object} Setup summary
    */
-  function setupAllTrackers() {
+  function setupAllTrackers(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
 
     ss.toast('Setting up tracker sheets...', 'Tracker Setup', 10);
@@ -872,7 +876,15 @@ CollegeTools.Trackers = (function() {
       message += '\nTravel rows refreshed: ' + travelResult.count;
     }
 
-    SpreadsheetApp.getUi().alert(message);
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert(message);
+    }
+    return {
+      ok: true,
+      count: syncResult && syncResult.count || 0,
+      travelRows: travelResult && travelResult.count || 0,
+      message: message,
+    };
   }
 
 

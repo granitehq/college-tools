@@ -90,9 +90,10 @@ suite.test('onOpen does not attempt copy registration from a simple trigger', ()
 });
 
 suite.test('complete setup performs registration from an explicit authorized action', () => {
-  const completeSetupBody = functionBody(readSource('setup.js'), 'completeSetup');
+  const setupSource = readSource('setup.js');
 
-  suite.assert(completeSetupBody.includes('CollegeTools.Registration.registerIfNeeded()'),
+  suite.assert(setupSource.includes('includeInCompleteSetup: true') &&
+    setupSource.includes('CollegeTools.Registration.registerIfNeeded()'),
     'Complete Setup should attempt registration from an explicit menu action');
 });
 
