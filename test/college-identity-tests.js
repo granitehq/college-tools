@@ -19,14 +19,9 @@ CollegeTools.Scorecard = {
 suite.test('fillCollegeRowCore assigns a College ID to a new row and preserves it on refill', () => {
   resetUuidCounter();
   const {colleges} = setupWorkbook({});
-  const idCol = getCollegeColumn('College ID', colleges) || (colleges.getLastColumn() + 1);
   colleges.getRange(3, 1).setValue('Alpha College');
 
-  const result = CollegeTools.Colleges.fillCollegeRow ?
-    null : CollegeTools.Colleges;
-  CollegeTools.Colleges.fillCollegeRowCore ?
-    CollegeTools.Colleges.fillCollegeRowCore(3, {suppressAlert: true, skipTrackerSetup: true}) :
-    null;
+  CollegeTools.Colleges.fillCollegeRowCore(3, {suppressAlert: true, skipTrackerSetup: true});
 
   const assignedId = colleges.getRange(3, getCollegeColumn('College ID', colleges)).getValue();
   suite.assert(assignedId, 'A College ID should be generated for a new row');
