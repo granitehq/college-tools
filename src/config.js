@@ -94,7 +94,7 @@ CollegeTools.Config = (function() {
       'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
       'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
       'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition',
-      'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes',
+      'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes', 'College ID',
     ],
 
 
@@ -122,14 +122,14 @@ CollegeTools.Config = (function() {
       'Federal Grants', 'State Grants', 'Institutional Grants', 'Merit Scholarships', 'Need-Based Aid', 'Work-Study Offered',
       'Subsidized Loans', 'Unsubsidized Loans', 'Parent PLUS Loans',
       'Net Price After Aid', 'Out-of-Pocket Cost', '4-Year Projected Cost',
-      'Outside Scholarships Applied', 'Financial Safety', '4-Year Burden', 'Aid Requirements Complete', 'Notes',
+      'Outside Scholarships Applied', 'Financial Safety', '4-Year Burden', 'Aid Requirements Complete', 'Notes', 'College ID',
     ],
 
     CAMPUS_VISIT: [
       'College Name', 'Visit Date', 'Visit Type (In-Person/Virtual/College Fair)', 'People Met',
       'Campus & Facilities (1-10)', 'Academic Vibe (1-10)', 'Social Atmosphere (1-10)', 'Overall Gut Feeling (1-10)',
       'Pros', 'Cons', 'Concerns', 'Follow-Up Needed', 'Next Steps',
-      'Visit Score', 'Notes',
+      'Visit Score', 'Notes', 'College ID',
     ],
 
     // Owns the application deadline and FAFSA/CSS deadlines are owned by
@@ -148,14 +148,14 @@ CollegeTools.Config = (function() {
       'FAFSA Opens', 'Merit Scholarship Deadline',
       'Other Deadline 1 Date', 'Other Deadline 2 Date', 'Mid-Year Report Due', 'Decision Release Date',
       'Student Visit Day', 'Housing Deposit Due', 'Enrollment Deposit Deadline',
-      'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)',
+      'Days Until Deadline (App)', 'Priority Level', 'Completion Status (%)', 'College ID',
     ],
 
     STATUS_TRACKER: [
       'College Name', 'Application Status', 'Decision Plan', 'App Portal', 'Submitted Date',
       'Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete', 'Interview (Y/N)',
       'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Portfolio Required (Y/N)',
-      'Portfolio Submitted (Date)', 'Documents Complete', 'Notes',
+      'Portfolio Submitted (Date)', 'Documents Complete', 'Notes', 'College ID',
     ],
 
     // Post-award/renewal minutiae (renewal terms, credit hours, thank-you

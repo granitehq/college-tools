@@ -53,7 +53,7 @@ suite.test('critical Colleges headers snapshot stays stable', () => {
     'Clubs/Activities (1-5)', 'Personal Priority (1-5)',
     'Weighted Score', 'Admission Fit', 'Campus Setting', 'Test Optional',
     'In-State Tuition', 'Out-of-State Tuition', 'Applicable Tuition',
-    'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes',
+    'Typical Debt at Graduation', 'Pell Grant Rate', 'Notes', 'College ID',
   ];
 
   suite.assertEqual(JSON.stringify(CollegeTools.Config.HEADERS.COLLEGES), JSON.stringify(expected),
