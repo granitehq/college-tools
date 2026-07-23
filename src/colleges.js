@@ -315,6 +315,10 @@ CollegeTools.Colleges = (function() {
    * @param {boolean} opts.skipHighlight - If true, skips cell highlighting for performance
    * @param {boolean} opts.skipTrackerSetup - If true, skips tracker setup for performance
    * @param {Object} opts.columnIndexes - Pre-computed column indexes for batch operations
+   * @param {Array<*>=} opts.rowValues - Preloaded row values for a bulk operation
+   * @param {Array<string>=} opts.rowFormulas - Preloaded row formulas for a bulk operation
+   * @param {boolean=} opts.deferWrite - Return the transformed row without writing it
+   * @param {Object=} opts.apiResult - Prefetched Scorecard result
    * @returns {Object} Result object with {ok: boolean, msg: string}
    * @private
    */
@@ -343,8 +347,8 @@ CollegeTools.Colleges = (function() {
     var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
     var lastCol = Math.min(hdrs.length, sh.getLastColumn());
     var rowRange = sh.getRange(row, 1, 1, lastCol);
-    var rowValues = rowRange.getValues()[0];
-    var rowFormulas = rowRange.getFormulas()[0];
+    var rowValues = opts.rowValues || rowRange.getValues()[0];
+    var rowFormulas = opts.rowFormulas || rowRange.getFormulas()[0];
 
     var name = (rowValues[COL.NAME - 1] || '').toString().trim();
     if (!name) return {ok: false, msg: 'empty name'};
@@ -363,7 +367,14 @@ CollegeTools.Colleges = (function() {
       }
     }
     nextRowValues[COL.NAME - 1] = sanitizedName;
-    var collegeId = ensureCollegeIdForRow_(sh, row, COL.COLLEGE_ID);
+    var collegeId = COL.COLLEGE_ID !== -1 ?
+      (rowValues[COL.COLLEGE_ID - 1] || '').toString().trim() :
+      '';
+    if (!collegeId) {
+      collegeId = opts.rowValues ?
+        Utilities.getUuid() :
+        ensureCollegeIdForRow_(sh, row, COL.COLLEGE_ID);
+    }
     if (COL.COLLEGE_ID !== -1) {
       // ensureCollegeIdForRow_ only computes the id; fold it into
       // nextRowValues so the batched rowRange.setValues() below is what
@@ -372,7 +383,7 @@ CollegeTools.Colleges = (function() {
     }
 
     // Fetch college data via API
-    var apiResult = CollegeTools.Scorecard.fetchCollegeData(sanitizedName, {
+    var apiResult = opts.apiResult || CollegeTools.Scorecard.fetchCollegeData(sanitizedName, {
       executionBudget: opts.executionBudget,
     });
     if (!apiResult.ok) {
@@ -380,7 +391,7 @@ CollegeTools.Colleges = (function() {
       if (isAutoStampNotes_(rowValues[COL.NOTES - 1])) {
         nextRowValues[COL.NOTES - 1] = CollegeTools.Config.VERSION + ' | ' + apiResult.error;
       }
-      rowRange.setValues([nextRowValues]);
+      if (!opts.deferWrite) rowRange.setValues([nextRowValues]);
       // Sync the typed name to trackers even without API data, so tracker rows
       // don't keep showing stale sample colleges when a lookup fails to match.
       if (!opts.skipTrackerSetup) {
@@ -394,7 +405,17 @@ CollegeTools.Colleges = (function() {
         }
       }
       if (!suppressAlert) SpreadsheetApp.getUi().alert('No match for "' + sanitizedName + '". See Notes.');
-      return {ok: false, msg: 'no match'};
+      return {
+        ok: false,
+        msg: 'no match',
+        trackerInfo: {
+          name: sanitizedName,
+          id: collegeId,
+          coa: '',
+          sourceRow: row,
+        },
+        rowValues: nextRowValues,
+      };
     }
 
     var r = apiResult.data;
@@ -480,7 +501,7 @@ CollegeTools.Colleges = (function() {
     if (isAutoStampNotes_(rowValues[COL.NOTES - 1])) {
       nextRowValues[COL.NOTES - 1] = CollegeTools.Config.VERSION + ' | ' + (usedName || name);
     }
-    rowRange.setValues([nextRowValues]);
+    if (!opts.deferWrite) rowRange.setValues([nextRowValues]);
 
     if (!suppressAlert && !skipHighlight) {
       // Highlight when run one-off (skip highlighting for performance)
@@ -504,7 +525,17 @@ CollegeTools.Colleges = (function() {
       }
     }
 
-    return {ok: true, msg: 'ok'};
+    return {
+      ok: true,
+      msg: 'ok',
+      trackerInfo: {
+        name: usedName || name,
+        id: collegeId,
+        coa: coa,
+        sourceRow: row,
+      },
+      rowValues: nextRowValues,
+    };
   }
 
   /**
@@ -532,6 +563,7 @@ CollegeTools.Colleges = (function() {
    * Displays a summary of successful, skipped, and failed operations.
    */
   function fillSelectedRows() {
+    var startedAt = new Date().getTime();
     var ss = SpreadsheetApp.getActive();
     var sh = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
     if (!sh) {
@@ -578,50 +610,140 @@ CollegeTools.Colleges = (function() {
     var hdrs = ensureCollegesIdColumn_(sh);
     var columnIndexes = buildCollegesColumnMap_(hdrs);
 
+    // Read selected names in one rectangular call, then issue concurrent API
+    // requests where the Scorecard client supports fetchAll().
+    var rowBlocks = [];
+    list.forEach(function(row) {
+      var block = rowBlocks[rowBlocks.length - 1];
+      if (!block || row !== block.endRow + 1) {
+        block = {startRow: row, endRow: row};
+        rowBlocks.push(block);
+      } else {
+        block.endRow = row;
+      }
+    });
+    var rowContext = {};
+    rowBlocks.forEach(function(block) {
+      var rowCount = block.endRow - block.startRow + 1;
+      block.range = sh.getRange(block.startRow, 1, rowCount, hdrs.length);
+      block.values = block.range.getValues();
+      block.formulas = block.range.getFormulas();
+      block.output = block.values.map(function(rowValues, rowIndex) {
+        return rowValues.map(function(value, columnIndex) {
+          return block.formulas[rowIndex][columnIndex] || value;
+        });
+      });
+      for (var row = block.startRow; row <= block.endRow; row++) {
+        rowContext[row] = {block: block, index: row - block.startRow};
+      }
+    });
+    var workItems = [];
+    list.forEach(function(row) {
+      var context = rowContext[row];
+      var name = (context.block.values[context.index][0] || '').toString().trim();
+      if (name) workItems.push({row: row, name: name});
+    });
+    var timingBucket = workItems.length <= 5 ? '1-5' :
+      (workItems.length <= 10 ? '6-10' : (workItems.length <= 20 ? '11-20' : '21-plus'));
+    var timingKey = 'fill-selected-' + timingBucket;
+    var fallbackEstimateMs = 5000 + (Math.ceil(workItems.length / 20) * 5000);
+    var estimatedMs = CollegeTools.Utils.estimatedDuration(timingKey, fallbackEstimateMs);
+
+    ss.toast(
+      'Fetching data for ' + workItems.length + ' college(s). Estimated total: about ' +
+        CollegeTools.Utils.formatDuration(estimatedMs) + '.',
+      'College Fill — Step 1 of 3',
+      30,
+    );
+
     // Process each row, stopping early if we approach the execution time limit
     var ok=0; var skipped=0; var failed=0; var timeLimitExceeded=false;
+    var trackerItems = [];
     var executionBudget = CollegeTools.ExecutionBudget.start(CollegeTools.Config.API_CONFIG.EXECUTION_TIME_LIMIT);
+    var batchResults = null;
+    if (CollegeTools.Scorecard.fetchCollegeDataBatch && workItems.length) {
+      batchResults = CollegeTools.Scorecard.fetchCollegeDataBatch(
+        workItems.map(function(item) {
+          return item.name;
+        }),
+        {executionBudget: executionBudget},
+      );
+    }
 
-    for (var i=0; i<list.length; i++) {
-      var row = list[i];
-      var name = (sh.getRange(row, 1).getValue()||'').toString().trim(); // A = College Name
-      if (!name) {
-        skipped++; continue;
-      }
+    skipped = list.length - workItems.length;
+    ss.toast(
+      'Writing ' + workItems.length + ' college row(s)...',
+      'College Fill — Step 2 of 3',
+      30,
+    );
 
+    for (var i=0; i<workItems.length; i++) {
+      var item = workItems[i];
       // Check execution time limit before processing each row
       if (!executionBudget.canContinue()) {
         timeLimitExceeded = true;
         SpreadsheetApp.getUi().alert('Stopping batch processing due to execution time limit. ' +
-          'Processed ' + (i) + ' of ' + list.length + ' rows.');
+          'Processed ' + i + ' of ' + workItems.length + ' rows.');
         break;
       }
 
       try {
-        var res = fillCollegeRowCore(row, {
+        var context = rowContext[item.row];
+        var res = fillCollegeRowCore(item.row, {
           suppressAlert: true,
+          skipTrackerSetup: !!batchResults,
           columnIndexes: columnIndexes,
           executionBudget: executionBudget,
+          apiResult: batchResults ? batchResults[i] : null,
+          rowValues: context.block.values[context.index],
+          rowFormulas: context.block.formulas[context.index],
+          deferWrite: true,
         });
         if (res && res.ok) {
           ok++;
         } else {
           failed++;
         }
+        if (res && res.rowValues) context.block.output[context.index] = res.rowValues;
+        if (res && res.trackerInfo) trackerItems.push(res.trackerInfo);
       } catch (e) {
         failed++;
       }
 
-      // Use configured batch delay
-      if (i < list.length - 1) { // Don't sleep after the last item
+      // Retain the legacy pacing only for the serial compatibility path.
+      if (!batchResults && i < workItems.length - 1) {
         Utilities.sleep(CollegeTools.Config.API_CONFIG.BATCH_DELAY);
       }
     }
 
+    rowBlocks.forEach(function(block) {
+      block.range.setValues(block.output);
+    });
+
+    if (batchResults) {
+      ss.toast(
+        'Synchronizing trackers and travel estimates...',
+        'College Fill — Step 3 of 3',
+        30,
+      );
+      if (CollegeTools.Trackers.syncCollegesToTrackersBatch) {
+        CollegeTools.Trackers.syncCollegesToTrackersBatch(trackerItems);
+      } else {
+        CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+      }
+      if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+        CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+      }
+    }
+
     var timeLimitMessage = timeLimitExceeded ? '\n⚠️ Stopped due to execution time limit.' : '';
+    var elapsedMs = new Date().getTime() - startedAt;
+    var elapsedSeconds = (elapsedMs / 1000).toFixed(1);
+    CollegeTools.Utils.recordDuration(timingKey, elapsedMs);
 
     SpreadsheetApp.getUi().alert('Batch fill complete.' + timeLimitMessage +
-      '\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed);
+      '\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed +
+      '\nElapsed: ' + elapsedSeconds + ' seconds');
   }
 
   // Public API

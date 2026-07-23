@@ -56,16 +56,28 @@ CollegeTools.Setup = (function() {
   /**
    * Runs setup/repair steps and aggregates required failures and optional warnings.
    * @param {Array<Object>} steps - Step descriptors to run
+   * @param {Object=} opts - Progress display options
    * @returns {Object} Aggregate service result
    * @private
    */
-  function runSetupSteps_(steps) {
+  function runSetupSteps_(steps, opts) {
+    opts = opts || {};
     var details = [];
     var warnings = [];
     var ok = true;
+    var workflowStartedAt = new Date().getTime();
+    var ss = SpreadsheetApp.getActive();
 
-    steps.forEach(function(step) {
+    steps.forEach(function(step, index) {
+      var stepStartedAt = new Date().getTime();
       var stepResult;
+      if (ss && ss.toast) {
+        ss.toast(
+          step.label + '...',
+          (opts.title || 'College Tools') + ' — Step ' + (index + 1) + ' of ' + steps.length,
+          30,
+        );
+      }
       try {
         stepResult = normalizeStepResult_(step.run(), step);
       } catch (error) {
@@ -75,6 +87,7 @@ CollegeTools.Setup = (function() {
       stepResult.id = step.id;
       stepResult.label = step.label;
       stepResult.required = step.required !== false;
+      stepResult.durationMs = new Date().getTime() - stepStartedAt;
       details.push(stepResult);
 
       if (!stepResult.ok) {
@@ -94,7 +107,10 @@ CollegeTools.Setup = (function() {
       ok ? 'steps_complete' : 'steps_failed',
       ok ? 'Steps complete' : 'One or more required steps failed',
       warnings,
-      {steps: details},
+      {
+        steps: details,
+        durationMs: new Date().getTime() - workflowStartedAt,
+      },
     );
   }
 
@@ -111,7 +127,10 @@ CollegeTools.Setup = (function() {
         includeInCompleteSetup: true,
         includeInRepair: false,
         run: function() {
-          CollegeTools.Instructions.createInstructionsSheet();
+          return CollegeTools.Instructions.createInstructionsSheet({
+            suppressAlert: true,
+            skipIfCurrent: true,
+          });
         },
       },
       {
@@ -121,7 +140,11 @@ CollegeTools.Setup = (function() {
         includeInCompleteSetup: true,
         includeInRepair: false,
         run: function() {
-          return CollegeTools.Trackers.setupAllTrackers({suppressAlert: true});
+          return CollegeTools.Trackers.setupAllTrackers({
+            suppressAlert: true,
+            skipTravel: true,
+            deferFormatting: true,
+          });
         },
       },
       {
@@ -292,6 +315,12 @@ CollegeTools.Setup = (function() {
    */
   function completeSetup() {
     var ui = SpreadsheetApp.getUi();
+    var setupEstimate = CollegeTools.Utils.estimatedDuration ?
+      CollegeTools.Utils.estimatedDuration('complete-setup', 45000) :
+      45000;
+    var setupEstimateText = CollegeTools.Utils.formatDuration ?
+      CollegeTools.Utils.formatDuration(setupEstimate) :
+      '45 seconds';
 
     // Disclose the copy registration phone-home, but only when an endpoint is
     // actually configured (blank in local/dev builds, so nothing is sent).
@@ -310,14 +339,21 @@ CollegeTools.Setup = (function() {
       '• Enhanced formatting and dropdowns\n' +
       '• Performance optimization (trim excess rows)\n' +
       registrationNotice + '\n' +
-      'This may take 30-60 seconds. Continue?',
+      'Estimated time: about ' + setupEstimateText +
+      ' (this estimate adapts after each run). Continue?',
       ui.ButtonSet.YES_NO,
     );
 
     if (result !== ui.Button.YES) return;
 
     try {
-      var setupResult = runSetupSteps_(stepsFor_('includeInCompleteSetup'));
+      var setupResult = runSetupSteps_(
+        stepsFor_('includeInCompleteSetup'),
+        {title: 'Complete Setup'},
+      );
+      if (CollegeTools.Utils.recordDuration) {
+        CollegeTools.Utils.recordDuration('complete-setup', setupResult.details.durationMs);
+      }
 
       var setupMessage = 'College Tools is fully configured:\n\n' +
         '✅ Instructions sheet created (first tab)\n' +
@@ -332,7 +368,8 @@ CollegeTools.Setup = (function() {
         '2. Get your API key (see Instructions)\n' +
         '3. Fill out your Personal Profile\n' +
         '4. Start adding colleges!\n\n' +
-        'Everything you need to know is in Instructions!';
+        'Everything you need to know is in Instructions!\n\n' +
+        'Elapsed: ' + (setupResult.details.durationMs / 1000).toFixed(1) + ' seconds';
 
       if (setupResult.warnings.length) {
         setupMessage += '\n\nRegistration warning: ' + setupResult.warnings.join('\n');
@@ -399,6 +436,12 @@ CollegeTools.Setup = (function() {
   function repairEntireWorkbook(opts) {
     opts = opts || {};
     var ui = SpreadsheetApp.getUi();
+    var repairEstimate = CollegeTools.Utils.estimatedDuration ?
+      CollegeTools.Utils.estimatedDuration('workbook-repair', 45000) :
+      45000;
+    var repairEstimateText = CollegeTools.Utils.formatDuration ?
+      CollegeTools.Utils.formatDuration(repairEstimate) :
+      '45 seconds';
     var result = opts.suppressAlert ? ui.Button.YES : ui.alert(
       'Repair Entire Workbook',
       'This will repair the current spreadsheet by:\n\n' +
@@ -407,6 +450,7 @@ CollegeTools.Setup = (function() {
       '• Rebuilding scoring formulas (custom weights are kept)\n' +
       '• Refreshing Travel Planner estimates\n' +
       '• Refreshing dashboard data when present\n\n' +
+      'Estimated time: about ' + repairEstimateText + '\n\n' +
       'Continue?',
       ui.ButtonSet.YES_NO,
     );
@@ -414,7 +458,13 @@ CollegeTools.Setup = (function() {
     if (result !== ui.Button.YES) return;
 
     try {
-      var repairResult = runSetupSteps_(stepsFor_('includeInRepair'));
+      var repairResult = runSetupSteps_(
+        stepsFor_('includeInRepair'),
+        {title: 'Workbook Repair'},
+      );
+      if (CollegeTools.Utils.recordDuration) {
+        CollegeTools.Utils.recordDuration('workbook-repair', repairResult.details.durationMs);
+      }
       var detailById = {};
       repairResult.details.steps.forEach(function(step) {
         detailById[step.id] = step.details || {};
@@ -426,6 +476,7 @@ CollegeTools.Setup = (function() {
           'Tracker rows updated: ' + (detailById['tracker-sync'].count || 0) + '\n' +
           'Formatted sheets repaired: ' + ((detailById['validation-formatting'].sectionsApplied || []).length) + '\n' +
           'Travel rows refreshed: ' + (detailById['travel-planner'].count || 0) + '\n\n' +
+          'Elapsed: ' + (repairResult.details.durationMs / 1000).toFixed(1) + ' seconds\n\n' +
           'This is safe to run again if needed.',
           ui.ButtonSet.OK,
         );

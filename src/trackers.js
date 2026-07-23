@@ -483,15 +483,17 @@ CollegeTools.Trackers = (function() {
   /**
    * Creates or updates the Financial Aid Tracker sheet with headers and formulas.
    * @param {Spreadsheet} ss - The spreadsheet object
+   * @param {Object=} opts - Optional setup flags
    * @private
    */
-  function createOrUpdateFinAid(ss) {
+  function createOrUpdateFinAid(ss, opts) {
+    opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     var headers = CollegeTools.Config.HEADERS.FINANCIAL_AID;
     ensureTrackerIdColumn_(sh, 'FINANCIAL_AID');
     migrateFinancialAidStatusColumns_(sh, headers);
 
-    CollegeTools.Formatting.applyStandardValidations(sh);
+    if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
 
     // Formulas row 2 (user can fill down)
     var r2 = 2;
@@ -565,23 +567,27 @@ CollegeTools.Trackers = (function() {
   /**
    * Creates or updates the Campus Visit Tracker sheet with headers and validation.
    * @param {Spreadsheet} ss - The spreadsheet object
+   * @param {Object=} opts - Optional setup flags
    * @private
    */
-  function createOrUpdateCampusVisit(ss) {
+  function createOrUpdateCampusVisit(ss, opts) {
+    opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     var headers = CollegeTools.Config.HEADERS.CAMPUS_VISIT;
     ensureTrackerIdColumn_(sh, 'CAMPUS_VISIT');
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    CollegeTools.Formatting.applyStandardValidations(sh);
+    if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
   }
 
   /**
    * Creates or updates the Application Timeline sheet with headers and formulas.
    * @param {Spreadsheet} ss - The spreadsheet object
+   * @param {Object=} opts - Optional setup flags
    * @private
    */
-  function createOrUpdateAppTimeline(ss) {
+  function createOrUpdateAppTimeline(ss, opts) {
+    opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     var headers = CollegeTools.Config.HEADERS.APPLICATION_TIMELINE;
     ensureTrackerIdColumn_(sh, 'APPLICATION_TIMELINE');
@@ -596,7 +602,7 @@ CollegeTools.Trackers = (function() {
       'Orientation Registration Opens': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
     });
 
-    CollegeTools.Formatting.applyStandardValidations(sh);
+    if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
 
     // Batch optimize: Set all formulas at once instead of individual calls
     var appDeadlineCol = CollegeTools.Utils.colIndex(sh, 'Application Deadline');
@@ -656,15 +662,17 @@ CollegeTools.Trackers = (function() {
   /**
    * Creates or updates the Application Status Tracker sheet with headers and validation.
    * @param {Spreadsheet} ss - The spreadsheet object
+   * @param {Object=} opts - Optional setup flags
    * @private
    */
-  function createOrUpdateStatusTracker(ss) {
+  function createOrUpdateStatusTracker(ss, opts) {
+    opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     var headers = CollegeTools.Config.HEADERS.STATUS_TRACKER;
     ensureTrackerIdColumn_(sh, 'STATUS_TRACKER');
     CollegeTools.Utils.setHeaders(sh, headers);
 
-    CollegeTools.Formatting.applyStandardValidations(sh);
+    if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
 
     // Documents Complete formula in row 2
     var completeCol = CollegeTools.Utils.colIndex(sh, 'Documents Complete');
@@ -686,14 +694,16 @@ CollegeTools.Trackers = (function() {
   /**
    * Creates or updates the Scholarship Tracker sheet with headers and validation.
    * @param {Spreadsheet} ss - The spreadsheet object
+   * @param {Object=} opts - Optional setup flags
    * @private
    */
-  function createOrUpdateScholarships(ss) {
+  function createOrUpdateScholarships(ss, opts) {
+    opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     var headers = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
     migrateScholarshipRequirementColumns_(sh, headers);
 
-    CollegeTools.Formatting.applyStandardValidations(sh);
+    if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
   }
 
   /**
@@ -790,6 +800,58 @@ CollegeTools.Trackers = (function() {
       ensureTrackerIdColumn_(st, 'STATUS_TRACKER');
       syncCollegeRowToSheet_(st, sourceRow, info.name, info.id, {});
     }
+  }
+
+  /**
+   * Synchronizes a set of filled Colleges rows into all linked trackers using
+   * one capture and one bulk write per tracker. Rows outside the supplied set
+   * are copied through unchanged.
+   * @param {Array<Object>} items - Filled row summaries
+   * @returns {Object} Batch sync summary
+   */
+  function syncCollegesToTrackersBatch(items) {
+    items = items || [];
+    if (!items.length) return {ok: true, count: 0};
+
+    var ss = SpreadsheetApp.getActive();
+    var faSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+    var cvSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+    var atSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+    var stSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+    var assignments = items.map(function(item) {
+      return {
+        trackerRow: getTrackerRowForCollegeRow_(item.sourceRow),
+        name: item.name || '',
+        id: item.id || '',
+        coa: item.coa || '',
+      };
+    });
+
+    rebuildTrackerFromSnapshots_(
+      faSheet,
+      captureTrackerSheet_(faSheet, 'FINANCIAL_AID'),
+      assignments,
+      function(assignment) {
+        return {'Total Cost of Attendance': assignment.coa};
+      },
+    );
+    rebuildTrackerFromSnapshots_(
+      cvSheet,
+      captureTrackerSheet_(cvSheet, 'CAMPUS_VISIT'),
+      assignments,
+    );
+    rebuildTrackerFromSnapshots_(
+      atSheet,
+      captureTrackerSheet_(atSheet, 'APPLICATION_TIMELINE'),
+      assignments,
+    );
+    rebuildTrackerFromSnapshots_(
+      stSheet,
+      captureTrackerSheet_(stSheet, 'STATUS_TRACKER'),
+      assignments,
+    );
+
+    return {ok: true, count: assignments.length};
   }
 
 
@@ -927,11 +989,11 @@ CollegeTools.Trackers = (function() {
 
     ss.toast('Setting up tracker sheets...', 'Tracker Setup', 10);
 
-    createOrUpdateFinAid(ss);
-    createOrUpdateCampusVisit(ss);
-    createOrUpdateAppTimeline(ss);
-    createOrUpdateStatusTracker(ss);
-    createOrUpdateScholarships(ss);
+    createOrUpdateFinAid(ss, opts);
+    createOrUpdateCampusVisit(ss, opts);
+    createOrUpdateAppTimeline(ss, opts);
+    createOrUpdateStatusTracker(ss, opts);
+    createOrUpdateScholarships(ss, opts);
 
     ss.toast('Applying formatting enhancements...', 'Tracker Setup', 10);
 
@@ -956,7 +1018,7 @@ CollegeTools.Trackers = (function() {
     }
 
     var travelResult = null;
-    if (CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
+    if (!opts.skipTravel && CollegeTools.Travel && CollegeTools.Travel.createOrUpdateTravelPlanner) {
       travelResult = CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
     }
 
@@ -985,6 +1047,7 @@ CollegeTools.Trackers = (function() {
   return {
     setupAllTrackers: setupAllTrackers,
     syncCollegeToTrackers: syncCollegeToTrackers,
+    syncCollegesToTrackersBatch: syncCollegesToTrackersBatch,
     repairCollegeSync: repairCollegeSync,
     enhanceApplicationTimelineFormatting: enhanceApplicationTimelineFormatting,
   };

@@ -16,34 +16,47 @@ const harness = createHarness([
 const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn} = harness;
 
 const observedBudgets = [];
+let individualFetchCount = 0;
+let batchFetchCount = 0;
+
+function resultForName(name) {
+  const state = name === 'Second' ? 'NY' : 'CA';
+  const locale = name === 'Second' ? 41 : 21;
+  return {
+    ok: true,
+    data: {
+      'school.name': `${name} University`,
+      'school.city': `${name} City`,
+      'school.state': state,
+      'school.locale': locale,
+      'school.school_url': `${name.toLowerCase()}.edu`,
+      'school.ownership': 1,
+      'latest.admissions.admission_rate.overall': 0.4,
+      'latest.student.retention_rate.four_year.full_time': 0.85,
+      'latest.completion.rate_suppressed.overall': 0.75,
+      'latest.earnings.10_yrs_after_entry.median': 70000,
+      'latest.cost.attendance.academic_year': 40000,
+      'latest.cost.avg_net_price.overall': 25000,
+      'latest.admissions.sat_scores.25th_percentile.math': 600,
+      'latest.admissions.sat_scores.25th_percentile.critical_reading': 610,
+      'latest.admissions.sat_scores.75th_percentile.math': 700,
+      'latest.admissions.sat_scores.75th_percentile.critical_reading': 710,
+      'latest.admissions.act_scores.25th_percentile.cumulative': 27,
+      'latest.admissions.act_scores.75th_percentile.cumulative': 32,
+    },
+  };
+}
+
 CollegeTools.Scorecard = {
   fetchCollegeData(name, options) {
+    individualFetchCount++;
     observedBudgets.push(options && options.executionBudget);
-    const state = name === 'Second' ? 'NY' : 'CA';
-    const locale = name === 'Second' ? 41 : 21;
-    return {
-      ok: true,
-      data: {
-        'school.name': `${name} University`,
-        'school.city': `${name} City`,
-        'school.state': state,
-        'school.locale': locale,
-        'school.school_url': `${name.toLowerCase()}.edu`,
-        'school.ownership': 1,
-        'latest.admissions.admission_rate.overall': 0.4,
-        'latest.student.retention_rate.four_year.full_time': 0.85,
-        'latest.completion.rate_suppressed.overall': 0.75,
-        'latest.earnings.10_yrs_after_entry.median': 70000,
-        'latest.cost.attendance.academic_year': 40000,
-        'latest.cost.avg_net_price.overall': 25000,
-        'latest.admissions.sat_scores.25th_percentile.math': 600,
-        'latest.admissions.sat_scores.25th_percentile.critical_reading': 610,
-        'latest.admissions.sat_scores.75th_percentile.math': 700,
-        'latest.admissions.sat_scores.75th_percentile.critical_reading': 710,
-        'latest.admissions.act_scores.25th_percentile.cumulative': 27,
-        'latest.admissions.act_scores.75th_percentile.cumulative': 32,
-      },
-    };
+    return resultForName(name);
+  },
+  fetchCollegeDataBatch(names, options) {
+    batchFetchCount++;
+    observedBudgets.push(options && options.executionBudget);
+    return names.map(resultForName);
   },
   typeFromOwnership(code) {
     return code === 1 ? 'Public' : '';
@@ -75,6 +88,8 @@ suite.test('filling the same row twice replaces canonical tracker college names'
 });
 
 suite.test('batch fill keeps tracker sync enabled', () => {
+  individualFetchCount = 0;
+  batchFetchCount = 0;
   const {colleges} = setupWorkbook();
   colleges.getRange(3, 1).setValue('First');
   colleges.getRange(4, 1).setValue('Second');
@@ -89,6 +104,7 @@ suite.test('batch fill keeps tracker sync enabled', () => {
       },
     };
   };
+  colleges.resetCallCounts();
 
   CollegeTools.Colleges.fillSelectedRows();
 
@@ -97,6 +113,10 @@ suite.test('batch fill keeps tracker sync enabled', () => {
     'Batch fill should sync the first tracker row');
   suite.assertEqual(cv.getRange(3, 1).getValue(), 'Second University',
     'Batch fill should sync the second tracker row');
+  suite.assertEqual(batchFetchCount, 1, 'Batch fill should use one concurrent Scorecard batch');
+  suite.assertEqual(individualFetchCount, 0, 'Healthy batch fill should not issue serial Scorecard fetches');
+  suite.assertEqual(colleges.callCounts.setValues, 1,
+    'Selected College rows should be written in one spreadsheet batch');
 });
 
 suite.test('batch fill backfills College ID on older Colleges sheets', () => {
@@ -127,6 +147,32 @@ suite.test('batch fill backfills College ID on older Colleges sheets', () => {
   suite.assert(colleges.getRange(4, idCol).getValue(), 'Batch fill should stamp the second row College ID');
 });
 
+suite.test('discontiguous batch fill does not rewrite unselected rows', () => {
+  const {colleges} = setupWorkbook();
+  const notesColumn = getCollegeColumn('Notes', colleges);
+  colleges.getRange(3, 1).setValue('First');
+  colleges.getRange(4, notesColumn).setFormula('=1+1');
+  colleges.getRange(5, 1).setValue('Second');
+  colleges.getActiveRangeList = function() {
+    return {
+      getRanges: function() {
+        return [
+          {getRow: function() { return 3; }, getNumRows: function() { return 1; }},
+          {getRow: function() { return 5; }, getNumRows: function() { return 1; }},
+        ];
+      },
+    };
+  };
+  colleges.resetCallCounts();
+
+  CollegeTools.Colleges.fillSelectedRows();
+
+  suite.assertEqual(colleges.getRange(4, notesColumn).getFormula(), '=1+1',
+    'Unselected row formulas should remain untouched');
+  suite.assertEqual(colleges.callCounts.setValues, 2,
+    'Each contiguous selected block should receive one write');
+});
+
 suite.test('batch fill passes one shared execution budget through row fetches', () => {
   observedBudgets.length = 0;
   const {colleges} = setupWorkbook();
@@ -146,9 +192,8 @@ suite.test('batch fill passes one shared execution budget through row fetches', 
 
   CollegeTools.Colleges.fillSelectedRows();
 
-  suite.assertEqual(observedBudgets.length, 2, 'Both row fetches should receive a budget');
-  suite.assert(observedBudgets[0], 'First row fetch should receive an execution budget');
-  suite.assertEqual(observedBudgets[0], observedBudgets[1], 'Batch rows should share one budget instance');
+  suite.assertEqual(observedBudgets.length, 1, 'Concurrent batch should receive one shared budget');
+  suite.assert(observedBudgets[0], 'Batch fetch should receive an execution budget');
   suite.assertEqual(typeof observedBudgets[0].canContinue, 'function', 'Budget should expose canContinue');
 });
 

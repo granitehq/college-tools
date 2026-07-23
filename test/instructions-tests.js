@@ -49,5 +49,20 @@ suite.test('Instructions describe optional Travel Planner fields', () => {
     'Instructions should disclose that travel estimates are approximate');
 });
 
+suite.test('Complete Setup can skip rebuilding current Instructions', () => {
+  CollegeTools.Instructions.createInstructionsSheet({suppressAlert: true});
+  const instructions = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.INSTRUCTIONS);
+  instructions.resetCallCounts();
+
+  const result = CollegeTools.Instructions.createInstructionsSheet({
+    suppressAlert: true,
+    skipIfCurrent: true,
+  });
+
+  suite.assert(result.skipped, 'Current version marker should skip the rebuild');
+  suite.assertEqual(instructions.callCounts.setValue, 0,
+    'Skipped Instructions should not issue line-by-line writes');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

@@ -8,7 +8,7 @@ const harness = createHarness([
   'config.js',
   'setup.js',
 ]);
-const {CollegeTools} = harness;
+const {CollegeTools, mockSpreadsheet} = harness;
 const suite = new TestSuite();
 
 suite.test('complete setup and repair use stable registry step order', () => {
@@ -86,6 +86,11 @@ suite.test('optional setup step failure reports a warning while required failure
   suite.assertEqual(result.details.steps.length, 3, 'Step result details should include every attempted step');
   suite.assertEqual(result.details.steps[2].code, 'required_failed',
     'Required failure details should preserve the step result code');
+  suite.assert(result.details.durationMs >= 0, 'Workflow result should report elapsed milliseconds');
+  suite.assert(result.details.steps.every((step) => step.durationMs >= 0),
+    'Every setup step should report elapsed milliseconds');
+  suite.assertEqual(mockSpreadsheet.toasts.length, 3,
+    'Step runner should provide one progress toast per step');
 });
 
 const success = suite.summary();

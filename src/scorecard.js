@@ -171,6 +171,58 @@ CollegeTools.Scorecard = (function() {
   }
 
   /**
+   * Builds request options shared by fetch() and fetchAll().
+   * @returns {Object} UrlFetch request options
+   * @private
+   */
+  function requestOptions_() {
+    return {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'CollegeTools/' + CollegeTools.Config.VERSION,
+      },
+      muteHttpExceptions: true,
+    };
+  }
+
+  /**
+   * Parses one Scorecard batch response without throwing.
+   * @param {HTTPResponse} response - UrlFetch response
+   * @returns {Object} Parsed response summary
+   * @private
+   */
+  function parseBatchResponse_(response) {
+    try {
+      var statusCode = response.getResponseCode();
+      if (statusCode !== 200) {
+        return {ok: false, statusCode: statusCode, error: 'HTTP ' + statusCode};
+      }
+      return {
+        ok: true,
+        statusCode: statusCode,
+        data: JSON.parse(response.getContentText()),
+      };
+    } catch (error) {
+      return {ok: false, statusCode: 0, error: error.toString()};
+    }
+  }
+
+  /**
+   * Executes requests in bounded concurrent waves.
+   * @param {Array<Object>} requests - fetchAll request objects
+   * @param {number} chunkSize - Maximum requests per wave
+   * @returns {Array<HTTPResponse>} Responses in request order
+   * @private
+   */
+  function fetchAllInChunks_(requests, chunkSize) {
+    var responses = [];
+    for (var i = 0; i < requests.length; i += chunkSize) {
+      responses = responses.concat(UrlFetchApp.fetchAll(requests.slice(i, i + chunkSize)));
+    }
+    return responses;
+  }
+
+  /**
    * Fetches JSON data from a URL with retry logic, caching, and an execution-time guard
    * @param {string} url - URL to fetch
    * @param {Object} options - Options object
@@ -473,6 +525,117 @@ CollegeTools.Scorecard = (function() {
   }
 
   /**
+   * Fetches multiple colleges concurrently. Exact-name requests run first;
+   * only empty exact responses receive a regex fallback. Transport failures
+   * use the existing retry-aware single fetch, preserving the hardened error
+   * path without slowing healthy batches.
+   * @param {string[]} collegeNames - Names in requested result order
+   * @param {Object=} options - Optional shared execution options
+   * @returns {Array<Object>} One fetchCollegeData-style result per input name
+   */
+  function fetchCollegeDataBatch(collegeNames, options) {
+    options = options || {};
+    if (!collegeNames || !collegeNames.length) return [];
+    if (typeof UrlFetchApp === 'undefined' || typeof UrlFetchApp.fetchAll !== 'function') {
+      return collegeNames.map(function(name) {
+        return fetchCollegeData(name, options);
+      });
+    }
+
+    var apiKey = getApiKey();
+    if (!apiKey) {
+      return collegeNames.map(function() {
+        return {ok: false, error: 'API key not found'};
+      });
+    }
+
+    var uniqueNames = [];
+    var seen = {};
+    collegeNames.forEach(function(name) {
+      if (!seen[name]) {
+        seen[name] = true;
+        uniqueNames.push(name);
+      }
+    });
+
+    var baseParams = {
+      'api_key': apiKey,
+      'per_page': 5,
+      'fields': CollegeTools.Config.API_FIELDS,
+      'school.operating': 1,
+    };
+    var requestOptions = requestOptions_();
+    var chunkSize = CollegeTools.Config.API_CONFIG.BATCH_FETCH_SIZE || 20;
+    var resultByName = {};
+    var retryNames = [];
+    var fallbackNames = [];
+
+    /**
+     * Builds one request per name for an exact or regex query wave.
+     * @param {string[]} names - College names
+     * @param {boolean} useRegex - Whether to build regex fallback queries
+     * @returns {Array<Object>} UrlFetch request objects
+     * @private
+     */
+    function requestsFor_(names, useRegex) {
+      return names.map(function(name) {
+        var params = JSON.parse(JSON.stringify(baseParams));
+        params['school.name'] = useRegex ?
+          '~.*' + CollegeTools.Utils.escapeRegex(name) + '.*' :
+          name;
+        return {
+          url: buildUrl(params),
+          method: requestOptions.method,
+          headers: requestOptions.headers,
+          muteHttpExceptions: requestOptions.muteHttpExceptions,
+        };
+      });
+    }
+
+    try {
+      var exactResponses = fetchAllInChunks_(requestsFor_(uniqueNames, false), chunkSize);
+      uniqueNames.forEach(function(name, i) {
+        var parsed = parseBatchResponse_(exactResponses[i]);
+        if (!parsed.ok) {
+          retryNames.push(name);
+          return;
+        }
+        var results = parsed.data && parsed.data.results || [];
+        if (results.length) {
+          resultByName[name] = {ok: true, data: results[0], notes: 'exact:200 (batch)'};
+        } else {
+          fallbackNames.push(name);
+        }
+      });
+
+      if (fallbackNames.length && checkExecutionTimeLimit(options)) {
+        var fallbackResponses = fetchAllInChunks_(requestsFor_(fallbackNames, true), chunkSize);
+        fallbackNames.forEach(function(name, i) {
+          var parsed = parseBatchResponse_(fallbackResponses[i]);
+          if (!parsed.ok) {
+            retryNames.push(name);
+            return;
+          }
+          var results = parsed.data && parsed.data.results || [];
+          resultByName[name] = results.length ?
+            {ok: true, data: results[0], notes: 'exact:200(0) | regex:200 (batch)'} :
+            {ok: false, error: 'no match for "' + name + '" (exact:200 | regex:200)'};
+        });
+      }
+    } catch (error) {
+      retryNames = uniqueNames.slice();
+    }
+
+    retryNames.forEach(function(name) {
+      resultByName[name] = fetchCollegeData(name, options);
+    });
+
+    return collegeNames.map(function(name) {
+      return resultByName[name] || {ok: false, error: 'Execution time limit approaching'};
+    });
+  }
+
+  /**
    * Clears tracked API response cache entries.
    * Keys written by setCachedData are registered in ScriptProperties so they
    * can be explicitly removed here.
@@ -517,6 +680,7 @@ CollegeTools.Scorecard = (function() {
   return {
     searchColleges: searchColleges,
     fetchCollegeData: fetchCollegeData,
+    fetchCollegeDataBatch: fetchCollegeDataBatch,
     typeFromOwnership: typeFromOwnership,
     clearCache: clearCache,
     isApiKeyConfigured: isApiKeyConfigured,

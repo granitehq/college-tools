@@ -13,6 +13,8 @@ var CollegeTools = CollegeTools || {};
 CollegeTools.Dashboard = (function() {
   'use strict';
 
+  var row1ReadCache_ = {};
+
   /**
    * Builds a schema-backed A1 range for dashboard formula generation.
    * @param {string} sheetKey - Stable sheet key
@@ -82,17 +84,25 @@ CollegeTools.Dashboard = (function() {
    */
   function readRow1Sheet_(sheet) {
     if (!sheet || sheet.getLastColumn() < 1) return null;
+    var cacheKey = sheet.getName();
+    if (Object.prototype.hasOwnProperty.call(row1ReadCache_, cacheKey)) {
+      return row1ReadCache_[cacheKey];
+    }
     var lastCol = sheet.getLastColumn();
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
       .map(function(h) {
         return (h || '').toString().trim();
       });
     var lastRow = sheet.getLastRow();
-    if (lastRow < 2) return {headers: headers, rows: []};
-    return {
+    if (lastRow < 2) {
+      row1ReadCache_[cacheKey] = {headers: headers, rows: []};
+      return row1ReadCache_[cacheKey];
+    }
+    row1ReadCache_[cacheKey] = {
       headers: headers,
       rows: sheet.getRange(2, 1, lastRow - 1, lastCol).getValues(),
     };
+    return row1ReadCache_[cacheKey];
   }
 
   /**
@@ -213,11 +223,12 @@ CollegeTools.Dashboard = (function() {
    * the same data that feeds "What's Due Next".
    * @param {Spreadsheet} ss - Workbook
    * @param {Date=} todayOverride - Optional test/control date
+   * @param {Array<Array<*>>=} dueRowsOverride - Optional already-built due rows
    * @returns {{message: string, background: string, color: string}} Banner content
    * @private
    */
-  function buildReadinessSummary_(ss, todayOverride) {
-    var rows = buildDueNextRows_(ss, todayOverride);
+  function buildReadinessSummary_(ss, todayOverride, dueRowsOverride) {
+    var rows = dueRowsOverride || buildDueNextRows_(ss, todayOverride);
     var overdue = 0;
     var dueSoon = 0;
     rows.forEach(function(row) {
@@ -508,6 +519,7 @@ CollegeTools.Dashboard = (function() {
    */
   function createOrUpdateDashboard(ss, opts) {
     opts = opts || {};
+    row1ReadCache_ = {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.DASHBOARD);
 
     var cn = CollegeTools.Config.SHEET_NAMES;
@@ -539,7 +551,8 @@ CollegeTools.Dashboard = (function() {
 
     // Section 0: On-track readiness banner
     var row = 3;
-    var readiness = buildReadinessSummary_(ss, opts && opts.today);
+    var allDueRows = buildDueNextRows_(ss, opts && opts.today);
+    var readiness = buildReadinessSummary_(ss, opts && opts.today, allDueRows);
     sh.getRange(row, 1, 1, 6).merge().setValue(readiness.message)
       .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center')
       .setBackground(readiness.background).setFontColor(readiness.color);
@@ -656,7 +669,7 @@ CollegeTools.Dashboard = (function() {
     // Section 6: real next-deadline table.
     row += 2;
     sh.getRange(row, 1).setValue('What\'s Due Next').setFontWeight('bold').setFontSize(14);
-    var dueRows = buildDueNextRows_(ss, opts && opts.today).slice(0, 15);
+    var dueRows = allDueRows.slice(0, 15);
     var dueTableStart = row + 2;
     row = writeDashboardTable_(sh, dueTableStart,
       ['College/Source', 'Item', 'Date', 'Days Left', 'Done?'],
@@ -700,12 +713,8 @@ CollegeTools.Dashboard = (function() {
       'No Admission Fit data yet.');
     sh.getRange(row, 1).setValue(fitBalanceMessage_(fitRows)).setFontStyle('italic');
 
-    // Auto-resize columns
-    for (var c = 1; c <= 5; c++) {
-      sh.autoResizeColumn(c);
-    }
-
-    // Set column widths for better display
+    // Fixed widths avoid five expensive auto-resize calls that were
+    // immediately overwritten by these values.
     sh.setColumnWidth(1, 220);
     sh.setColumnWidth(2, 220);
     sh.setColumnWidth(3, 140);

@@ -335,6 +335,7 @@ class MockSheet {
   setColumnWidths() { return this; }
   setFrozenRows() { return this; }
   autoResizeColumn() { return this; }
+  autoResizeColumns() { return this; }
   hideColumns(column, numColumns) {
     const count = numColumns || 1;
     for (let c = column; c < column + count; c++) this.hiddenColumns.add(c);
@@ -406,6 +407,7 @@ class MockSpreadsheet {
     this.sheetOrder = [];
     this.activeSheetName = null;
     this.namedRanges = {};
+    this.toasts = [];
   }
 
   getSheetByName(name) {
@@ -440,7 +442,9 @@ class MockSpreadsheet {
   setNamedRange(name, range) {
     this.namedRanges[name] = {row: range.row, col: range.col};
   }
-  toast() {}
+  toast(message, title, duration) {
+    this.toasts.push({message, title, duration});
+  }
 }
 
 function createValidationBuilder() {
@@ -542,6 +546,7 @@ function createHarness(moduleFiles) {
     mockSpreadsheet.sheetOrder = [];
     mockSpreadsheet.activeSheetName = null;
     mockSpreadsheet.namedRanges = {};
+    mockSpreadsheet.toasts = [];
     mockUi.alerts = [];
   }
 

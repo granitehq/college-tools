@@ -22,6 +22,7 @@ const tests = [
   'scoring-tests.js',
   'instructions-tests.js',
   'college-scorecard-fields-tests.js',
+  'scorecard-batch-tests.js',
   'dashboard-decision-tests.js',
   'formatting-schema-integration-tests.js',
   'menu-wiring-tests.js',

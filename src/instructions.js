@@ -100,10 +100,17 @@ CollegeTools.Instructions = (function() {
 
   /**
    * Creates or updates the Instructions sheet with comprehensive user guide.
+   * @param {Object=} opts - Optional alert and current-version flags
+   * @returns {Object} Instructions update result
    */
-  function createInstructionsSheet() {
+  function createInstructionsSheet(opts) {
+    opts = opts || {};
     var ss = SpreadsheetApp.getActive();
     var sheet = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.INSTRUCTIONS);
+    var versionMarker = 'college-tools-instructions:' + CollegeTools.Config.VERSION;
+    if (opts.skipIfCurrent && sheet.getRange(1, 1).getNote() === versionMarker) {
+      return {ok: true, skipped: true, message: 'Instructions already current'};
+    }
     sheet.clear();
 
     var row = 1;
@@ -387,11 +394,15 @@ CollegeTools.Instructions = (function() {
     sheet.setColumnWidths(1, MERGE_COLS, 150);
     sheet.getRange(1, 1, row, MERGE_COLS).setWrap(true);
     sheet.getRange(1, 1, row, MERGE_COLS).setVerticalAlignment('top');
+    sheet.getRange(1, 1).setNote(versionMarker);
 
     ss.setActiveSheet(sheet);
     ss.moveActiveSheet(1);
 
-    SpreadsheetApp.getUi().alert('Instructions sheet created! It\'s now your first tab.');
+    if (!opts.suppressAlert) {
+      SpreadsheetApp.getUi().alert('Instructions sheet created! It\'s now your first tab.');
+    }
+    return {ok: true, skipped: false, message: 'Instructions sheet created'};
   }
 
   return {

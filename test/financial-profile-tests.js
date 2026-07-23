@@ -34,5 +34,21 @@ suite.test('Personal Profile exposes optional home fields and preserves State_Re
     'Trips_Home_Per_Year should point at the trips row');
 });
 
+suite.test('rerunning financial setup preserves existing profile inputs in one batch', () => {
+  const profile = mockSpreadsheet.insertSheet(CollegeTools.Config.SHEET_NAMES.PERSONAL_PROFILE);
+  profile.getRange(4, 2).setValue(1450);
+  profile.getRange(9, 2).setValue(85000);
+  profile.getRange(14, 2).setValue('Boston');
+  profile.resetCallCounts();
+
+  CollegeTools.Financial.runFinancialSetup_();
+
+  suite.assertEqual(profile.getRange(4, 2).getValue(), 1450, 'SAT input should survive setup rerun');
+  suite.assertEqual(profile.getRange(9, 2).getValue(), 85000, 'Income input should survive setup rerun');
+  suite.assertEqual(profile.getRange(14, 2).getValue(), 'Boston', 'Home City should survive setup rerun');
+  suite.assertEqual(profile.callCounts.setValues, 1, 'Profile structure should be written in one batch');
+  suite.assertEqual(profile.callCounts.setValue, 0, 'Profile setup should avoid single-cell value writes');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

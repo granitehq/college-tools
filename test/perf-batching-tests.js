@@ -87,6 +87,29 @@ suite.test('repairCollegeSync skips restore for duplicate tracker names but sets
   suite.assertEqual(st.getRange(2, stStatus).getValue(), 'Submitted', 'ambiguous data not moved');
 });
 
+suite.test('batch row sync uses at most one block write per tracker', () => {
+  setupWorkbook({});
+  const trackers = [
+    sheet(C.SHEET_NAMES.FINANCIAL_AID),
+    sheet(C.SHEET_NAMES.CAMPUS_VISIT),
+    sheet(C.SHEET_NAMES.APPLICATION_TIMELINE),
+    sheet(C.SHEET_NAMES.STATUS_TRACKER),
+  ];
+  trackers.forEach((tracker) => tracker.resetCallCounts());
+
+  CollegeTools.Trackers.syncCollegesToTrackersBatch([
+    {sourceRow: 3, name: 'Alpha University', id: 'alpha-id', coa: 40000},
+    {sourceRow: 4, name: 'Beta University', id: 'beta-id', coa: 50000},
+  ]);
+
+  trackers.forEach((tracker) => {
+    suite.assert(tracker.callCounts.setValues <= 1,
+      `${tracker.getName()} should use at most one block write`);
+    suite.assertEqual(tracker.callCounts.setValue, 0,
+      `${tracker.getName()} should avoid individual cell writes`);
+  });
+});
+
 /* ---- item 3: batched formats + validations ---- */
 
 suite.test('enhanceFormatsDropdowns batches validations, applies dropdowns, clears stray rules', () => {
@@ -103,10 +126,21 @@ suite.test('enhanceFormatsDropdowns batches validations, applies dropdowns, clea
   suite.assert(fa.callCounts.setNumberFormats <= 1, 'FA formats in <=1 batch');
   const fafsaCol = col(fa, 'FAFSA Submitted (Y/N)');
   suite.assert(fa.getRange(2, fafsaCol).getDataValidation(), 'Y/N dropdown applied');
-  suite.assert(fa.getRange(500, fafsaCol).getDataValidation(), 'dropdown applied full height');
+  suite.assert(fa.getRange(200, fafsaCol).getDataValidation(), 'dropdown applied through supported height');
   suite.assert(!fa.getRange(2, tuitionCol).getDataValidation(), 'stray validation cleared');
   const ratingCol = getCollegeColumn('Program Fit (1-5)', colleges);
   suite.assert(colleges.getRange(3, ratingCol).getDataValidation(), 'Colleges rating dropdown applied');
+});
+
+suite.test('setHeaders skips writes and resizing when headers are already current', () => {
+  setupWorkbook({});
+  const fa = sheet(C.SHEET_NAMES.FINANCIAL_AID);
+  fa.resetCallCounts();
+
+  const changed = CollegeTools.Utils.setHeaders(fa, C.HEADERS.FINANCIAL_AID);
+
+  suite.assertEqual(changed, false, 'Current headers should be recognized as a no-op');
+  suite.assertEqual(fa.callCounts.setValues, 0, 'Current headers should not be rewritten');
 });
 
 suite.test('applyStandardValidations preserves validations on untargeted columns', () => {

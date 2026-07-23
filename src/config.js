@@ -48,6 +48,7 @@ CollegeTools.Config = (function() {
     RETRY_DELAY_MAX: 10000, // Maximum delay in ms
     CACHE_DURATION: 600, // Cache duration in seconds (10 minutes)
     BATCH_DELAY: 200, // Delay between batch requests in ms
+    BATCH_FETCH_SIZE: 20, // Concurrent Scorecard requests per fetchAll wave
     EXECUTION_TIME_LIMIT: 300000, // 5 minutes in ms (conservative under 6min limit)
   };
 

@@ -83,10 +83,21 @@ CollegeTools.Utils = (function() {
    * @param {string[]} headers - Array of header names
    */
   function setHeaders(sh, headers) {
+    var existing = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+    var changed = existing.length !== headers.length || existing.some(function(header, index) {
+      return header !== headers[index];
+    });
+    if (!changed) return false;
+
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
     sh.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f3f4');
     sh.setFrozenRows(1);
-    for (var c=1; c<=headers.length; c++) sh.autoResizeColumn(c);
+    if (sh.autoResizeColumns) {
+      sh.autoResizeColumns(1, headers.length);
+    } else {
+      for (var c=1; c<=headers.length; c++) sh.autoResizeColumn(c);
+    }
+    return true;
   }
 
   /**
@@ -149,8 +160,57 @@ CollegeTools.Utils = (function() {
       column = lastCol;
     }
 
-    sh.hideColumns(column);
+    if (!sh.isColumnHiddenByUser || !sh.isColumnHiddenByUser(column)) {
+      sh.hideColumns(column);
+    }
     return column;
+  }
+
+  /**
+   * Formats milliseconds as a short user-facing estimate.
+   * @param {number} durationMs - Duration in milliseconds
+   * @returns {string} Rounded duration text
+   */
+  function formatDuration(durationMs) {
+    var seconds = Math.max(1, Math.round(durationMs / 1000));
+    if (seconds < 60) return seconds + ' second' + (seconds === 1 ? '' : 's');
+    var minutes = Math.round(seconds / 60);
+    return minutes + ' minute' + (minutes === 1 ? '' : 's');
+  }
+
+  /**
+   * Returns a workbook-specific prior duration when available.
+   * @param {string} workflowKey - Stable workflow timing key
+   * @param {number} fallbackMs - Default estimate before the first run
+   * @returns {number} Estimated duration in milliseconds
+   */
+  function estimatedDuration(workflowKey, fallbackMs) {
+    try {
+      if (typeof PropertiesService === 'undefined') return fallbackMs;
+      var value = PropertiesService.getDocumentProperties()
+        .getProperty('college_tools_timing_' + workflowKey);
+      return value ? Number(value) || fallbackMs : fallbackMs;
+    } catch (error) {
+      return fallbackMs;
+    }
+  }
+
+  /**
+   * Records an exponential moving average for future estimates.
+   * @param {string} workflowKey - Stable workflow timing key
+   * @param {number} durationMs - Most recent duration in milliseconds
+   */
+  function recordDuration(workflowKey, durationMs) {
+    try {
+      if (typeof PropertiesService === 'undefined') return;
+      var props = PropertiesService.getDocumentProperties();
+      var propertyKey = 'college_tools_timing_' + workflowKey;
+      var prior = Number(props.getProperty(propertyKey));
+      var average = prior ? Math.round((prior * 0.7) + (durationMs * 0.3)) : Math.round(durationMs);
+      props.setProperty(propertyKey, String(average));
+    } catch (error) {
+      // Timing history is optional and must never fail the workflow.
+    }
   }
 
   /**
@@ -262,6 +322,9 @@ CollegeTools.Utils = (function() {
     setHeaders: setHeaders,
     colIndex: colIndex,
     ensureHiddenLastColumn: ensureHiddenLastColumn,
+    formatDuration: formatDuration,
+    estimatedDuration: estimatedDuration,
+    recordDuration: recordDuration,
     columnToLetter: columnToLetter,
     addr: addr,
     colIndex2: colIndex2,
