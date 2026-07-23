@@ -121,6 +121,39 @@ CollegeTools.Utils = (function() {
   }
 
   /**
+   * Ensures an internal system column exists as the final used column and is
+   * hidden from normal spreadsheet users. Moving the entire column preserves
+   * values, formulas, formatting, notes, and validations in existing copies.
+   * @param {Sheet} sh - Target sheet
+   * @param {string} header - System-column header
+   * @param {number=} headerRow - Header row, defaults to row 1
+   * @returns {number} Final 1-based column index
+   */
+  function ensureHiddenLastColumn(sh, header, headerRow) {
+    headerRow = headerRow || 1;
+    var lastCol = Math.max(1, sh.getLastColumn());
+    var headers = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0];
+    var column = null;
+    for (var i = 0; i < headers.length; i++) {
+      if ((headers[i] || '').toString().trim() === header) {
+        column = i + 1;
+        break;
+      }
+    }
+
+    if (!column) {
+      column = lastCol + 1;
+      sh.getRange(headerRow, column).setValue(header);
+    } else if (column < lastCol) {
+      sh.moveColumns(sh.getRange(1, column, sh.getMaxRows(), 1), lastCol + 1);
+      column = lastCol;
+    }
+
+    sh.hideColumns(column);
+    return column;
+  }
+
+  /**
    * Converts a column number to its letter representation (1=A, 27=AA, etc).
    * @param {number} column - 1-based column number
    * @returns {string} Column letter(s)
@@ -228,6 +261,7 @@ CollegeTools.Utils = (function() {
     ensureSheet: ensureSheet,
     setHeaders: setHeaders,
     colIndex: colIndex,
+    ensureHiddenLastColumn: ensureHiddenLastColumn,
     columnToLetter: columnToLetter,
     addr: addr,
     colIndex2: colIndex2,

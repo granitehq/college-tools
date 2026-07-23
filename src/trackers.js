@@ -33,14 +33,10 @@ CollegeTools.Trackers = (function() {
    * @private
    */
   function ensureTrackerIdColumn_(sh, sheetKey) {
-    var label = CollegeTools.Schema.header(sheetKey, 'COLLEGE_ID');
-    var idCol = CollegeTools.Utils.colIndex(sh, label);
-    if (idCol) return idCol;
-
-    var lastCol = Math.max(1, sh.getLastColumn());
-    idCol = lastCol + 1;
-    sh.getRange(1, idCol).setValue(label);
-    return idCol;
+    var label = CollegeTools.Schema && CollegeTools.Schema.header ?
+      CollegeTools.Schema.header(sheetKey, 'COLLEGE_ID') :
+      'College ID';
+    return CollegeTools.Utils.ensureHiddenLastColumn(sh, label, 1);
   }
 
   /**
@@ -492,6 +488,7 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateFinAid(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     var headers = CollegeTools.Config.HEADERS.FINANCIAL_AID;
+    ensureTrackerIdColumn_(sh, 'FINANCIAL_AID');
     migrateFinancialAidStatusColumns_(sh, headers);
 
     CollegeTools.Formatting.applyStandardValidations(sh);
@@ -573,6 +570,7 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateCampusVisit(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     var headers = CollegeTools.Config.HEADERS.CAMPUS_VISIT;
+    ensureTrackerIdColumn_(sh, 'CAMPUS_VISIT');
     CollegeTools.Utils.setHeaders(sh, headers);
 
     CollegeTools.Formatting.applyStandardValidations(sh);
@@ -586,6 +584,7 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateAppTimeline(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     var headers = CollegeTools.Config.HEADERS.APPLICATION_TIMELINE;
+    ensureTrackerIdColumn_(sh, 'APPLICATION_TIMELINE');
     // Honors Program Deadline / Portfolio-Audition Due / Housing Application
     // Opens / Orientation Registration Opens were collapsed into two generic
     // date slots -- migrate any existing dates into the first open slot per
@@ -662,6 +661,7 @@ CollegeTools.Trackers = (function() {
   function createOrUpdateStatusTracker(ss) {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     var headers = CollegeTools.Config.HEADERS.STATUS_TRACKER;
+    ensureTrackerIdColumn_(sh, 'STATUS_TRACKER');
     CollegeTools.Utils.setHeaders(sh, headers);
 
     CollegeTools.Formatting.applyStandardValidations(sh);
@@ -848,20 +848,15 @@ CollegeTools.Trackers = (function() {
       CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
 
     // Read all header and data in two bulk reads instead of per-row calls
+    var collegeIdHeader = CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID');
+    CollegeTools.Utils.ensureHiddenLastColumn(collegesSheet, collegeIdHeader, 2);
     var lastCol = collegesSheet.getLastColumn();
     var hdrs = collegesSheet.getRange(2, 1, 1, lastCol).getValues()[0]
       .map(function(x) {
         return (x || '').toString().trim();
       });
     var coaIdx = hdrs.indexOf('Total Cost of Attendance');
-    var idIdx = hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID'));
-    if (idIdx === -1) {
-      // Older Colleges sheet: append the column once, same as fillCollegeRowCore's
-      // ensureCollegesIdColumn_, so repair alone can bring an old workbook current.
-      idIdx = lastCol;
-      collegesSheet.getRange(2, lastCol + 1).setValue(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID'));
-      lastCol += 1;
-    }
+    var idIdx = hdrs.indexOf(collegeIdHeader);
     var data = collegesSheet.getRange(3, 1, lastRow - 2, lastCol).getValues();
 
     // Build the ordered canonical assignment list once; each tracker maps a

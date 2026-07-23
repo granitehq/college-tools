@@ -218,6 +218,7 @@ class MockSheet {
     this.formulas = {};
     this.validations = {};
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
+    this.hiddenColumns = new Set();
     this.activeRow = 3;
     this.maxRows = 1000;
   }
@@ -334,6 +335,44 @@ class MockSheet {
   setColumnWidths() { return this; }
   setFrozenRows() { return this; }
   autoResizeColumn() { return this; }
+  hideColumns(column, numColumns) {
+    const count = numColumns || 1;
+    for (let c = column; c < column + count; c++) this.hiddenColumns.add(c);
+    return this;
+  }
+  isColumnHiddenByUser(column) {
+    return this.hiddenColumns.has(column);
+  }
+  moveColumns(range, destinationIndex) {
+    if (range.numCols !== 1) throw new Error('Mock moveColumns currently supports one column');
+    const sourceColumn = range.col;
+    const lastColumn = this.getLastColumn();
+    const targetColumn = destinationIndex > sourceColumn ? destinationIndex - 1 : destinationIndex;
+    const remap = (column) => {
+      if (column === sourceColumn) return targetColumn;
+      if (sourceColumn < targetColumn && column > sourceColumn && column <= targetColumn) return column - 1;
+      if (sourceColumn > targetColumn && column >= targetColumn && column < sourceColumn) return column + 1;
+      return column;
+    };
+    const moveMap = (source) => {
+      const moved = {};
+      Object.keys(source).forEach((key) => {
+        const [row, column] = key.split(',').map((part) => parseInt(part, 10));
+        moved[this._key(row, remap(column))] = source[key];
+      });
+      return moved;
+    };
+    this.values = moveMap(this.values);
+    this.formulas = moveMap(this.formulas);
+    this.validations = moveMap(this.validations);
+    this.formats = moveMap(this.formats || {});
+    this.notes = moveMap(this.notes || {});
+    const hidden = new Set();
+    this.hiddenColumns.forEach((column) => hidden.add(remap(column)));
+    this.hiddenColumns = hidden;
+    if (targetColumn > lastColumn) throw new Error('Invalid mock move destination');
+    return this;
+  }
   insertColumnBefore(column) {
     const shiftMap = (source) => {
       const shifted = {};

@@ -47,6 +47,53 @@ suite.test('ensureCollegesIdColumn_ backfills College ID on an older Colleges sh
   suite.assert(newHeaders.indexOf('College ID') !== -1, 'College ID column should be auto-appended');
 });
 
+suite.test('College ID is moved to the final column, hidden, and preserved', () => {
+  const {colleges} = setupWorkbook({});
+  const currentHeaders = colleges.getRange(2, 1, 1, colleges.getLastColumn()).getValues()[0];
+  const withoutId = currentHeaders.filter((header) => header !== 'College ID');
+  const oldHeaders = withoutId.slice(0, 2).concat(['College ID'], withoutId.slice(2));
+  colleges.getRange(2, 1, 1, currentHeaders.length).clearContent();
+  colleges.getRange(2, 1, 1, oldHeaders.length).setValues([oldHeaders]);
+  colleges.getRange(3, 1).setValue('Existing College');
+  colleges.getRange(3, 3).setValue('stable-existing-id');
+
+  CollegeTools.Colleges.fillCollegeRowCore(3, {suppressAlert: true, skipTrackerSetup: true});
+
+  const finalColumn = colleges.getLastColumn();
+  suite.assertEqual(colleges.getRange(2, finalColumn).getValue(), 'College ID',
+    'College ID header should be the final used column');
+  suite.assertEqual(colleges.getRange(3, finalColumn).getValue(), 'stable-existing-id',
+    'Moving College ID should preserve its existing value');
+  suite.assert(colleges.isColumnHiddenByUser(finalColumn),
+    'College ID should be hidden from normal users');
+});
+
+suite.test('tracker College ID columns are last and hidden after repair', () => {
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Existing College');
+  const collegeIdColumn = getCollegeColumn('College ID', colleges);
+  colleges.getRange(3, collegeIdColumn).setValue('tracker-stable-id');
+
+  const campus = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  const currentHeaders = campus.getRange(1, 1, 1, campus.getLastColumn()).getValues()[0];
+  const withoutId = currentHeaders.filter((header) => header !== 'College ID');
+  const oldHeaders = withoutId.slice(0, 2).concat(['College ID'], withoutId.slice(2));
+  campus.getRange(1, 1, 1, currentHeaders.length).clearContent();
+  campus.getRange(1, 1, 1, oldHeaders.length).setValues([oldHeaders]);
+  campus.getRange(2, 1).setValue('Existing College');
+  campus.getRange(2, 3).setValue('tracker-stable-id');
+
+  CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  const finalColumn = campus.getLastColumn();
+  suite.assertEqual(campus.getRange(1, finalColumn).getValue(), 'College ID',
+    'Tracker College ID header should be the final used column');
+  suite.assertEqual(campus.getRange(2, finalColumn).getValue(), 'tracker-stable-id',
+    'Tracker College ID should remain associated with its row');
+  suite.assert(campus.isColumnHiddenByUser(finalColumn),
+    'Tracker College ID should be hidden from normal users');
+});
+
 suite.test('repairCollegeSync preserves tracker data across a Colleges rename (ID-keyed, not name-keyed)', () => {
   resetUuidCounter();
   const {colleges} = setupWorkbook({});

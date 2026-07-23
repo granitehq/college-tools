@@ -61,18 +61,9 @@ CollegeTools.Colleges = (function() {
    * @private
    */
   function ensureCollegesIdColumn_(sh) {
+    var idHeader = CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID');
+    CollegeTools.Utils.ensureHiddenLastColumn(sh, idHeader, 2);
     var lastCol = Math.max(1, sh.getLastColumn());
-    var hdrs = sh.getRange(2, 1, 1, lastCol).getValues()[0]
-      .map(function(x) {
-        return (x || '').toString().trim();
-      });
-
-    if (hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID')) !== -1) return hdrs;
-
-    var idCol = lastCol + 1;
-    sh.getRange(2, idCol).setValue(CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID'));
-
-    lastCol = Math.max(1, sh.getLastColumn());
     return sh.getRange(2, 1, 1, lastCol).getValues()[0]
       .map(function(x) {
         return (x || '').toString().trim();
