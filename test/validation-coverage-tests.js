@@ -31,19 +31,16 @@ suite.test('tracker college-name validation points at Colleges row 3 onward', ()
     'Validation should point to the Colleges sheet');
 });
 
-suite.test('Colleges sheet keeps dropdowns for ratings, region, type, and campus setting', () => {
+suite.test('Colleges sheet keeps dropdowns for ratings, type, and campus setting', () => {
   const {colleges} = setupWorkbook();
   CollegeTools.Formatting.enhanceFormatsDropdowns();
 
   const programFitValidation = colleges.getRange(3, getCollegeColumn('Program Fit (1-5)', colleges)).getDataValidation();
-  const regionValidation = colleges.getRange(3, getCollegeColumn('Region', colleges)).getDataValidation();
   const typeValidation = colleges.getRange(3, getCollegeColumn('Type (Public/Private)', colleges)).getDataValidation();
   const campusSettingValidation = colleges.getRange(3, getCollegeColumn('Campus Setting', colleges)).getDataValidation();
 
   suite.assert(programFitValidation && programFitValidation.ruleType === 'list',
     'Program Fit should have a dropdown');
-  suite.assert(regionValidation && regionValidation.ruleType === 'list',
-    'Region should have a dropdown');
   suite.assert(typeValidation && typeValidation.ruleType === 'list',
     'Type should have a dropdown');
   suite.assert(campusSettingValidation && campusSettingValidation.ruleType === 'list',

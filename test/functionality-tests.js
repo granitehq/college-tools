@@ -118,7 +118,7 @@ const mockSheet = {
     if (row === 2 && col <= 30) {
       // Header row - simulate college headers
       const headers = [
-        'College Name', 'City', 'State', 'Region', 'Type (Public/Private)',
+        'College Name', 'City', 'State', 'Type (Public/Private)',
         'Acceptance Rate', 'First-Year Retention', 'Grad Rate', 'Median Earnings (10yr)',
         'Total Cost of Attendance', 'Estimated Net Price', 'Link',
         'SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%',

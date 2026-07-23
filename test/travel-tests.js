@@ -16,7 +16,7 @@ const harness = createHarness([
   'trackers.js',
   'colleges.js',
 ]);
-const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn} = harness;
+const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn, resetSheets, ensureSheetWithHeaders} = harness;
 const suite = new TestSuite();
 
 suite.test('estimateTravel leaves outputs blank when home city or state is missing', () => {
@@ -119,6 +119,22 @@ suite.test('createOrUpdateTravelPlanner creates headers, assumptions, and estima
   suite.assertEqual(travel.getRange(2, 5).getValue(), 'TX', 'Home State should be copied from profile');
   suite.assert(travel.getRange(2, 6).getValue() > 0, 'Distance should be estimated');
   suite.assert(travel.getRange(2, 12).getValue() > 0, 'Annual travel cost should be estimated');
+});
+
+suite.test('new Travel Planner is inserted immediately after Scholarship Tracker', () => {
+  resetSheets();
+  ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.COLLEGES,
+    CollegeTools.Config.HEADERS.COLLEGES, 2);
+  mockSpreadsheet.insertSheet(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
+  mockSpreadsheet.insertSheet(CollegeTools.Config.SHEET_NAMES.DASHBOARD);
+
+  CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+
+  const sheetNames = mockSpreadsheet.getSheets().map((sheet) => sheet.getName());
+  const scholarshipIndex = sheetNames.indexOf(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
+  const travelIndex = sheetNames.indexOf(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+  suite.assertEqual(travelIndex, scholarshipIndex + 1,
+    'Travel Planner should be immediately after Scholarship Tracker');
 });
 
 suite.test('createOrUpdateTravelPlanner keeps estimates blank when profile home city is blank', () => {

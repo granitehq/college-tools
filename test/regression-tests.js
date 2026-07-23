@@ -293,53 +293,6 @@ suite.test('repairCollegeSync reports duplicate tracker names instead of silentl
   'Repair should report duplicate tracker names that require manual resolution');
 });
 
-suite.test('fillRegionsAllRows repairs a missing Colleges Region column before filling regions', () => {
-  const {colleges} = setupWorkbook();
-  const legacyHeaders = CollegeTools.Config.HEADERS.COLLEGES.filter((header) => header !== 'Region');
-  colleges.clear();
-  colleges.getRange(2, 1, 1, legacyHeaders.length).setValues([legacyHeaders]);
-  colleges.getRange(3, 1).setValue('The University of Texas at Austin');
-  colleges.getRange(3, legacyHeaders.indexOf('State') + 1).setValue('TX');
-  colleges.getRange(3, legacyHeaders.indexOf('Type (Public/Private)') + 1).setValue('Public');
-
-  const result = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
-  const repairedHeaders = colleges.getRange(2, 1, 1, colleges.getLastColumn()).getValues()[0];
-  const regionCol = repairedHeaders.indexOf('Region') + 1;
-  const typeCol = repairedHeaders.indexOf('Type (Public/Private)') + 1;
-
-  suite.assertEqual(result.ok, true, 'Region fill should repair and continue when Region is missing');
-  suite.assertEqual(regionCol, legacyHeaders.length + 1,
-    'Region should be appended as a new trailing column, never inserted mid-row ' +
-    '(a real Sheets column insert next to a typed/dropdown column throws ' +
-    '"This operation is not allowed on cells in typed columns")');
-  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'South',
-    'Region should be filled from the existing State value');
-  suite.assertEqual(colleges.getRange(3, typeCol).getValue(), 'Public',
-    'Existing data should be untouched since no column was inserted before it');
-});
-
-suite.test('fillRegionsAllRows repairs a missing Region column even when insertColumnBefore ' +
-  'is unavailable on the live sheet', () => {
-  const {colleges} = setupWorkbook();
-  const legacyHeaders = CollegeTools.Config.HEADERS.COLLEGES.filter((header) => header !== 'Region');
-  colleges.clear();
-  colleges.getRange(2, 1, 1, legacyHeaders.length).setValues([legacyHeaders]);
-  colleges.getRange(3, 1).setValue('The University of Texas at Austin');
-  colleges.getRange(3, legacyHeaders.indexOf('State') + 1).setValue('TX');
-
-  colleges.insertColumnBefore = () => {
-    throw new Error('This operation is not allowed on cells in typed columns.');
-  };
-
-  const result = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
-
-  suite.assertEqual(result.ok, true,
-    'Repairing a missing Region column must not depend on insertColumnBefore, ' +
-    'which Google Sheets rejects next to typed/dropdown columns');
-  const repairedHeaders = colleges.getRange(2, 1, 1, colleges.getLastColumn()).getValues()[0];
-  suite.assert(repairedHeaders.indexOf('Region') !== -1, 'Region header should still be added');
-});
-
 suite.test('setupAllTrackers repairs stale sample tracker names from Colleges', () => {
   const {colleges} = setupWorkbook();
   const coaCol = getCollegeColumn('Total Cost of Attendance', colleges);

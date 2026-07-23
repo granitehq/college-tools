@@ -77,7 +77,6 @@ Move prompts and final alerts toward menu adapters while keeping service functio
    - `CollegeTools.Setup.repairEntireWorkbook`
    - `CollegeTools.Trackers.setupAllTrackers`
    - `CollegeTools.Formatting.repairValidationsAndFormatting`
-   - `CollegeTools.Colleges.fillRegionsAllRows`
    - `CollegeTools.Travel.createOrUpdateTravelPlanner`
 
 3. Move menu-only confirmation prompts into `src/menu.js` or thin menu-boundary functions.
@@ -121,7 +120,6 @@ Replace hand-written setup sequencing with a tested registry of steps that can b
 3. Convert current Repair Entire Workbook steps into registry entries.
    - Tracker sync
    - Validation and formatting repair
-   - Region refresh
    - Travel Planner refresh
    - Scoring formula rebuild
    - Application timeline formatting

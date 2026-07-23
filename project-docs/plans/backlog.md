@@ -31,8 +31,8 @@ is listed as release pending.
 4. **Surfaced important Scorecard fields.** Test Optional, Applicable Tuition,
    Typical Debt at Graduation, and Pell Grant Rate are in the Colleges model
    with regression coverage.
-5. **Fixed the Region/template repair issue.** Missing Region columns are
-   appended safely instead of inserted beside typed columns.
+5. **Retired the low-value Region field.** State remains the canonical
+   geographic field, eliminating Region dropdown and repair failures.
 6. **Fixed tracker syncing after no-match fills and setup.** Tracker rows now
    receive typed college names even when Scorecard cannot find a match, and
    tracker setup repairs sync automatically.
@@ -54,14 +54,14 @@ the two-branch rule because `origin/main` has not been updated.
    task because main is behind development.
 2. **Direct-push update workflow.** Registration, registry provisioning docs,
    and `scripts/push-updates.js` exist in development only.
-3. **Performance batching pass.** Repair College Sync, validation repair,
-   Fill Regions, and dashboard refresh were batched in development only.
+3. **Performance batching pass.** Repair College Sync, validation repair, and
+   dashboard refresh were batched in development only.
 4. **Follow-up review fixes.** Development includes registration disclosure,
    low-trust registry documentation, registry payload bounds, repair-sync
-   cleanup, region changed-run writes, and consolidated performance feedback.
+   cleanup and consolidated performance feedback.
 5. **Manual live-sheet smoke test before release.** Run Repair Validations &
-   Dropdowns, Repair Entire Workbook, Refresh Dashboard Data, Fill Regions,
-   Complete Setup, direct-push dry run, and a throwaway-copy push.
+   Dropdowns, Repair Entire Workbook, Refresh Dashboard Data, Complete Setup,
+   direct-push dry run, and a throwaway-copy push.
 6. **Stable college identity.** A `College ID` (UUID) column on Colleges and the
    four per-college trackers; `repairCollegeSync` keys off it instead of College
    Name, with a one-time name bridge for pre-migration rows and automatic,
@@ -76,9 +76,9 @@ Architecture/refactoring items remain separate backlog entries for priority trac
 1. **Release current development after smoke testing.** Merge `development`
    into `main`, then verify from `main` before deploying. This closes the
    direct-push and performance-review gap.
-2. **Apply required live-template edits.** Delete stale removed columns in the
-   production template, rerun setup/repair, and confirm the live spreadsheet
-   matches the simplified header model.
+2. **Apply required live-template edits.** Remove Region, clear all sample
+   colleges/profile defaults, rerun setup/repair, and confirm the live
+   spreadsheet matches the simplified header model with empty data rows.
 3. **Add owner-aware deadlines.** Add Student/Parent/Both owner fields to
    Application Timeline and Financial Aid Tracker, then filter or split the
    Dashboard What's Due Next view by owner.

@@ -439,7 +439,6 @@ CollegeTools.Formatting = (function() {
         .concat([
           {header: 'Type (Public/Private)',
             rule: listRule_(['Public', 'Private (nonprofit)', 'Private (for-profit)', 'Other'])},
-          {header: 'Region', rule: listRule_(['Northeast', 'Midwest', 'South', 'West'])},
           {header: 'Campus Setting', rule: listRule_(['City', 'Suburban', 'Town', 'Rural', 'Other'])},
         ]);
       applyColumnFormatsAndValidations_(col, 2, collegeFormats, collegeValidations, true);

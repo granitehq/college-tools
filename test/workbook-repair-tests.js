@@ -35,7 +35,6 @@ CollegeTools.Scoring = {
 
 suite.test('repairEntireWorkbook can run as a no-UI service with suppressed alerts', () => {
   const {colleges} = setupWorkbook({includeCampusSetting: true});
-  var regionCol = getCollegeColumn('Region', colleges);
 
   colleges.getRange(3, 1).setValue('Alpha College');
   colleges.getRange(3, 3).setValue('CA');
@@ -44,8 +43,6 @@ suite.test('repairEntireWorkbook can run as a no-UI service with suppressed aler
   var result = CollegeTools.Setup.repairEntireWorkbook({suppressAlert: true});
 
   suite.assert(result.ok, 'Suppressed workbook repair should succeed');
-  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'West',
-    'Suppressed workbook repair should still run repair steps');
   suite.assertEqual(mockUi.alerts.length, 0,
     'Suppressed workbook repair should not show confirmation or completion alerts');
 });
@@ -63,10 +60,9 @@ suite.test('repairEntireWorkbook returns structured failure without alerts when 
     'Failed suppressed repair should not alert');
 });
 
-suite.test('repairEntireWorkbook combines sync, validations, regions, and dashboard refresh', () => {
+suite.test('repairEntireWorkbook combines sync, validations, travel, and dashboard refresh', () => {
   const {colleges} = setupWorkbook({includeCampusSetting: true});
   var coaCol = getCollegeColumn('Total Cost of Attendance', colleges);
-  var regionCol = getCollegeColumn('Region', colleges);
 
   colleges.getRange(3, 1).setValue('Alpha College');
   colleges.getRange(3, 3).setValue('CA');
@@ -83,8 +79,6 @@ suite.test('repairEntireWorkbook combines sync, validations, regions, and dashbo
   suite.assert(result.ok, 'Workbook repair should succeed');
   suite.assertEqual(fa.getRange(2, 1).getValue(), 'Alpha College',
     'Workbook repair should resync tracker names');
-  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'West',
-    'Workbook repair should refill regions');
   var travel = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
   suite.assert(travel, 'Workbook repair should create or refresh Travel Planner');
   suite.assertEqual(travel.getRange(2, 1).getValue(), 'Alpha College',
