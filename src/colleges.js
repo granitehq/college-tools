@@ -2,12 +2,12 @@
  * College data operations
  * @version 2.6.6
  * @author College Tools
- * @description Core college data management, filling, and region mapping
+ * @description Core college data management and filling
  */
 
 /**
  * CollegeTools.Colleges - College data management module
- * Handles filling college data, region mapping, and batch operations
+ * Handles filling college data and batch operations
  */
 var CollegeTools = CollegeTools || {};
 CollegeTools.Colleges = (function() {
@@ -54,44 +54,8 @@ CollegeTools.Colleges = (function() {
   }
 
   /**
-   * Ensures older Colleges sheets have a Region column, appending it as a new
-   * trailing column when missing, then returns the current row-2 headers.
-   * Appends rather than inserting mid-row: Google Sheets rejects
-   * insertColumnBefore/After next to columns using its "typed column"
-   * (dropdown/chip) feature with "This operation is not allowed on cells in
-   * typed columns," and every column in this sheet is located by header name,
-   * not position, so an appended Region column works everywhere the same way.
-   * @param {Sheet} sh - Colleges sheet
-   * @returns {Array<string>} Trimmed row-2 header values
-   * @private
-   */
-  function ensureCollegesRegionColumn_(sh) {
-    var lastCol = Math.max(1, sh.getLastColumn());
-    var hdrs = sh.getRange(2, 1, 1, lastCol).getValues()[0]
-      .map(function(x) {
-        return (x || '').toString().trim();
-      });
-
-    if (hdrs.indexOf(CollegeTools.Schema.header('COLLEGES', 'REGION')) !== -1) return hdrs;
-
-    var regionCol = lastCol + 1;
-    sh.getRange(2, regionCol).setValue(CollegeTools.Schema.header('COLLEGES', 'REGION'));
-
-    if (CollegeTools.Formatting && CollegeTools.Formatting.validateList) {
-      CollegeTools.Formatting.validateList(sh, 'Region', ['Northeast', 'Midwest', 'South', 'West'], 2);
-    }
-
-    lastCol = Math.max(1, sh.getLastColumn());
-    return sh.getRange(2, 1, 1, lastCol).getValues()[0]
-      .map(function(x) {
-        return (x || '').toString().trim();
-      });
-  }
-
-  /**
-   * Auto-appends the College ID column to older Colleges sheets that predate
-   * stable college identity, the same way ensureCollegesRegionColumn_ backfills
-   * Region. Existing IDs (if any) are left untouched.
+   * Auto-appends the College ID column to Colleges sheets that predate stable
+   * college identity. Existing IDs (if any) are left untouched.
    * @param {Sheet} sh - Colleges sheet
    * @returns {Array<string>} Refreshed row-2 headers
    * @private
@@ -166,7 +130,6 @@ CollegeTools.Colleges = (function() {
       TYPICAL_DEBT: optionalCollegeColumn_(hdrs, 'TYPICAL_DEBT'),
       PELL_GRANT_RATE: optionalCollegeColumn_(hdrs, 'PELL_GRANT_RATE'),
       NOTES: requiredCollegeColumn_(hdrs, 'NOTES'),
-      REGION: optionalCollegeColumn_(hdrs, 'REGION'),
       COLLEGE_ID: optionalCollegeColumn_(hdrs, 'COLLEGE_ID'),
       HEADERS: hdrs,
     };
@@ -384,11 +347,9 @@ CollegeTools.Colleges = (function() {
 
     var hdrs = opts.columnIndexes ? opts.columnIndexes.HEADERS : null;
     if (!hdrs) {
-      hdrs = ensureCollegesRegionColumn_(sh);
       hdrs = ensureCollegesIdColumn_(sh);
     }
     var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
-    var idxRegion0 = COL.REGION !== -1 ? COL.REGION - 1 : -1;
     var lastCol = Math.min(hdrs.length, sh.getLastColumn());
     var rowRange = sh.getRange(row, 1, 1, lastCol);
     var rowValues = rowRange.getValues()[0];
@@ -491,11 +452,6 @@ CollegeTools.Colleges = (function() {
     var act25 = r['latest.admissions.act_scores.25th_percentile.cumulative'] || '';
     var act75 = r['latest.admissions.act_scores.75th_percentile.cumulative'] || '';
 
-    var regionVal = (idxRegion0 !== -1) ? CollegeTools.Utils.getRegionForState(state) : '';
-    // Ensure regionVal is always a string to prevent #VALUE! errors
-    regionVal = (regionVal || '').toString();
-
-
     // Write data to sheet without overwriting unrelated cells or formulas
     var writes = [
       [COL.CITY, city],
@@ -519,7 +475,6 @@ CollegeTools.Colleges = (function() {
     if (COL.OUT_OF_STATE_TUITION !== -1) writes.push([COL.OUT_OF_STATE_TUITION, outOfStateTuition]);
     if (COL.TYPICAL_DEBT !== -1) writes.push([COL.TYPICAL_DEBT, typicalDebt]);
     if (COL.PELL_GRANT_RATE !== -1) writes.push([COL.PELL_GRANT_RATE, pellGrantRate]);
-    if (idxRegion0 !== -1) writes.push([idxRegion0 + 1, regionVal]);
     if (COL.APPLICABLE_TUITION !== -1 && COL.IN_STATE_TUITION !== -1 && COL.OUT_OF_STATE_TUITION !== -1) {
       writes.push([COL.APPLICABLE_TUITION, '=IF(State_Residency=' +
         CollegeTools.Utils.addr(row, COL.STATE) + ',' +
@@ -581,106 +536,6 @@ CollegeTools.Colleges = (function() {
   }
 
   /**
-   * Automatically fills the Region column for all rows in the Colleges sheet based on state.
-   * Maps US states to four regions: Northeast, Midwest, South, West.
-   * Only updates rows that have a college name and where the region differs from the calculated value.
-   * @param {Object=} opts - Optional execution flags
-   * @param {boolean=} opts.suppressAlert - Whether to suppress user alerts
-   * @returns {Object} Result summary with updated row count
-   */
-  function fillRegionsAllRows(opts) {
-    opts = opts || {};
-    var ss = SpreadsheetApp.getActive();
-    var sh = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-    if (!sh) {
-      if (!opts.suppressAlert) {
-        SpreadsheetApp.getUi().alert('Sheet "' + CollegeTools.Config.SHEET_NAMES.COLLEGES + '" not found.');
-      }
-      return {ok: false, count: 0};
-    }
-
-    var lastRow = sh.getLastRow();
-    if (lastRow < 3) {
-      if (!opts.suppressAlert) SpreadsheetApp.getUi().alert('No data rows to process.');
-      return {ok: true, count: 0};
-    }
-
-    // Read header row 2, repairing older sheets that predate Region.
-    var hdrs = ensureCollegesRegionColumn_(sh);
-
-    var columnIndexes = buildCollegesColumnMap_(hdrs);
-    var colName = columnIndexes.NAME;
-    var colState = columnIndexes.STATE;
-    var idxRegion = columnIndexes.REGION === -1 ? -1 : columnIndexes.REGION - 1;
-
-    if (idxRegion === -1) {
-      if (!opts.suppressAlert) {
-        SpreadsheetApp.getUi().alert('No "Region" column found on ' +
-          CollegeTools.Config.SHEET_NAMES.COLLEGES + ' sheet.');
-      }
-      return {ok: false, count: 0};
-    }
-    var colRegion = idxRegion + 1;
-
-    var range = sh.getRange(3, 1, lastRow-2, sh.getLastColumn());
-    var values = range.getValues();
-
-    // Collect only the rows whose derived Region actually changed, then write
-    // them as contiguous runs. Unchanged and empty rows are never rewritten, so
-    // a stray user formula in the Region column can't be flattened.
-    var updates = [];
-    for (var r=0; r<values.length; r++) {
-      var rowVals = values[r];
-      var name = (rowVals[colName-1]||'').toString().trim();
-      if (!name) continue; // skip empty rows
-      var st = (rowVals[colState-1]||'').toString().trim();
-      var currentRegion = (rowVals[colRegion-1]||'').toString().trim();
-      var newRegion = CollegeTools.Utils.getRegionForState(st);
-      if (newRegion && newRegion !== currentRegion) {
-        updates.push({row: r + 3, value: newRegion}); // absolute row
-      }
-    }
-
-    writeContiguousColumnRuns_(sh, colRegion, updates);
-    if (!opts.suppressAlert) {
-      SpreadsheetApp.getUi().alert('Regions updated for ' + updates.length + ' row(s).');
-    }
-    return {ok: true, count: updates.length};
-  }
-
-  /**
-   * Writes single-column updates as contiguous setValues runs, touching only the
-   * changed rows. Runs of adjacent rows collapse into one range write.
-   * @param {Sheet} sh - Target sheet
-   * @param {number} column - 1-based column index
-   * @param {Array<{row: number, value: *}>} updates - Changed row/value pairs
-   * @private
-   */
-  function writeContiguousColumnRuns_(sh, column, updates) {
-    if (!updates.length) return;
-    updates.sort(function(a, b) {
-      return a.row - b.row;
-    });
-
-    var runStart = updates[0].row;
-    var runValues = [[updates[0].value]];
-    var previousRow = updates[0].row;
-
-    for (var i = 1; i < updates.length; i++) {
-      if (updates[i].row === previousRow + 1) {
-        runValues.push([updates[i].value]);
-      } else {
-        sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
-        runStart = updates[i].row;
-        runValues = [[updates[i].value]];
-      }
-      previousRow = updates[i].row;
-    }
-
-    sh.getRange(runStart, column, runValues.length, 1).setValues(runValues);
-  }
-
-  /**
    * Batch fills multiple selected rows in the Colleges sheet with data from the College Scorecard API.
    * Processes all selected rows that contain a college name, skipping empty rows.
    * Displays a summary of successful, skipped, and failed operations.
@@ -729,8 +584,7 @@ CollegeTools.Colleges = (function() {
     // Note: Tracker setup is handled separately - not needed during fill operations
 
     // Performance optimization: Read headers once for entire batch operation.
-    var hdrs = ensureCollegesRegionColumn_(sh);
-    hdrs = ensureCollegesIdColumn_(sh);
+    var hdrs = ensureCollegesIdColumn_(sh);
     var columnIndexes = buildCollegesColumnMap_(hdrs);
 
     // Process each row, stopping early if we approach the execution time limit
@@ -786,6 +640,5 @@ CollegeTools.Colleges = (function() {
     fillCollegeRow: fillCollegeRow,
     fillCollegeRowCore: fillCollegeRowCore,
     fillSelectedRows: fillSelectedRows,
-    fillRegionsAllRows: fillRegionsAllRows,
   };
 })();

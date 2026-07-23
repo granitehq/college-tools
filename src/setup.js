@@ -221,16 +221,6 @@ CollegeTools.Setup = (function() {
         },
       },
       {
-        id: 'regions',
-        label: 'Region refresh',
-        required: true,
-        includeInCompleteSetup: false,
-        includeInRepair: true,
-        run: function() {
-          return CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
-        },
-      },
-      {
         id: 'travel-planner',
         label: 'Travel Planner refresh',
         required: false,
@@ -400,7 +390,7 @@ CollegeTools.Setup = (function() {
 
   /**
    * Repairs the workbook by re-syncing colleges, reapplying validations/formatting,
-   * refreshing derived regions, and refreshing the dashboard when present.
+   * and refreshing the dashboard when present.
    * Safe to run on existing downloaded spreadsheets.
    * @param {Object=} opts - Optional execution flags
    * @param {boolean=} opts.suppressAlert - Whether to suppress confirmation and completion alerts
@@ -414,7 +404,6 @@ CollegeTools.Setup = (function() {
       'This will repair the current spreadsheet by:\n\n' +
       '• Re-syncing tracker college lists from the Colleges tab\n' +
       '• Reapplying dropdowns and formatting\n' +
-      '• Refilling Regions from State values\n' +
       '• Rebuilding scoring formulas (custom weights are kept)\n' +
       '• Refreshing Travel Planner estimates\n' +
       '• Refreshing dashboard data when present\n\n' +
@@ -436,7 +425,6 @@ CollegeTools.Setup = (function() {
           'Workbook Repair Complete',
           'Tracker rows updated: ' + (detailById['tracker-sync'].count || 0) + '\n' +
           'Formatted sheets repaired: ' + ((detailById['validation-formatting'].sectionsApplied || []).length) + '\n' +
-          'Regions refreshed: ' + (detailById.regions.count || 0) + '\n' +
           'Travel rows refreshed: ' + (detailById['travel-planner'].count || 0) + '\n\n' +
           'This is safe to run again if needed.',
           ui.ButtonSet.OK,
@@ -447,7 +435,6 @@ CollegeTools.Setup = (function() {
         ok: repairResult.ok,
         trackerRows: detailById['tracker-sync'].count || 0,
         formattedSheets: (detailById['validation-formatting'].sectionsApplied || []).length,
-        regionRows: detailById.regions.count || 0,
         travelRows: detailById['travel-planner'].count || 0,
         warnings: repairResult.warnings,
         details: repairResult.details,

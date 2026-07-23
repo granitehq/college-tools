@@ -26,6 +26,10 @@ modules.
 
 - `Colleges`: headers on row 2, data starts on row 3.
 - Tracker/helper sheets: headers on row 1, data starts on row 2.
+- The master template contains no sample colleges or student/profile values.
+- `Region` is not part of the Colleges model; use `State`.
+- New `Travel Planner` sheets are inserted immediately after
+  `Scholarship Tracker`.
 - `CollegeTools.Utils.colIndex()` reads row 1 only. Do not use it for
   `Colleges`.
 - Prefer `CollegeTools.Schema` helpers for new sheet-aware code.

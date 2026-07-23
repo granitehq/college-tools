@@ -131,7 +131,10 @@ suite.test("schema resolves actual workbook columns and A1 ranges from sheet met
   suite.assertEqual(CollegeTools.Schema.columnIndex("COLLEGES", "NET_PRICE", colleges),
     CollegeTools.Config.HEADERS.COLLEGES.indexOf("Estimated Net Price") + 1,
     "Schema should resolve Colleges columns using row-2 headers");
-  suite.assertEqual(CollegeTools.Schema.rangeA1("COLLEGES", "NET_PRICE", colleges, 1000), "K3:K1000",
+  const netPriceColumn = CollegeTools.Utils.columnToLetter(
+    CollegeTools.Config.HEADERS.COLLEGES.indexOf("Estimated Net Price") + 1);
+  suite.assertEqual(CollegeTools.Schema.rangeA1("COLLEGES", "NET_PRICE", colleges, 1000),
+    `${netPriceColumn}3:${netPriceColumn}1000`,
     "Schema should build data ranges from the sheet data start row");
   const projectedCostCol = CollegeTools.Utils.columnToLetter(
     CollegeTools.Config.HEADERS.FINANCIAL_AID.indexOf("4-Year Projected Cost") + 1);

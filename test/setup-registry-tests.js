@@ -37,7 +37,6 @@ suite.test('complete setup and repair use stable registry step order', () => {
     [
       'tracker-sync',
       'validation-formatting',
-      'regions',
       'travel-planner',
       'scoring',
       'timeline-formatting',

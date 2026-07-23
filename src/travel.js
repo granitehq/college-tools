@@ -266,6 +266,28 @@ CollegeTools.Travel = (function() {
   }
 
   /**
+   * Returns the Travel Planner sheet, inserting it immediately after the
+   * Scholarship Tracker when it does not exist yet.
+   * @param {Spreadsheet} ss - Active spreadsheet
+   * @returns {Sheet} Existing or newly inserted Travel Planner sheet
+   * @private
+   */
+  function ensureTravelPlannerSheet_(ss) {
+    var name = CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER;
+    var existing = ss.getSheetByName(name);
+    if (existing) return existing;
+
+    var scholarship = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
+    if (scholarship) {
+      // insertSheet uses a zero-based insertion index while getIndex() is
+      // one-based, so the Scholarship Tracker index places the new sheet
+      // immediately after it.
+      return ss.insertSheet(name, scholarship.getIndex());
+    }
+    return ss.insertSheet(name);
+  }
+
+  /**
    * Creates or refreshes the Travel Planner sheet from Colleges and profile data.
    * @param {Object=} opts - Optional execution flags
    * @returns {Object} Refresh result with ok and count
@@ -274,7 +296,7 @@ CollegeTools.Travel = (function() {
     opts = opts || {};
     var ss = SpreadsheetApp.getActive();
     var colleges = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.COLLEGES);
-    var travel = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+    var travel = ensureTravelPlannerSheet_(ss);
     CollegeTools.Utils.setHeaders(travel, CollegeTools.Config.HEADERS.TRAVEL_PLANNER);
     var assumptions = ensureAssumptions_(travel);
     if (!colleges) return {ok: false, count: 0, msg: 'no Colleges sheet'};

@@ -74,18 +74,10 @@ CollegeTools.Config = (function() {
     'latest.aid.median_debt.completers.overall',
   ].join(',');
 
-  // US region mapping
-  var REGION_MAP = {
-    NORTHEAST: ['CT', 'ME', 'MA', 'NH', 'NJ', 'NY', 'PA', 'RI', 'VT'],
-    MIDWEST: ['IL', 'IN', 'IA', 'KS', 'MI', 'MN', 'MO', 'NE', 'ND', 'OH', 'SD', 'WI'],
-    SOUTH: ['AL', 'AR', 'DE', 'DC', 'FL', 'GA', 'KY', 'LA', 'MD', 'MS', 'NC', 'OK', 'SC', 'TN', 'TX', 'VA', 'WV'],
-    WEST: ['AK', 'AZ', 'CA', 'CO', 'HI', 'ID', 'MT', 'NM', 'NV', 'OR', 'UT', 'WA', 'WY'],
-  };
-
   // Column headers for various sheets
   var HEADERS = {
     COLLEGES: [
-      'College Name', 'City', 'State', 'Region', 'Type (Public/Private)',
+      'College Name', 'City', 'State', 'Type (Public/Private)',
       'Acceptance Rate', 'First-Year Retention', 'Grad Rate', 'Median Earnings (10yr)',
       'Total Cost of Attendance', 'Estimated Net Price', 'Link',
       'SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%',
@@ -199,7 +191,6 @@ CollegeTools.Config = (function() {
     SHEET_NAMES: SHEET_NAMES,
     API_CONFIG: API_CONFIG,
     API_FIELDS: API_FIELDS,
-    REGION_MAP: REGION_MAP,
     HEADERS: HEADERS,
     DEFAULT_WEIGHTS: DEFAULT_WEIGHTS,
   };

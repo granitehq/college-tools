@@ -146,22 +146,6 @@ CollegeTools.Utils = (function() {
   }
 
   /**
-   * Determines the US region for a given state abbreviation.
-   * @param {string} st - Two-letter state abbreviation
-   * @returns {string} Region name (Northeast, Midwest, South, West) or empty string
-   */
-  function getRegionForState(st) {
-    if (!st) return '';
-    st = (st+'').trim().toUpperCase();
-    var m = CollegeTools.Config.REGION_MAP;
-    if (m.NORTHEAST.indexOf(st) !== -1) return 'Northeast';
-    if (m.MIDWEST.indexOf(st) !== -1) return 'Midwest';
-    if (m.SOUTH.indexOf(st) !== -1) return 'South';
-    if (m.WEST.indexOf(st) !== -1) return 'West';
-    return ''; // unknown / territory
-  }
-
-  /**
    * Trims sheets to a maximum number of rows for better performance.
    * Removes excess rows beyond the specified limit to reduce formula calculations.
    * @param {string} sheetName - Name of the sheet to trim
@@ -246,7 +230,6 @@ CollegeTools.Utils = (function() {
     colIndex: colIndex,
     columnToLetter: columnToLetter,
     addr: addr,
-    getRegionForState: getRegionForState,
     colIndex2: colIndex2,
     trimAllSheets: trimAllSheets,
     sanitizeCollegeName: sanitizeCollegeName,

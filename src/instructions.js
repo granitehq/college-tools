@@ -255,7 +255,6 @@ CollegeTools.Instructions = (function() {
           '   • Repair Validations & Dropdowns: Reapply formatting and dropdown rules',
           '   • Repair College Sync Across Tabs: Re-sync tracker college names',
           '   • Repair Entire Workbook: Run all major repair steps in one pass',
-          '   • Fill Regions (all rows): Auto-populate US regions',
           '   • Complete Setup (Re-run): Re-run full setup if troubleshooting',
           '   • Register for Updates, DEBUG: Fill row (verbose), Clear API Cache:',
           '     developer/diagnostic tools, safe to ignore otherwise',

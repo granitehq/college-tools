@@ -42,14 +42,14 @@ namespaced modules.
 - `src/config.js`: sheet names, headers, API fields, default weights, version,
   registration config.
 - `src/menu.js`: `onOpen()` and global menu adapters.
-- `src/utils.js`: shared helpers, sanitization, region mapping, row-1 lookup.
+- `src/utils.js`: shared helpers, sanitization, row-1 lookup.
 - `src/schema.js`: canonical sheet metadata, header rows, data starts, column
   keys, ownership groups, workbook shape validation.
 - `src/formulas.js`: pure formula builders and sheet/range reference helpers.
 - `src/scorecard.js`: College Scorecard API client, retry/backoff, search
   cache, execution-budget checks, API key lookup.
-- `src/colleges.js`: fill current/selected rows, region repair, row
-  preservation, debug/version helpers.
+- `src/colleges.js`: fill current/selected rows, row preservation,
+  debug/version helpers.
 - `src/trackers.js`: create/update trackers and sync/repair college-linked
   rows.
 - `src/formatting.js`: number formats, dropdown/date validation, formatting
@@ -244,6 +244,12 @@ manual testing in a copied Google Sheet.
 
 ## Important Current Realities
 
+- The master template must not preload sample colleges or student/profile
+  values. Keep college and tracker data rows blank.
+- `Region` is intentionally absent from the Colleges model; `State` is the
+  canonical geographic field.
+- A newly created `Travel Planner` sheet is inserted immediately after
+  `Scholarship Tracker`.
 - `project-docs/backlog.md` is the consolidated roadmap/backlog. Older planning
   and review docs are archived under `project-docs/archive/`.
 - `README.md`, `project-docs/version-management.md`, and release docs describe

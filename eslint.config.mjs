@@ -38,7 +38,6 @@ const appsScriptGlobals = {
   enhanceFormatsDropdowns: 'writable',
   ensureScoring: 'writable',
   searchCollegeNames: 'writable',
-  fillRegionsAllRows: 'writable',
   clearApiCache: 'writable',
 };
 

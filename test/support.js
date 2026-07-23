@@ -211,8 +211,9 @@ class MockRange {
 }
 
 class MockSheet {
-  constructor(name) {
+  constructor(name, spreadsheet) {
     this.name = name;
+    this.spreadsheet = spreadsheet;
     this.values = {};
     this.formulas = {};
     this.validations = {};
@@ -303,6 +304,10 @@ class MockSheet {
     return this.name;
   }
 
+  getIndex() {
+    return this.spreadsheet.getSheets().indexOf(this) + 1;
+  }
+
   resetCallCounts() {
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
   }
@@ -359,6 +364,7 @@ class MockSheet {
 class MockSpreadsheet {
   constructor() {
     this.sheets = {};
+    this.sheetOrder = [];
     this.activeSheetName = null;
     this.namedRanges = {};
   }
@@ -367,11 +373,20 @@ class MockSpreadsheet {
     return this.sheets[name] || null;
   }
 
-  insertSheet(name) {
-    const sheet = new MockSheet(name);
+  insertSheet(name, sheetIndex) {
+    const sheet = new MockSheet(name, this);
     this.sheets[name] = sheet;
+    if (typeof sheetIndex === 'number') {
+      this.sheetOrder.splice(sheetIndex, 0, sheet);
+    } else {
+      this.sheetOrder.push(sheet);
+    }
     if (!this.activeSheetName) this.activeSheetName = name;
     return sheet;
+  }
+
+  getSheets() {
+    return this.sheetOrder.slice();
   }
 
   getActiveSheet() {
@@ -485,6 +500,7 @@ function createHarness(moduleFiles) {
 
   function resetSheets() {
     mockSpreadsheet.sheets = {};
+    mockSpreadsheet.sheetOrder = [];
     mockSpreadsheet.activeSheetName = null;
     mockSpreadsheet.namedRanges = {};
     mockUi.alerts = [];
