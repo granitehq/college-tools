@@ -1,6 +1,6 @@
 /**
  * Copy registration for direct push updates
- * @version 2.6.5
+ * @version 2.6.6
  * @author College Tools
  * @description Registers copied spreadsheets with the internal update registry once per version
  */

@@ -1,6 +1,6 @@
 /**
  * Sheet formatting and validation
- * @version 2.6.5
+ * @version 2.6.6
  * @author College Tools
  * @description Number formats, dropdowns, and data validation for sheets
  */

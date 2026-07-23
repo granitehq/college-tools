@@ -1,6 +1,6 @@
 /**
  * Configuration and constants for College Tools
- * @version 2.6.5
+ * @version 2.6.6
  * @author College Tools
  * @description Central configuration module with constants, settings, and shared data
  */
@@ -14,7 +14,7 @@ CollegeTools.Config = (function() {
   'use strict';
 
   // Version information
-  var VERSION = '2.6.5';
+  var VERSION = '2.6.6';
 
   // Copy registration configuration. Leave ENDPOINT_URL blank in local/dev
   // builds; set it to the deployed registry Web App URL for release builds.
