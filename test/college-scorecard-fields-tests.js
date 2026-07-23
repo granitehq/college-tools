@@ -73,8 +73,11 @@ suite.test('fillCollegeRow writes test policy and residency-aware tuition fields
     'In-state tuition should be written from the flattened Scorecard key');
   suite.assertEqual(colleges.getRange(3, getCollegeColumn('Out-of-State Tuition', colleges)).getValue(), 36000,
     'Out-of-state tuition should be written from the flattened Scorecard key');
+  const stateCell = CollegeTools.Utils.addr(3, getCollegeColumn('State', colleges));
+  const inStateCell = CollegeTools.Utils.addr(3, getCollegeColumn('In-State Tuition', colleges));
+  const outOfStateCell = CollegeTools.Utils.addr(3, getCollegeColumn('Out-of-State Tuition', colleges));
   suite.assertEqual(colleges.getRange(3, getCollegeColumn('Applicable Tuition', colleges)).getFormula(),
-    '=IF(State_Residency=C3,AC3,AD3)',
+    `=IF(State_Residency=${stateCell},${inStateCell},${outOfStateCell})`,
     'Applicable tuition should compare State_Residency with the school state');
   suite.assertEqual(colleges.getRange(3, getCollegeColumn('Typical Debt at Graduation', colleges)).getValue(), 18500,
     'Typical debt should be written from the flattened Scorecard key');

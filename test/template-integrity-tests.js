@@ -54,7 +54,6 @@ const suite = new TestSuite();
 
 suite.test('filling the same row twice replaces canonical tracker college names', () => {
   const {colleges} = setupWorkbook({includeCampusSetting: true});
-  const regionCol = getCollegeColumn('Region', colleges);
   const campusSettingCol = getCollegeColumn('Campus Setting', colleges);
 
   colleges.getRange(3, 1).setValue('First');
@@ -63,8 +62,6 @@ suite.test('filling the same row twice replaces canonical tracker college names'
   const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
   suite.assertEqual(fa.getRange(2, 1).getValue(), 'First University',
     'First fill should seed tracker row');
-  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'West',
-    'First fill should compute region');
   suite.assertEqual(colleges.getRange(3, campusSettingCol).getValue(), 'Suburban',
     'First fill should compute Campus Setting');
 
@@ -73,8 +70,6 @@ suite.test('filling the same row twice replaces canonical tracker college names'
 
   suite.assertEqual(fa.getRange(2, 1).getValue(), 'Second University',
     'Second fill should replace tracker name in the same row');
-  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'Northeast',
-    'Second fill should replace region instead of leaving stale data');
   suite.assertEqual(colleges.getRange(3, campusSettingCol).getValue(), 'Rural',
     'Second fill should replace Campus Setting instead of leaving stale data');
 });

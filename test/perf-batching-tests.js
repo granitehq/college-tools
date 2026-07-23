@@ -3,7 +3,6 @@
  *
  * Guards the bulk-write refactors that replaced per-row/per-cell round-trips:
  *   - repairCollegeSync bulk tracker rebuild (trackers.js)
- *   - fillRegionsAllRows batched column write (colleges.js)
  *   - enhanceFormatsDropdowns / applyStandardValidations batched formats+validations (formatting.js)
  *   - dashboard stat-row batched writes (dashboard.js)
  *
@@ -86,34 +85,6 @@ suite.test('repairCollegeSync skips restore for duplicate tracker names but sets
   }), 'duplicate warning emitted');
   suite.assertEqual(st.getRange(2, stName).getValue(), 'Echo', 'canonical name kept');
   suite.assertEqual(st.getRange(2, stStatus).getValue(), 'Submitted', 'ambiguous data not moved');
-});
-
-/* ---- item 4: fillRegionsAllRows batched write ---- */
-
-suite.test('fillRegionsAllRows writes regions in one batched call and is idempotent', () => {
-  const {colleges} = setupWorkbook({});
-  colleges.getRange(3, 1).setValue('Alpha');
-  colleges.getRange(3, 3).setValue('CA');
-  colleges.getRange(4, 1).setValue('Beta');
-  colleges.getRange(4, 3).setValue('NY');
-  colleges.getRange(5, 1).setValue('Gamma');
-  colleges.getRange(5, 3).setValue('TX');
-
-  colleges.resetCallCounts();
-  const result = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
-  suite.assertEqual(result.count, 3, 'three regions changed');
-  suite.assertEqual(colleges.callCounts.setValue, 0, 'no per-cell setValue');
-  suite.assert(colleges.callCounts.setValues <= 1, 'single batched column write');
-
-  const regionCol = getCollegeColumn('Region', colleges);
-  suite.assertEqual(colleges.getRange(3, regionCol).getValue(), 'West', 'CA -> West');
-  suite.assertEqual(colleges.getRange(4, regionCol).getValue(), 'Northeast', 'NY -> Northeast');
-  suite.assertEqual(colleges.getRange(5, regionCol).getValue(), 'South', 'TX -> South');
-
-  colleges.resetCallCounts();
-  const again = CollegeTools.Colleges.fillRegionsAllRows({suppressAlert: true});
-  suite.assertEqual(again.count, 0, 'no changes on rerun');
-  suite.assertEqual(colleges.callCounts.setValues, 0, 'no write when unchanged');
 });
 
 /* ---- item 3: batched formats + validations ---- */

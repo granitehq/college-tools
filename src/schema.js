@@ -52,7 +52,6 @@ CollegeTools.Schema = (function() {
         ['COLLEGE_NAME', 'College Name'],
         ['CITY', 'City'],
         ['STATE', 'State'],
-        ['REGION', 'Region'],
         ['TYPE', 'Type (Public/Private)'],
         ['ACCEPTANCE_RATE', 'Acceptance Rate'],
         ['RETENTION_RATE', 'First-Year Retention'],
@@ -86,7 +85,7 @@ CollegeTools.Schema = (function() {
         ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: setFromKeys([
-        'CITY', 'STATE', 'REGION', 'TYPE', 'ACCEPTANCE_RATE', 'RETENTION_RATE',
+        'CITY', 'STATE', 'TYPE', 'ACCEPTANCE_RATE', 'RETENTION_RATE',
         'GRAD_RATE', 'EARNINGS_10YR', 'TOTAL_COST', 'NET_PRICE', 'LINK',
         'SAT_25', 'SAT_75', 'ACT_25', 'ACT_75', 'CAMPUS_SETTING',
         'TEST_OPTIONAL', 'IN_STATE_TUITION', 'OUT_OF_STATE_TUITION',

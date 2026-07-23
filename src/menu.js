@@ -36,7 +36,6 @@ function onOpen() {
       .addItem('Repair Validations & Dropdowns', 'repairValidationsAndFormatting')
       .addItem('Repair College Sync Across Tabs', 'repairCollegeSync')
       .addItem('Repair Entire Workbook', 'repairEntireWorkbook')
-      .addItem('Fill Regions (all rows)', 'fillRegionsAllRows')
       .addSeparator()
       .addItem('📋 Complete Setup (Re-run)', 'completeSetup')
       .addItem('Register for Updates', 'registerCopyForUpdates')
@@ -89,9 +88,6 @@ function setupFinancialIntelligence() {
 function searchCollegeNames() {
   return CollegeTools.Lookup.searchCollegeNames();
 }
-function fillRegionsAllRows() {
-  return CollegeTools.Colleges.fillRegionsAllRows();
-}
 function repairCollegeSync() {
   return CollegeTools.Trackers.repairCollegeSync();
 }
@@ -102,7 +98,6 @@ function repairEntireWorkbook() {
     'This will repair the current spreadsheet by:\n\n' +
     '• Re-syncing tracker college lists from the Colleges tab\n' +
     '• Reapplying dropdowns and formatting\n' +
-    '• Refilling Regions from State values\n' +
     '• Rebuilding scoring formulas (custom weights are kept)\n' +
     '• Refreshing Travel Planner estimates\n' +
     '• Refreshing dashboard data when present\n\n' +
@@ -126,7 +121,6 @@ function repairEntireWorkbook() {
     'Formatted sheets repaired: ' +
       ((detailById['validation-formatting'] && detailById['validation-formatting'].sectionsApplied || []).length) +
       '\n' +
-    'Regions refreshed: ' + (detailById.regions && detailById.regions.count || 0) + '\n' +
     'Travel rows refreshed: ' + (detailById['travel-planner'] && detailById['travel-planner'].count || 0) +
       '\n\n' +
     'This is safe to run again if needed.',

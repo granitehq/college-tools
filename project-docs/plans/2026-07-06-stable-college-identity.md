@@ -4,7 +4,7 @@
 
 **Goal:** Give every Colleges row a stable, hidden `College ID` that never changes, propagate it to the four per-college trackers (Financial Aid, Campus Visit, Application Timeline, Application Status), and switch `repairCollegeSync` from name-matching to ID-matching so renaming a college or having duplicate names no longer strands or clobbers tracker data.
 
-**Architecture:** Add a `College ID` header (auto-appended to old sheets the same way `ensureCollegesRegionColumn_` already appends `Region`) to Colleges and to the four trackers. IDs are generated with `Utilities.getUuid()` the first time a Colleges row is filled or repaired, and preserved forever after (added to `PRESERVED_HEADERS`). `repairCollegeSync`'s existing name-keyed snapshot/rebuild mechanism becomes the **one-time bridge**: any tracker row that already carries an ID is matched by ID; any tracker row that still has a name but no ID is matched by name (today's logic) and has the winning Colleges row's ID stamped onto it, so it never needs name-matching again. This makes the migration automatic and idempotent — it happens the next time a user runs Setup/Repair, with no separate migration script and no data loss.
+**Architecture:** Add a `College ID` header to Colleges and to the four trackers. IDs are generated with `Utilities.getUuid()` the first time a Colleges row is filled or repaired, and preserved forever after (added to `PRESERVED_HEADERS`). `repairCollegeSync`'s existing name-keyed snapshot/rebuild mechanism becomes the **one-time bridge**: any tracker row that already carries an ID is matched by ID; any tracker row that still has a name but no ID is matched by name (today's logic) and has the winning Colleges row's ID stamped onto it, so it never needs name-matching again. This makes the migration automatic and idempotent — it happens the next time a user runs Setup/Repair, with no separate migration script and no data loss.
 
 **Tech Stack:** Google Apps Script V8 (`src/*.js`, global `CollegeTools` namespace), Node test harness under `test/` with a mocked `SpreadsheetApp`/`Utilities` (`test/support.js`).
 
@@ -50,7 +50,7 @@ Scholarship Tracker and Travel Planner are **out of scope**: Scholarship Tracker
 
 ```js
     COLLEGES: [
-      'College Name', 'City', 'State', 'Region', 'Type (Public/Private)',
+      'College Name', 'City', 'State', 'Type (Public/Private)',
       'Acceptance Rate', 'First-Year Retention', 'Grad Rate', 'Median Earnings (10yr)',
       'Total Cost of Attendance', 'Estimated Net Price', 'Link',
       'SAT 25%', 'SAT 75%', 'ACT 25%', 'ACT 75%',
@@ -231,20 +231,19 @@ git commit -m "test: add deterministic Utilities.getUuid mock to the harness"
 ### Task 3: Colleges sheet — generate and preserve College ID
 
 **Files:**
-- Modify: `src/colleges.js` (`PRESERVED_HEADERS` at line 127, `ensureCollegesRegionColumn_` region at lines 68-89, `buildCollegesColumnMap_` at lines 97-124, `fillCollegeRowCore` at lines 318-497)
+- Modify: `src/colleges.js` (`PRESERVED_HEADERS`, `buildCollegesColumnMap_`, and `fillCollegeRowCore`)
 - Test: new file `test/college-identity-tests.js`
 
 **Interfaces:**
 - Consumes: `CollegeTools.Schema.header('COLLEGES', 'COLLEGE_ID')` (Task 1). `Utilities.getUuid()` (Task 2, and real Apps Script runtime).
-- Produces: `ensureCollegesIdColumn_(sh)` → returns refreshed `hdrs` array (same contract as `ensureCollegesRegionColumn_`). `ensureCollegeIdForRow_(sh, row, idCol)` → returns the row's College ID string (existing value if present, otherwise a newly generated and written UUID). `COL.COLLEGE_ID` added to the map returned by `buildCollegesColumnMap_`. `fillCollegeRowCore` result unchanged (`{ok, msg}`), but `CollegeTools.Trackers.syncCollegeToTrackers` is now called with an `id` field in its `info` object in both the success and no-match branches.
+- Produces: `ensureCollegesIdColumn_(sh)` → returns refreshed `hdrs` array. `ensureCollegeIdForRow_(sh, row, idCol)` → returns the row's College ID string (existing value if present, otherwise a newly generated and written UUID). `COL.COLLEGE_ID` added to the map returned by `buildCollegesColumnMap_`. `fillCollegeRowCore` result unchanged (`{ok, msg}`), but `CollegeTools.Trackers.syncCollegeToTrackers` is now called with an `id` field in its `info` object in both the success and no-match branches.
 
-- [ ] **Step 1: Add `ensureCollegesIdColumn_`, next to `ensureCollegesRegionColumn_` (`src/colleges.js:68-89`)**
+- [ ] **Step 1: Add `ensureCollegesIdColumn_` near the Colleges header helpers**
 
 ```js
   /**
    * Auto-appends the College ID column to older Colleges sheets that predate
-   * stable college identity, the same way ensureCollegesRegionColumn_ backfills
-   * Region. Existing IDs (if any) are left untouched.
+   * stable college identity. Existing IDs (if any) are left untouched.
    * @param {Sheet} sh - Colleges sheet
    * @returns {Array<string>} Refreshed row-2 headers
    * @private
@@ -294,9 +293,7 @@ In `fillCollegeRowCore` (`src/colleges.js:335-341`), change:
 
 ```js
     var hdrs = opts.columnIndexes ? opts.columnIndexes.HEADERS : null;
-    if (!hdrs) {
-      hdrs = ensureCollegesRegionColumn_(sh);
-    }
+    if (!hdrs) hdrs = ensureCollegesIdColumn_(sh);
     var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
 ```
 
@@ -304,10 +301,7 @@ to:
 
 ```js
     var hdrs = opts.columnIndexes ? opts.columnIndexes.HEADERS : null;
-    if (!hdrs) {
-      hdrs = ensureCollegesRegionColumn_(sh);
-      hdrs = ensureCollegesIdColumn_(sh);
-    }
+    if (!hdrs) hdrs = ensureCollegesIdColumn_(sh);
     var COL = opts.columnIndexes || buildCollegesColumnMap_(hdrs);
 ```
 
@@ -315,12 +309,11 @@ In `buildCollegesColumnMap_` (`src/colleges.js:97-124`), add before `HEADERS: hd
 
 ```js
       NOTES: requiredCollegeColumn_(hdrs, 'NOTES'),
-      REGION: optionalCollegeColumn_(hdrs, 'REGION'),
       COLLEGE_ID: optionalCollegeColumn_(hdrs, 'COLLEGE_ID'),
       HEADERS: hdrs,
 ```
 
-(`optionalCollegeColumn_` is used, matching `REGION`, since batch callers may pass a pre-built `columnIndexes` map captured before the ID column existed — this keeps `fillRegionsAllRows`/`fillSelectedRows` from throwing on a stale map instead of silently missing the column.)
+(`optionalCollegeColumn_` is used because batch callers may pass a pre-built `columnIndexes` map captured before the ID column existed; this keeps `fillSelectedRows` from throwing on a stale map instead of silently missing the column.)
 
 - [ ] **Step 3: Preserve `College ID` across row refreshes (`src/colleges.js:127-141`)**
 

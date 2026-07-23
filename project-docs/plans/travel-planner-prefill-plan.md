@@ -12,7 +12,7 @@
 
 ## Product Decisions
 
-- Keep `Region` as a low-stakes Colleges field for now: plain value/dropdown, derived when possible, manual if needed, never a setup blocker.
+- `Region` has been retired; `State` is the canonical geographic field.
 - Do not add six travel columns to `Colleges`. Put travel outputs in a new `Travel Planner` sheet.
 - If an existing live workbook already has travel columns on `Colleges`, the script must not delete them. The user will manually delete old `Colleges` travel columns after verifying `Travel Planner`.
 - `Home State` replaces the visible `State Residency` label in `Personal Profile`, but the named range remains `State_Residency` for compatibility.
@@ -978,7 +978,7 @@ Expected: fails because repair does not create/refresh Travel Planner.
 
 - [ ] **Step 3: Integrate setup repair**
 
-In `src/setup.js`, inside `repairEntireWorkbook`, after region refresh and before dashboard refresh:
+In `src/setup.js`, inside `repairEntireWorkbook`, after tracker/formatting repair and before dashboard refresh:
 
 ```js
 var travelResult = {ok: true, count: 0};

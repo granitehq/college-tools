@@ -28,6 +28,10 @@ entry points live as globals in `src/menu.js`.
 - Node requirement for local tooling: `>=24.0.0`.
 - `Colleges` headers are on row 2 and data starts on row 3.
 - Tracker/helper sheets use row-1 headers and row-2 data.
+- The master template contains no sample colleges or student/profile values.
+- `Region` is not part of the Colleges model; use `State`.
+- New `Travel Planner` sheets are inserted immediately after
+  `Scholarship Tracker`.
 - `CollegeTools.Utils.colIndex()` reads row 1 only; do not use it for
   `Colleges`.
 - Prefer `CollegeTools.Schema` helpers for new sheet-aware code.
