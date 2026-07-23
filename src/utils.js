@@ -1,6 +1,6 @@
 /**
  * Utility functions for College Tools
- * @version 2.6.6
+ * @version 2.7.0
  * @author College Tools
  * @description Helper functions for sheets, formatting, and data manipulation
  */
