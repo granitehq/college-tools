@@ -20,21 +20,23 @@ CollegeTools.Financial = (function() {
    */
   function createPersonalProfileSheet(ss) {
     var sheet = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.PERSONAL_PROFILE);
-    sheet.clear();
+    var profileRange = sheet.getRange(1, 1, 15, 3);
+    var profileGrid = profileRange.getValues();
 
-    // Essential structure only - no formatting for speed
-    sheet.getRange(1, 1).setValue('🎓 Personal Profile & Settings');
-    sheet.getRange(3, 1).setValue('📊 Academic Profile');
-    sheet.getRange(4, 1).setValue('SAT Score:');
-    sheet.getRange(5, 1).setValue('ACT Score:');
-    sheet.getRange(6, 1).setValue('GPA:');
-    sheet.getRange(8, 1).setValue('💰 Financial Profile');
-    sheet.getRange(9, 1).setValue('Family Income:');
-    sheet.getRange(10, 1).setValue('Expected Family Contribution:');
-    sheet.getRange(12, 1).setValue('🎯 Preferences');
-    sheet.getRange(13, 1).setValue('Home State:');
-    sheet.getRange(14, 1).setValue('Home City:');
-    sheet.getRange(15, 1).setValue('Trips Home Per Year:');
+    // Update owned labels in memory while preserving every user-input cell.
+    profileGrid[0][0] = '🎓 Personal Profile & Settings';
+    profileGrid[2][0] = '📊 Academic Profile';
+    profileGrid[3][0] = 'SAT Score:';
+    profileGrid[4][0] = 'ACT Score:';
+    profileGrid[5][0] = 'GPA:';
+    profileGrid[7][0] = '💰 Financial Profile';
+    profileGrid[8][0] = 'Family Income:';
+    profileGrid[9][0] = 'Expected Family Contribution:';
+    profileGrid[11][0] = '🎯 Preferences';
+    profileGrid[12][0] = 'Home State:';
+    profileGrid[13][0] = 'Home City:';
+    profileGrid[14][0] = 'Trips Home Per Year:';
+    profileRange.setValues(profileGrid);
 
     // Create named ranges - essential for formulas
     ss.setNamedRange('SAT_Score', sheet.getRange(4, 2));

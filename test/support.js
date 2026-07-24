@@ -51,6 +51,12 @@ class MockRange {
     return this.sheet.getCellValue(this.row, this.col);
   }
 
+  getSheet() { return this.sheet; }
+  getRow() { return this.row; }
+  getLastRow() { return this.row + this.numRows - 1; }
+  getColumn() { return this.col; }
+  getLastColumn() { return this.col + this.numCols - 1; }
+
   setValue(value) {
     this.sheet.callCounts.setValue++;
     this.sheet.setCellValue(this.row, this.col, value);
@@ -218,6 +224,7 @@ class MockSheet {
     this.formulas = {};
     this.validations = {};
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
+    this.hiddenColumns = new Set();
     this.activeRow = 3;
     this.maxRows = 1000;
   }
@@ -334,6 +341,45 @@ class MockSheet {
   setColumnWidths() { return this; }
   setFrozenRows() { return this; }
   autoResizeColumn() { return this; }
+  autoResizeColumns() { return this; }
+  hideColumns(column, numColumns) {
+    const count = numColumns || 1;
+    for (let c = column; c < column + count; c++) this.hiddenColumns.add(c);
+    return this;
+  }
+  isColumnHiddenByUser(column) {
+    return this.hiddenColumns.has(column);
+  }
+  moveColumns(range, destinationIndex) {
+    if (range.numCols !== 1) throw new Error('Mock moveColumns currently supports one column');
+    const sourceColumn = range.col;
+    const lastColumn = this.getLastColumn();
+    const targetColumn = destinationIndex > sourceColumn ? destinationIndex - 1 : destinationIndex;
+    const remap = (column) => {
+      if (column === sourceColumn) return targetColumn;
+      if (sourceColumn < targetColumn && column > sourceColumn && column <= targetColumn) return column - 1;
+      if (sourceColumn > targetColumn && column >= targetColumn && column < sourceColumn) return column + 1;
+      return column;
+    };
+    const moveMap = (source) => {
+      const moved = {};
+      Object.keys(source).forEach((key) => {
+        const [row, column] = key.split(',').map((part) => parseInt(part, 10));
+        moved[this._key(row, remap(column))] = source[key];
+      });
+      return moved;
+    };
+    this.values = moveMap(this.values);
+    this.formulas = moveMap(this.formulas);
+    this.validations = moveMap(this.validations);
+    this.formats = moveMap(this.formats || {});
+    this.notes = moveMap(this.notes || {});
+    const hidden = new Set();
+    this.hiddenColumns.forEach((column) => hidden.add(remap(column)));
+    this.hiddenColumns = hidden;
+    if (targetColumn > lastColumn) throw new Error('Invalid mock move destination');
+    return this;
+  }
   insertColumnBefore(column) {
     const shiftMap = (source) => {
       const shifted = {};
@@ -347,6 +393,34 @@ class MockSheet {
     this.values = shiftMap(this.values);
     this.formulas = shiftMap(this.formulas);
     this.validations = shiftMap(this.validations);
+    return this;
+  }
+  deleteColumn(column) {
+    return this.deleteColumns(column, 1);
+  }
+  deleteColumns(startColumn, howMany) {
+    const endColumn = startColumn + howMany - 1;
+    const shiftMap = (source) => {
+      const shifted = {};
+      Object.keys(source).forEach((key) => {
+        const [row, col] = key.split(',').map((part) => parseInt(part, 10));
+        if (col >= startColumn && col <= endColumn) return;
+        const nextCol = col > endColumn ? col - howMany : col;
+        shifted[this._key(row, nextCol)] = source[key];
+      });
+      return shifted;
+    };
+    this.values = shiftMap(this.values);
+    this.formulas = shiftMap(this.formulas);
+    this.validations = shiftMap(this.validations);
+    this.formats = shiftMap(this.formats || {});
+    this.notes = shiftMap(this.notes || {});
+    const hidden = new Set();
+    this.hiddenColumns.forEach((col) => {
+      if (col < startColumn) hidden.add(col);
+      else if (col > endColumn) hidden.add(col - howMany);
+    });
+    this.hiddenColumns = hidden;
     return this;
   }
   deleteRows() { return this; }
@@ -367,6 +441,7 @@ class MockSpreadsheet {
     this.sheetOrder = [];
     this.activeSheetName = null;
     this.namedRanges = {};
+    this.toasts = [];
   }
 
   getSheetByName(name) {
@@ -401,7 +476,9 @@ class MockSpreadsheet {
   setNamedRange(name, range) {
     this.namedRanges[name] = {row: range.row, col: range.col};
   }
-  toast() {}
+  toast(message, title, duration) {
+    this.toasts.push({message, title, duration});
+  }
 }
 
 function createValidationBuilder() {
@@ -503,6 +580,7 @@ function createHarness(moduleFiles) {
     mockSpreadsheet.sheetOrder = [];
     mockSpreadsheet.activeSheetName = null;
     mockSpreadsheet.namedRanges = {};
+    mockSpreadsheet.toasts = [];
     mockUi.alerts = [];
   }
 

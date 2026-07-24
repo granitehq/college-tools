@@ -83,10 +83,21 @@ CollegeTools.Utils = (function() {
    * @param {string[]} headers - Array of header names
    */
   function setHeaders(sh, headers) {
+    var existing = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+    var changed = existing.length !== headers.length || existing.some(function(header, index) {
+      return header !== headers[index];
+    });
+    if (!changed) return false;
+
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
     sh.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f3f4');
     sh.setFrozenRows(1);
-    for (var c=1; c<=headers.length; c++) sh.autoResizeColumn(c);
+    if (sh.autoResizeColumns) {
+      sh.autoResizeColumns(1, headers.length);
+    } else {
+      for (var c=1; c<=headers.length; c++) sh.autoResizeColumn(c);
+    }
+    return true;
   }
 
   /**
@@ -118,6 +129,118 @@ CollegeTools.Utils = (function() {
       if ((hdrs[i]||'').toString().trim() === header) return i+1;
     }
     return null;
+  }
+
+  /**
+   * Ensures an internal system column exists as the final used column and is
+   * hidden from normal spreadsheet users. Moving the entire column preserves
+   * values, formulas, formatting, notes, and validations in existing copies.
+   * @param {Sheet} sh - Target sheet
+   * @param {string} header - System-column header
+   * @param {number=} headerRow - Header row, defaults to row 1
+   * @returns {number} Final 1-based column index
+   */
+  function ensureHiddenLastColumn(sh, header, headerRow) {
+    headerRow = headerRow || 1;
+    var lastCol = Math.max(1, sh.getLastColumn());
+    var headers = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0];
+    var columns = [];
+    for (var i = 0; i < headers.length; i++) {
+      if ((headers[i] || '').toString().trim() === header) {
+        columns.push(i + 1);
+      }
+    }
+
+    var column = columns.length ? columns[columns.length - 1] : null;
+    if (columns.length > 1) {
+      var lastRow = Math.max(headerRow, sh.getLastRow());
+      var rowCount = lastRow - headerRow;
+      if (rowCount > 0) {
+        var sourceValues = columns.map(function(sourceColumn) {
+          return sh.getRange(headerRow + 1, sourceColumn, rowCount, 1).getValues();
+        });
+        var mergedValues = [];
+        for (var r = 0; r < rowCount; r++) {
+          var value = '';
+          for (var source = sourceValues.length - 1; source >= 0; source--) {
+            var candidate = sourceValues[source][r][0];
+            if (candidate !== '' && candidate !== null && candidate !== undefined) {
+              value = candidate;
+              break;
+            }
+          }
+          mergedValues.push([value]);
+        }
+        sh.getRange(headerRow + 1, column, rowCount, 1).setValues(mergedValues);
+      }
+
+      for (var duplicate = columns.length - 2; duplicate >= 0; duplicate--) {
+        var duplicateColumn = columns[duplicate];
+        sh.deleteColumn(duplicateColumn);
+        if (duplicateColumn < column) column--;
+      }
+      lastCol = Math.max(1, sh.getLastColumn());
+    }
+
+    if (!column) {
+      column = lastCol + 1;
+      sh.getRange(headerRow, column).setValue(header);
+    } else if (column < lastCol) {
+      sh.moveColumns(sh.getRange(1, column, sh.getMaxRows(), 1), lastCol + 1);
+      column = lastCol;
+    }
+
+    if (!sh.isColumnHiddenByUser || !sh.isColumnHiddenByUser(column)) {
+      sh.hideColumns(column);
+    }
+    return column;
+  }
+
+  /**
+   * Formats milliseconds as a short user-facing estimate.
+   * @param {number} durationMs - Duration in milliseconds
+   * @returns {string} Rounded duration text
+   */
+  function formatDuration(durationMs) {
+    var seconds = Math.max(1, Math.round(durationMs / 1000));
+    if (seconds < 60) return seconds + ' second' + (seconds === 1 ? '' : 's');
+    var minutes = Math.round(seconds / 60);
+    return minutes + ' minute' + (minutes === 1 ? '' : 's');
+  }
+
+  /**
+   * Returns a workbook-specific prior duration when available.
+   * @param {string} workflowKey - Stable workflow timing key
+   * @param {number} fallbackMs - Default estimate before the first run
+   * @returns {number} Estimated duration in milliseconds
+   */
+  function estimatedDuration(workflowKey, fallbackMs) {
+    try {
+      if (typeof PropertiesService === 'undefined') return fallbackMs;
+      var value = PropertiesService.getDocumentProperties()
+        .getProperty('college_tools_timing_' + workflowKey);
+      return value ? Number(value) || fallbackMs : fallbackMs;
+    } catch (error) {
+      return fallbackMs;
+    }
+  }
+
+  /**
+   * Records an exponential moving average for future estimates.
+   * @param {string} workflowKey - Stable workflow timing key
+   * @param {number} durationMs - Most recent duration in milliseconds
+   */
+  function recordDuration(workflowKey, durationMs) {
+    try {
+      if (typeof PropertiesService === 'undefined') return;
+      var props = PropertiesService.getDocumentProperties();
+      var propertyKey = 'college_tools_timing_' + workflowKey;
+      var prior = Number(props.getProperty(propertyKey));
+      var average = prior ? Math.round((prior * 0.7) + (durationMs * 0.3)) : Math.round(durationMs);
+      props.setProperty(propertyKey, String(average));
+    } catch (error) {
+      // Timing history is optional and must never fail the workflow.
+    }
   }
 
   /**
@@ -228,6 +351,10 @@ CollegeTools.Utils = (function() {
     ensureSheet: ensureSheet,
     setHeaders: setHeaders,
     colIndex: colIndex,
+    ensureHiddenLastColumn: ensureHiddenLastColumn,
+    formatDuration: formatDuration,
+    estimatedDuration: estimatedDuration,
+    recordDuration: recordDuration,
     columnToLetter: columnToLetter,
     addr: addr,
     colIndex2: colIndex2,

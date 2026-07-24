@@ -49,6 +49,19 @@ function onOpen() {
 
 /* ======================= ADAPTER FUNCTIONS ======================= */
 /* eslint-disable jsdoc/require-jsdoc, no-implicit-globals */
+
+/**
+ * Keeps dependent travel estimates current when profile travel inputs change.
+ * Must remain global so Google Sheets can invoke the simple trigger.
+ * @param {Object} e - Apps Script edit event
+ */
+function onEdit(e) {
+  if (CollegeTools.Travel && CollegeTools.Travel.handleProfileEdit) {
+    return CollegeTools.Travel.handleProfileEdit(e);
+  }
+  return null;
+}
+
 function fillCollegeRow() {
   return CollegeTools.Colleges.fillCollegeRow();
 }

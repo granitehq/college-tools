@@ -219,7 +219,10 @@ CollegeTools.Formatting = (function() {
     var resolvedHeaderRow = resolveHeaderRow_(sh, headerRow);
     var dataStart = resolvedHeaderRow + 1;
     var lastCol = Math.max(1, sh.getLastColumn());
-    var rowCount = Math.max(1, sh.getMaxRows() - resolvedHeaderRow);
+    // Setup/optimization caps supported sheets at 200 rows or fewer. Avoid
+    // moving thousands of empty-row format/validation cells in older copies;
+    // the explicit row-trimming action can remove those excess rows later.
+    var rowCount = Math.max(1, Math.min(200, sh.getMaxRows() - resolvedHeaderRow));
     var colByHeader = headerColumnMap_(sh, resolvedHeaderRow, lastCol);
 
     if (numberFormats && numberFormats.length) {
