@@ -641,7 +641,7 @@ CollegeTools.Colleges = (function() {
     var workItems = [];
     list.forEach(function(row) {
       var context = rowContext[row];
-      var name = (context.block.values[context.index][0] || '').toString().trim();
+      var name = CollegeTools.Utils.sanitizeCollegeName(context.block.values[context.index][0]);
       if (name) workItems.push({row: row, name: name});
     });
     var timingBucket = workItems.length <= 5 ? '1-5' :

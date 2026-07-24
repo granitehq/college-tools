@@ -126,7 +126,7 @@ suite.test('enhanceFormatsDropdowns batches validations, applies dropdowns, clea
   suite.assert(fa.callCounts.setNumberFormats <= 1, 'FA formats in <=1 batch');
   const fafsaCol = col(fa, 'FAFSA Submitted (Y/N)');
   suite.assert(fa.getRange(2, fafsaCol).getDataValidation(), 'Y/N dropdown applied');
-  suite.assert(fa.getRange(200, fafsaCol).getDataValidation(), 'dropdown applied through supported height');
+  suite.assert(fa.getRange(100, fafsaCol).getDataValidation(), 'dropdown applied through supported height');
   suite.assert(!fa.getRange(2, tuitionCol).getDataValidation(), 'stray validation cleared');
   const ratingCol = getCollegeColumn('Program Fit (1-5)', colleges);
   suite.assert(colleges.getRange(3, ratingCol).getDataValidation(), 'Colleges rating dropdown applied');

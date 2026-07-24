@@ -272,10 +272,10 @@ CollegeTools.Utils = (function() {
    * Trims sheets to a maximum number of rows for better performance.
    * Removes excess rows beyond the specified limit to reduce formula calculations.
    * @param {string} sheetName - Name of the sheet to trim
-   * @param {number} maxRows - Maximum number of rows to keep (default: 200)
+   * @param {number} maxRows - Maximum number of rows to keep (default: 100)
    */
   function trimSheetRows(sheetName, maxRows) {
-    maxRows = maxRows || 200;
+    maxRows = maxRows || 100;
     var ss = SpreadsheetApp.getActive();
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) return;
@@ -289,28 +289,24 @@ CollegeTools.Utils = (function() {
 
   /**
    * Trims all College Tools sheets to improve performance.
-   * Reduces rows to 200 maximum for main sheets, 100 for tracker sheets.
+   * Reduces every sheet to 100 rows maximum, comfortably above realistic
+   * college-list sizes.
    * @param {Object=} opts - Optional execution flags
    * @param {boolean=} opts.suppressAlert - Whether to suppress the completion alert
    * @returns {Object} Optimization summary
    */
   function trimAllSheets(opts) {
     opts = opts || {};
-    // Main sheets - keep more rows for colleges
-    trimSheetRows(CollegeTools.Config.SHEET_NAMES.COLLEGES, 200);
-
-    // Tracker sheets - fewer rows needed
+    trimSheetRows(CollegeTools.Config.SHEET_NAMES.COLLEGES, 100);
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID, 100);
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT, 100);
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE, 100);
-    trimSheetRows(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 150); // Scholarships might need more
+    trimSheetRows(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 100);
     trimSheetRows(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 100);
 
     if (!opts.suppressAlert) {
       SpreadsheetApp.getUi().alert('Sheet Performance Optimization',
-        'Trimmed all sheets to optimal row counts:\n' +
-        '• Colleges: 200 rows\n' +
-        '• Trackers: 100-150 rows\n\n' +
+        'Trimmed all sheets to a maximum of 100 rows.\n\n' +
         'This should significantly improve performance!',
         SpreadsheetApp.getUi().ButtonSet.OK);
     }
