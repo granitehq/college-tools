@@ -408,6 +408,7 @@ CollegeTools.Colleges = (function() {
       return {
         ok: false,
         msg: 'no match',
+        error: apiResult.error || 'No College Scorecard match',
         trackerInfo: {
           name: sanitizedName,
           id: collegeId,
@@ -658,6 +659,7 @@ CollegeTools.Colleges = (function() {
 
     // Process each row, stopping early if we approach the execution time limit
     var ok=0; var skipped=0; var failed=0; var timeLimitExceeded=false;
+    var failureDetails = [];
     var trackerItems = [];
     var executionBudget = CollegeTools.ExecutionBudget.start(CollegeTools.Config.API_CONFIG.EXECUTION_TIME_LIMIT);
     var batchResults = null;
@@ -703,11 +705,14 @@ CollegeTools.Colleges = (function() {
           ok++;
         } else {
           failed++;
+          failureDetails.push('Row ' + item.row + ' (' + item.name + '): ' +
+            (res && (res.error || res.msg) || 'Unknown error'));
         }
         if (res && res.rowValues) context.block.output[context.index] = res.rowValues;
         if (res && res.trackerInfo) trackerItems.push(res.trackerInfo);
       } catch (e) {
         failed++;
+        failureDetails.push('Row ' + item.row + ' (' + item.name + '): ' + e.toString());
       }
 
       // Retain the legacy pacing only for the serial compatibility path.
@@ -741,9 +746,13 @@ CollegeTools.Colleges = (function() {
     var elapsedSeconds = (elapsedMs / 1000).toFixed(1);
     CollegeTools.Utils.recordDuration(timingKey, elapsedMs);
 
+    var failureMessage = failureDetails.length ?
+      '\n\nFailed rows:\n' + failureDetails.slice(0, 8).join('\n') +
+        (failureDetails.length > 8 ? '\n…plus ' + (failureDetails.length - 8) + ' more' : '') :
+      '';
     SpreadsheetApp.getUi().alert('Batch fill complete.' + timeLimitMessage +
       '\nOK: ' + ok + ' | Skipped (no name): ' + skipped + ' | Failed: ' + failed +
-      '\nElapsed: ' + elapsedSeconds + ' seconds');
+      '\nElapsed: ' + elapsedSeconds + ' seconds' + failureMessage);
   }
 
   // Public API

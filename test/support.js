@@ -51,6 +51,12 @@ class MockRange {
     return this.sheet.getCellValue(this.row, this.col);
   }
 
+  getSheet() { return this.sheet; }
+  getRow() { return this.row; }
+  getLastRow() { return this.row + this.numRows - 1; }
+  getColumn() { return this.col; }
+  getLastColumn() { return this.col + this.numCols - 1; }
+
   setValue(value) {
     this.sheet.callCounts.setValue++;
     this.sheet.setCellValue(this.row, this.col, value);
@@ -387,6 +393,34 @@ class MockSheet {
     this.values = shiftMap(this.values);
     this.formulas = shiftMap(this.formulas);
     this.validations = shiftMap(this.validations);
+    return this;
+  }
+  deleteColumn(column) {
+    return this.deleteColumns(column, 1);
+  }
+  deleteColumns(startColumn, howMany) {
+    const endColumn = startColumn + howMany - 1;
+    const shiftMap = (source) => {
+      const shifted = {};
+      Object.keys(source).forEach((key) => {
+        const [row, col] = key.split(',').map((part) => parseInt(part, 10));
+        if (col >= startColumn && col <= endColumn) return;
+        const nextCol = col > endColumn ? col - howMany : col;
+        shifted[this._key(row, nextCol)] = source[key];
+      });
+      return shifted;
+    };
+    this.values = shiftMap(this.values);
+    this.formulas = shiftMap(this.formulas);
+    this.validations = shiftMap(this.validations);
+    this.formats = shiftMap(this.formats || {});
+    this.notes = shiftMap(this.notes || {});
+    const hidden = new Set();
+    this.hiddenColumns.forEach((col) => {
+      if (col < startColumn) hidden.add(col);
+      else if (col > endColumn) hidden.add(col - howMany);
+    });
+    this.hiddenColumns = hidden;
     return this;
   }
   deleteRows() { return this; }

@@ -4,8 +4,8 @@
 const {createHarness, TestSuite} = require('./support');
 
 const harness = createHarness([
-  'config.js', 'utils.js', 'schema.js', 'formatting.js',
-  'travel.js', 'trackers.js', 'colleges.js',
+  'config.js', 'utils.js', 'schema.js', 'formatting.js', 'formulas.js',
+  'travel.js', 'financial.js', 'admissions.js', 'trackers.js', 'colleges.js',
 ]);
 const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn, resetUuidCounter} = harness;
 const suite = new TestSuite();
@@ -68,6 +68,26 @@ suite.test('College ID is moved to the final column, hidden, and preserved', () 
     'College ID should be hidden from normal users');
 });
 
+suite.test('duplicate Colleges ID columns are consolidated into one hidden final column', () => {
+  const {colleges} = setupWorkbook({});
+  const firstIdColumn = getCollegeColumn('College ID', colleges);
+  colleges.getRange(3, 1).setValue('Duplicate ID College');
+  colleges.getRange(3, firstIdColumn).setValue('older-id');
+  const duplicateColumn = colleges.getLastColumn() + 1;
+  colleges.getRange(2, duplicateColumn).setValue('College ID');
+  colleges.getRange(3, duplicateColumn).setValue('authoritative-id');
+
+  CollegeTools.Colleges.fillCollegeRowCore(3, {suppressAlert: true, skipTrackerSetup: true});
+
+  const headers = colleges.getRange(2, 1, 1, colleges.getLastColumn()).getValues()[0];
+  suite.assertEqual(headers.filter((header) => header === 'College ID').length, 1,
+    'Only one College ID header should remain');
+  suite.assertEqual(colleges.getRange(3, colleges.getLastColumn()).getValue(), 'authoritative-id',
+    'The rightmost populated ID should win when duplicate columns are repaired');
+  suite.assert(colleges.isColumnHiddenByUser(colleges.getLastColumn()),
+    'The consolidated College ID should be hidden');
+});
+
 suite.test('tracker College ID columns are last and hidden after repair', () => {
   const {colleges} = setupWorkbook({});
   colleges.getRange(3, 1).setValue('Existing College');
@@ -92,6 +112,31 @@ suite.test('tracker College ID columns are last and hidden after repair', () => 
     'Tracker College ID should remain associated with its row');
   suite.assert(campus.isColumnHiddenByUser(finalColumn),
     'Tracker College ID should be hidden from normal users');
+});
+
+suite.test('Campus Visit setup removes stale legacy columns and duplicate College IDs', () => {
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Campus Visit College');
+  const campus = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  const canonicalLength = CollegeTools.Config.HEADERS.CAMPUS_VISIT.length;
+  campus.getRange(1, canonicalLength + 1, 1, 3).setValues([[
+    'Tour Guide Name', 'Worst Feature', 'College ID',
+  ]]);
+  campus.getRange(2, canonicalLength + 1, 1, 3).setValues([[
+    'Alex Guide', 'Parking', 'stable-campus-id',
+  ]]);
+
+  CollegeTools.Trackers.setupAllTrackers({suppressAlert: true});
+
+  const headers = campus.getRange(1, 1, 1, campus.getLastColumn()).getValues()[0];
+  suite.assertEqual(campus.getLastColumn(), canonicalLength,
+    'Campus Visit should be reduced to the canonical compact schema');
+  suite.assertEqual(new Set(headers).size, headers.length,
+    'Every Campus Visit header should be distinct');
+  suite.assertEqual(headers[headers.length - 1], 'College ID',
+    'Campus Visit College ID should be last');
+  suite.assert(campus.isColumnHiddenByUser(headers.length),
+    'Campus Visit College ID should be hidden');
 });
 
 suite.test('repairCollegeSync preserves tracker data across a Colleges rename (ID-keyed, not name-keyed)', () => {

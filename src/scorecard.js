@@ -468,7 +468,7 @@ CollegeTools.Scorecard = (function() {
       };
     }
 
-    // Try exact match first, then regex fallback
+    // Try exact match first, then regex and fuzzy fallbacks.
     var baseParams = {
       'api_key': apiKey,
       'per_page': 5,
@@ -507,6 +507,22 @@ CollegeTools.Scorecard = (function() {
         noteBits.push('regex:200');
       } else {
         noteBits.push('regex:' + (r2.statusCode || 'err'));
+      }
+    }
+
+    // Fuzzy Scorecard search handles common abbreviations and alternate school
+    // names that neither the exact nor full-name regex query can find.
+    if (!results.length && checkExecutionTimeLimit(options)) {
+      var q3 = JSON.parse(JSON.stringify(baseParams));
+      q3['school.search'] = collegeName;
+      var url3 = buildUrl(q3);
+
+      var r3 = fetchJsonWithRetries(url3, {useCache: false, executionBudget: options.executionBudget});
+      if (r3.ok && r3.data && r3.data.results) {
+        results = r3.data.results;
+        noteBits.push('search:200');
+      } else {
+        noteBits.push('search:' + (r3.statusCode || 'err'));
       }
     }
 
@@ -569,6 +585,7 @@ CollegeTools.Scorecard = (function() {
     var resultByName = {};
     var retryNames = [];
     var fallbackNames = [];
+    var fuzzyNames = [];
 
     /**
      * Builds one request per name for an exact or regex query wave.
@@ -617,9 +634,40 @@ CollegeTools.Scorecard = (function() {
             return;
           }
           var results = parsed.data && parsed.data.results || [];
+          if (results.length) {
+            resultByName[name] = {
+              ok: true,
+              data: results[0],
+              notes: 'exact:200(0) | regex:200 (batch)',
+            };
+          } else {
+            fuzzyNames.push(name);
+          }
+        });
+      }
+
+      if (fuzzyNames.length && checkExecutionTimeLimit(options)) {
+        var fuzzyRequests = fuzzyNames.map(function(name) {
+          var params = JSON.parse(JSON.stringify(baseParams));
+          params['school.search'] = name;
+          return {
+            url: buildUrl(params),
+            method: requestOptions.method,
+            headers: requestOptions.headers,
+            muteHttpExceptions: requestOptions.muteHttpExceptions,
+          };
+        });
+        var fuzzyResponses = fetchAllInChunks_(fuzzyRequests, chunkSize);
+        fuzzyNames.forEach(function(name, i) {
+          var parsed = parseBatchResponse_(fuzzyResponses[i]);
+          if (!parsed.ok) {
+            retryNames.push(name);
+            return;
+          }
+          var results = parsed.data && parsed.data.results || [];
           resultByName[name] = results.length ?
-            {ok: true, data: results[0], notes: 'exact:200(0) | regex:200 (batch)'} :
-            {ok: false, error: 'no match for "' + name + '" (exact:200 | regex:200)'};
+            {ok: true, data: results[0], notes: 'exact:200(0) | regex:200(0) | search:200 (batch)'} :
+            {ok: false, error: 'no match for "' + name + '" (exact:200 | regex:200 | search:200)'};
         });
       }
     } catch (error) {

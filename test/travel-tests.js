@@ -159,6 +159,33 @@ suite.test('createOrUpdateTravelPlanner keeps estimates blank when profile home 
     'Annual travel cost should stay blank when optional Home City is blank');
 });
 
+suite.test('editing profile home fields automatically refreshes existing travel rows', () => {
+  const {colleges} = setupWorkbook();
+  const cityCol = getCollegeColumn('City', colleges);
+  const stateCol = getCollegeColumn('State', colleges);
+  const profile = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.PERSONAL_PROFILE) ||
+    mockSpreadsheet.insertSheet(CollegeTools.Config.SHEET_NAMES.PERSONAL_PROFILE);
+
+  colleges.getRange(3, 1).setValue('The University of Texas at Austin');
+  colleges.getRange(3, cityCol).setValue('Austin');
+  colleges.getRange(3, stateCol).setValue('TX');
+  CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+
+  profile.getRange(13, 2).setValue('TX');
+  profile.getRange(14, 2).setValue('Dallas');
+  profile.getRange(15, 2).setValue(4);
+  const result = CollegeTools.Travel.handleProfileEdit({
+    range: profile.getRange(13, 2, 3, 1),
+  });
+
+  const travel = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+  suite.assertEqual(result.count, 1, 'Relevant profile edit should refresh one travel row');
+  suite.assertEqual(travel.getRange(2, 4).getValue(), 'Dallas',
+    'Travel Planner should pick up Home City entered after initial setup');
+  suite.assert(travel.getRange(2, 6).getValue() > 0,
+    'Travel distance should be recomputed after the profile edit');
+});
+
 
 suite.test('Financial Aid Travel Costs row pulls annual estimate from Travel Planner when available', () => {
   const {colleges} = setupWorkbook();

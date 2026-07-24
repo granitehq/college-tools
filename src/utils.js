@@ -144,12 +144,42 @@ CollegeTools.Utils = (function() {
     headerRow = headerRow || 1;
     var lastCol = Math.max(1, sh.getLastColumn());
     var headers = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0];
-    var column = null;
+    var columns = [];
     for (var i = 0; i < headers.length; i++) {
       if ((headers[i] || '').toString().trim() === header) {
-        column = i + 1;
-        break;
+        columns.push(i + 1);
       }
+    }
+
+    var column = columns.length ? columns[columns.length - 1] : null;
+    if (columns.length > 1) {
+      var lastRow = Math.max(headerRow, sh.getLastRow());
+      var rowCount = lastRow - headerRow;
+      if (rowCount > 0) {
+        var sourceValues = columns.map(function(sourceColumn) {
+          return sh.getRange(headerRow + 1, sourceColumn, rowCount, 1).getValues();
+        });
+        var mergedValues = [];
+        for (var r = 0; r < rowCount; r++) {
+          var value = '';
+          for (var source = sourceValues.length - 1; source >= 0; source--) {
+            var candidate = sourceValues[source][r][0];
+            if (candidate !== '' && candidate !== null && candidate !== undefined) {
+              value = candidate;
+              break;
+            }
+          }
+          mergedValues.push([value]);
+        }
+        sh.getRange(headerRow + 1, column, rowCount, 1).setValues(mergedValues);
+      }
+
+      for (var duplicate = columns.length - 2; duplicate >= 0; duplicate--) {
+        var duplicateColumn = columns[duplicate];
+        sh.deleteColumn(duplicateColumn);
+        if (duplicateColumn < column) column--;
+      }
+      lastCol = Math.max(1, sh.getLastColumn());
     }
 
     if (!column) {

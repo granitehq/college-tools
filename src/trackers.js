@@ -328,6 +328,10 @@ CollegeTools.Trackers = (function() {
     var lastCol = sh.getLastColumn();
     if (lastRow < 2 || lastCol < 1) {
       CollegeTools.Utils.setHeaders(sh, newHeaders);
+      lastCol = sh.getLastColumn();
+      if (lastCol > newHeaders.length) {
+        sh.deleteColumns(newHeaders.length + 1, lastCol - newHeaders.length);
+      }
       return;
     }
 
@@ -377,6 +381,10 @@ CollegeTools.Trackers = (function() {
 
     CollegeTools.Utils.setHeaders(sh, newHeaders);
     sh.getRange(2, 1, newBlock.length, newHeaders.length).setValues(newBlock);
+    lastCol = sh.getLastColumn();
+    if (lastCol > newHeaders.length) {
+      sh.deleteColumns(newHeaders.length + 1, lastCol - newHeaders.length);
+    }
   }
 
   /**
@@ -490,8 +498,8 @@ CollegeTools.Trackers = (function() {
     opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
     var headers = CollegeTools.Config.HEADERS.FINANCIAL_AID;
-    ensureTrackerIdColumn_(sh, 'FINANCIAL_AID');
     migrateFinancialAidStatusColumns_(sh, headers);
+    ensureTrackerIdColumn_(sh, 'FINANCIAL_AID');
 
     if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
 
@@ -574,8 +582,26 @@ CollegeTools.Trackers = (function() {
     opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
     var headers = CollegeTools.Config.HEADERS.CAMPUS_VISIT;
+    migrateTrackerHeaders_(sh, headers, {
+      'People to Meet': ['People Met'],
+      'Tour Guide Name': ['People Met'],
+      'Info Session Presenter': ['People Met'],
+      'Admissions Officer Met': ['People Met'],
+      'Campus Beauty (1-10)': ['Campus & Facilities (1-10)'],
+      'Facilities Quality (1-10)': ['Campus & Facilities (1-10)'],
+      'Surprises': ['Pros', 'Notes'],
+      'Best Feature': ['Pros', 'Notes'],
+      'Worst Feature': ['Cons', 'Concerns', 'Notes'],
+      'Thank You Email Sent': ['Follow-Up Needed', 'Notes'],
+      'Connected on Social Media': ['Follow-Up Needed', 'Notes'],
+      'Added to Mailing List': ['Follow-Up Needed', 'Notes'],
+      'Additional Info Requested': ['Follow-Up Needed', 'Notes'],
+    });
+    var lastCol = sh.getLastColumn();
+    if (lastCol > headers.length) {
+      sh.deleteColumns(headers.length + 1, lastCol - headers.length);
+    }
     ensureTrackerIdColumn_(sh, 'CAMPUS_VISIT');
-    CollegeTools.Utils.setHeaders(sh, headers);
 
     if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
   }
@@ -590,7 +616,6 @@ CollegeTools.Trackers = (function() {
     opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
     var headers = CollegeTools.Config.HEADERS.APPLICATION_TIMELINE;
-    ensureTrackerIdColumn_(sh, 'APPLICATION_TIMELINE');
     // Honors Program Deadline / Portfolio-Audition Due / Housing Application
     // Opens / Orientation Registration Opens were collapsed into two generic
     // date slots -- migrate any existing dates into the first open slot per
@@ -601,6 +626,7 @@ CollegeTools.Trackers = (function() {
       'Housing Application Opens': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
       'Orientation Registration Opens': ['Other Deadline 1 Date', 'Other Deadline 2 Date'],
     });
+    ensureTrackerIdColumn_(sh, 'APPLICATION_TIMELINE');
 
     if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
 
@@ -669,8 +695,8 @@ CollegeTools.Trackers = (function() {
     opts = opts || {};
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
     var headers = CollegeTools.Config.HEADERS.STATUS_TRACKER;
+    migrateTrackerHeaders_(sh, headers, {});
     ensureTrackerIdColumn_(sh, 'STATUS_TRACKER');
-    CollegeTools.Utils.setHeaders(sh, headers);
 
     if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
 

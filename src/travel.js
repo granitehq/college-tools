@@ -342,8 +342,38 @@ CollegeTools.Travel = (function() {
     return {ok: true, count: rows.length};
   }
 
+  /**
+   * Refreshes travel estimates when the user edits Home State, Home City, or
+   * Trips Home Per Year on Personal Profile.
+   * @param {Object} event - Apps Script onEdit event
+   * @returns {Object|null} Refresh result when the edit is relevant
+   */
+  function handleProfileEdit(event) {
+    if (!event || !event.range) return null;
+    var range = event.range;
+    var sheet = range.getSheet();
+    if (!sheet || sheet.getName() !== CollegeTools.Config.SHEET_NAMES.PERSONAL_PROFILE) return null;
+
+    var firstRow = range.getRow();
+    var lastRow = range.getLastRow();
+    var firstColumn = range.getColumn();
+    var lastColumn = range.getLastColumn();
+    var touchesTravelInputs = firstColumn <= 2 && lastColumn >= 2 &&
+      firstRow <= 15 && lastRow >= 13;
+    if (!touchesTravelInputs) return null;
+
+    var result = createOrUpdateTravelPlanner({suppressAlert: true});
+    SpreadsheetApp.getActive().toast(
+      'Updated ' + result.count + ' travel estimate(s).',
+      'Travel Planner refreshed',
+      5,
+    );
+    return result;
+  }
+
   return {
     estimateTravel: estimateTravel,
     createOrUpdateTravelPlanner: createOrUpdateTravelPlanner,
+    handleProfileEdit: handleProfileEdit,
   };
 })();
