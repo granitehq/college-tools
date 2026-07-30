@@ -1,6 +1,6 @@
 # College Task Management Requirements Specification
 
-**Status:** Draft for review
+**Status:** Draft for review, revision 2
 
 **Date:** 2026-07-30
 
@@ -11,22 +11,28 @@
 ## Purpose
 
 Add a task-management layer to `college-tools` that turns the college
-application process into a structured, owner-aware 90-day plan. The feature
-must reduce the parent's coordination burden, make student ownership visible,
-and present a short weekly action list instead of requiring the family to
-reconstruct status across sheets, email, application portals, and
-conversations.
+application process into a structured, owner-aware 90-day plan. For the current
+rising-senior scenario, the project objective is:
+
+> By the target early-application date, submit the strongest possible
+> applications to colleges the student would actually attend and the family
+> can realistically afford, while maximizing athletic and merit opportunities.
+
+The feature must reduce the parent's coordination burden, make student
+ownership visible, and present a short weekly action list instead of requiring
+the family to reconstruct status across sheets, email, application portals,
+and conversations.
 
 This document defines product requirements. It does not yet prescribe a
 task-by-task implementation plan or final sheet layout.
 
 ## Problem Statement
 
-The college process contains approximately 60-100 meaningful tasks across
-strategy, research, affordability, testing, recommendations, applications,
-essays, athletic recruiting, visits, submission, and financial aid. The
-existing workbook tracks colleges, deadlines, financial aid, visits, and
-application status, but it is not a project-management system for the work
+The college process is expected to contain approximately 70-100 meaningful
+tasks across strategy, research, affordability, testing, recommendations,
+applications, essays, athletic recruiting, visits, submission, and financial
+aid. The existing workbook tracks colleges, deadlines, financial aid, visits,
+and application status, but it is not a project-management system for the work
 required to reach those outcomes.
 
 Without a single task source of truth:
@@ -49,8 +55,8 @@ reviewer. A successful result allows the parent to:
 2. see only the decisions and short external actions that require the parent;
 3. confirm that the student owns and completes authentic student work;
 4. identify overdue, blocked, and due-soon work before deadlines are missed;
-5. keep the college list and weekly workload within explicit capacity limits;
-   and
+5. understand the total and weekly effort required from each role before
+   deciding whether to reduce scope, reassign work, or obtain help; and
 6. use an assistant or targeted professional help for research, drafting,
    comparisons, and preparation without confusing that support with task
    ownership.
@@ -67,19 +73,25 @@ reviewer. A successful result allows the parent to:
    information, factual review, fees, signatures, and verification.
 4. **The weekly view is the primary operating view.** The full plan exists for
    completeness; users should normally work from a small current-action view.
-5. **Capacity is a constraint, not a suggestion.** When work exceeds the
-   configured limit, the system should expose the overload so the user can
-   reduce scope, reassign work, or obtain help.
+5. **Estimate before constraining.** The first complete plan must calculate the
+   work required by role and week without suppressing, deferring, or removing
+   valuable work to fit a predetermined hour limit. Capacity decisions come
+   after the family reviews that baseline.
 6. **Tasks must be applicable and actionable.** Do not pad the plan with filler
    or create tasks for testing, CSS Profile, interviews, visits, or recruiting
    when those activities do not apply.
-7. **The college list is intentionally small.** The planning model assumes
-   8-10 colleges, normally 3 likely/affordable, 3-4 target, and 2-3 reach
-   schools.
+7. **Each college must justify its workload.** The system should support the
+   family's chosen list size, show the incremental work created by each school,
+   and make it easy to remove schools that are unaffordable, poor fits, or not
+   worth attending without track.
 8. **Support is separate from ownership.** An assistant can prepare research
    or drafts and a professional can advise, while the task still belongs to
    the student or parent.
-9. **College and estate work remain separate.** This feature is a college
+9. **Prioritize high-value senior-year work.** Applications, affordability,
+   essays, recruiting, recommendations, and submission readiness take priority
+   over adding new extracurriculars, starting an admissions-only passion
+   project, or chasing many low-value scholarships.
+10. **College and estate work remain separate.** This feature is a college
    application command center, not a general household, work, or estate task
    manager.
 
@@ -106,16 +118,17 @@ The parent is the default owner of:
 
 - the annual contribution and borrowing limits;
 - financial-safety criteria and final affordability decisions;
-- final approval of the 8-10-college list;
+- final approval of the college list;
 - sensitive parent financial information and parent-controlled aid forms;
 - application fees and other payments;
 - factual and financial verification before submission;
 - major deadline oversight; and
 - decisions or external actions that require parental authority.
 
-The parent's weekly college-work ceiling is 4-6 hours. With heavy use of
-prepared research, drafting, comparisons, and task planning, the desired
-operating target is 2.5-4 hours per week.
+The requirements must not impose a parent-hour ceiling before the detailed
+90-day plan is built. The plan should first calculate the work that is worth
+doing, then show the parent total, weekly average, and peak weeks so the family
+can make an informed scope or delegation decision.
 
 ### Counselor Or Paid Professional
 
@@ -159,14 +172,16 @@ accountability.
 ### In Scope
 
 - A master 90-day college task plan.
-- Approximately 60-100 applicable tasks for a typical 8-10-college process.
+- A value-selected task catalog expected to produce approximately 70-100
+  applicable tasks for a typical application process.
 - One-time, recurring, and college-specific tasks.
 - Student, Parent, Counselor/Professional, and Shared ownership.
 - Dependencies, deadlines, priorities, effort, status, deliverables, and
   authoritative resource links.
 - Separate normal and parent-adjusted effort estimates.
 - Assistant-preparation and professional-help indicators.
-- Weekly workload totals and capacity warnings.
+- Total, phase, and weekly effort summaries by role.
+- Peak-week and deadline-collision visibility.
 - Weekly, owner-specific, overdue, blocked, decision-needed, and due-soon
   views.
 - A concise weekly report.
@@ -216,42 +231,77 @@ does not assume general task tracking. Approval of this specification would be
 a product-direction change; the backlog must be reconciled before
 implementation begins.
 
+## Current Scenario Assumptions
+
+The first task catalog and validation scenario should reflect the family's
+current situation:
+
+- the student is a rising senior, so the feature should optimize the
+  application process rather than propose long-horizon profile building;
+- the student is considering highly selective schools, including Top 50
+  options;
+- business, marketing, and entrepreneurship programs and opportunities matter;
+- track and field recruiting, particularly jumping events, may affect
+  admission, college fit, and possibly affordability;
+- affordability is a first-class selection criterion alongside admission and
+  academic fit;
+- merit scholarships, honors colleges, institutional awards, and financial-aid
+  requirements may have deadlines separate from the application deadline; and
+- October 31 is the working early-application target for the first real plan,
+  but actual college deadlines, application rounds, testing strategy, and final
+  college count remain configurable.
+
+These assumptions guide the starter catalog without turning one student's
+preferences into hard-coded requirements for every workbook user.
+
 ## Planning Model
 
 ### Ninety-Day Phases
 
-The initial plan should organize tasks into four phases:
+The initial plan should organize tasks into four overlapping phases. Workstreams
+such as recruiting, affordability, and essays may span multiple phases.
 
-1. **Days 1-14: Establish structure**
+1. **Days 1-14: Establish the foundation**
    - set budget and debt limits;
-   - configure roles and weekly capacity;
+   - configure roles, planning dates, and effort assumptions;
    - assemble student records and activity history;
-   - decide whether targeted professional help is needed;
+   - create the Common App account and complete the base profile;
+   - draft the activities list, honors list, resume, and brag sheet;
+   - build the preliminary college list and application calendar;
+   - gather parent financial documents;
    - contact the school counselor; and
    - complete an SAT or ACT diagnostic if testing is still in scope.
 
-2. **Days 15-30: Approve the strategy**
-   - build and evaluate the initial college list;
-   - assess academic, financial, and athletic fit;
+2. **Days 15-30: Finalize selection and strategy**
+   - assess admission, academic, financial, and athletic fit;
+   - run official net-price calculators for every serious candidate;
+   - identify merit, honors-college, and priority scholarship requirements;
+   - decide the Early Decision, Early Action, and Regular Decision strategy;
    - create the recruiting profile and coach targets;
    - request recommendations;
    - start the main essay; and
-   - approve the final 8-10 colleges.
+   - approve the final college list.
 
-3. **Days 31-60: Execute and monitor**
+3. **Days 21-60: Produce applications in parallel**
    - complete Common App sections;
    - refine activities and honors;
-   - draft and revise essays;
-   - complete recruiting questionnaires and follow-ups; and
+   - draft and revise the personal statement and supplemental essays;
+   - complete athletic profiles, coach outreach, questionnaires, and follow-ups;
+   - attend only high-value visits, virtual sessions, or interviews;
+   - prepare FAFSA and CSS Profile materials where applicable;
+   - pursue high-value scholarship and honors-college opportunities; and
    - resolve financial or strategic decisions while monitoring weekly status.
 
-4. **Days 61-90: Verify and submit**
-   - run application audits;
+4. **Days 45-90: Verify, submit, and confirm**
+   - run an application-readiness audit for every school;
+   - review each generated application PDF;
    - verify transcripts and recommendations;
+   - verify test-score reporting requirements where applicable;
    - complete parent-controlled financial-aid sections;
    - pay fees and submit;
    - confirm portal access and receipt; and
-   - track follow-up requirements.
+   - track follow-up requirements, institutional scholarships, and continuing
+     coach communication.
 
 Phase boundaries should be configurable because actual dates depend on the
 application cycle and school deadlines.
@@ -265,31 +315,92 @@ Each active college should record whether it passes these three tests:
 3. offers a realistic athletic opportunity or is worth attending without the
    sport.
 
-The task system should warn when the active list exceeds 10 colleges. It should
-not block a larger list, but it should show the extra task and workload impact.
+No fixed college count is a product requirement. Earlier planning considered
+both a focused 8-10-school list and a broader 10-15-school list. The task system
+must support either decision, show the incremental tasks and effort created by
+each college, and let the family decide the final count after reviewing fit,
+affordability, deadlines, and workload.
+
+An initial balance might include Reach, Target, and Likely schools, but the
+counts must remain configurable. Every Likely school must also be financially
+plausible and genuinely acceptable to the student.
+
+### Project Deliverables
+
+The detailed plan should lead to these outcomes where applicable:
+
+- a final college list with Reach/Target/Likely assessment, academic and
+  program fit, affordability, athletic fit, deadlines, and application
+  requirements;
+- a dated application calendar that includes application, merit, honors,
+  financial-aid, scholarship, recruiting, and school-document deadlines;
+- official net-price estimates and a comparable four-year cost view for every
+  serious college;
+- a complete Common App base profile, activities section, honors section, and
+  additional information;
+- a student resume/brag sheet and confirmed recommendation plan;
+- a final personal statement and all required supplemental essays;
+- an athletic resume/profile, verified marks and results, relevant media links,
+  coach-contact history, and recruiting-questionnaire status;
+- selected visit, virtual-event, and interview notes;
+- organized FAFSA/CSS Profile source documents and school-specific aid
+  requirements;
+- a focused list of institutional, honors, state/regional, employer, and other
+  high-value scholarship opportunities;
+- verified application PDFs, submissions, receipts, and portal access; and
+- current tracker and dashboard data suitable for later offer comparison and
+  decision-making.
 
 ## Task Catalog Requirements
 
 The starter catalog should cover the following workstreams. Counts are planning
-ranges, not quotas.
+ranges, not quotas, and should not be used to add low-value work merely to
+reach a target.
 
 | Workstream | Typical task count | Representative deliverables |
 |---|---:|---|
 | Family strategy | 6-8 | Budget, debt limit, geography, school-size and academic priorities |
 | Student profile | 6-8 | Transcript review, resume, activities, awards, interests |
-| College research | 10-12 | Initial list, program review, outcomes, campus fit |
-| Affordability | 10-12 | Net-price estimates, merit rules, financial safeties, four-year cost |
+| College research | 10-12 | Initial list, business/marketing/entrepreneurship review, outcomes, campus fit |
+| Affordability | 10-12 | Official net-price estimates, merit rules, honors colleges, financial safeties, four-year cost |
 | Testing | 5-7 | Diagnostic, test decision, registration, preparation, score policy |
 | Recommendations and school records | 6-8 | Counselor meeting, teacher requests, brag sheet, transcript process |
 | Common App | 8-10 | Profile, education, activities, honors, additional information |
-| Essays | 8-12 | Story inventory, topic, outline, drafts, revisions, supplements |
-| Athletic recruiting | 10-15 | Verified marks, athletic profile, targets, emails, questionnaires |
+| Essays | 8-12 | Story inventory, personal statement, drafts, revisions, school-specific supplements |
+| Athletic recruiting | 10-15 | Verified marks/results, athletic resume, media links, targets, emails, questionnaires |
 | Visits and demonstrated interest | 4-6 | Virtual events, selected visits, interviews, admissions contacts |
-| Submission and financial aid | 8-10 | Application audit, submission, portals, FAFSA, CSS, scholarships |
+| Submission and financial aid | 8-10 | PDF audit, submission, portals, FAFSA, CSS Profile, institutional scholarships |
 
-The total active task count should normally land between 60 and 100 after
-non-applicable work is removed. This is a target range, not a hard cap; school-
-specific supplements or requirements may create additional legitimate tasks.
+The total active task count is expected to land around 70-100 after
+non-applicable work is removed and school-specific work is instantiated. This
+is an expected result, not a minimum or maximum. The value and necessity of a
+task determine whether it belongs in the plan.
+
+### Value Filter
+
+The first catalog should prioritize work that materially improves admission
+readiness, affordability, athletic opportunity, or deadline control:
+
+- completing accurate, polished applications;
+- choosing colleges the student would attend at a plausible price;
+- official net-price estimates and school-specific aid requirements;
+- personal statement and required supplemental essays;
+- teacher and counselor recommendations;
+- timely, personalized coach outreach and recruiting follow-up;
+- institutional merit scholarships, honors colleges, large regional or state
+  awards, employer benefits, and athletic opportunities; and
+- submission verification and portal follow-up.
+
+The catalog should omit or de-prioritize:
+
+- starting new extracurriculars solely to influence admission;
+- creating a new "passion project" for application optics;
+- applying to dozens of small, low-probability scholarships without a clear
+  value case;
+- low-value visits or demonstrated-interest activities that do not affect the
+  decision; and
+- duplicate research that does not change a school, cost, recruiting, or
+  application decision.
 
 ### Task Templates And Instances
 
@@ -333,21 +444,55 @@ Every task must support:
 | Notes/outcome | Short context, response, or completion note |
 | Completed date | Recorded when a task is completed |
 
-### Effort And Capacity Rules
+### Resource Source Rules
+
+Task links should prioritize primary, authoritative sources:
+
+- each college's admissions, financial-aid, scholarship, honors, and program
+  pages;
+- each college's official net-price calculator;
+- Common App and the college's application portal;
+- official FAFSA and CSS Profile guidance;
+- school counselor and transcript-process instructions;
+- official team rosters, recruiting questionnaires, meet results, and
+  conference results; and
+- the Common Data Set where it answers an admissions or affordability
+  question.
+
+College Board BigFuture and carefully selected third-party research may help
+with discovery or comparison. Third-party chancing estimates must be labeled
+as estimates and must not override official deadlines, costs, requirements, or
+coach communication.
+
+### Effort Estimation And Role Totals
 
 - Normal effort and parent-adjusted effort must be stored separately.
-- The initial parent effort multiplier should be configurable and default to
-  `2.0`.
-- The multiplier applies only to parent work, not student, counselor, or
+- The parent effort adjustment must be configurable. A `2.0` multiplier is a
+  planning hypothesis from the source conversation, not a cap or a reason to
+  omit work.
+- The adjustment applies only to parent work, not student, counselor, or
   assistant-prepared work.
-- Weekly totals must avoid double-counting shared tasks.
-- The system must show planned hours by owner and week.
-- Weekly capacity must be based on the planned work week, not only the external
+- Assistant preparation should reduce the remaining active effort estimate
+  only when the plan identifies a concrete prepared deliverable.
+- Shared-task effort must either be allocated by role or clearly reported as a
+  separate Shared total; it must not be silently counted in full for both
+  Student and Parent.
+- Weekly effort must be based on the planned work week, not only the external
   due date.
-- The parent target is 2.5-4 hours per week, with a hard warning above 6 hours.
-- The student planning target is approximately 8-10 hours per week.
-- The feature should not silently move work to later weeks to eliminate an
-  overload warning.
+- The first complete plan must report:
+  - total hours by Student, Parent, Counselor/Professional, and Shared;
+  - average hours per week by role over the planning period;
+  - effort by phase and workstream;
+  - planned effort by role for every week;
+  - the peak week for each role;
+  - effort not yet assigned to a planned week;
+  - the effect of assistant or professional preparation; and
+  - the incremental effort associated with each active college.
+- The system must not enforce a default weekly ceiling or silently reschedule,
+  drop, or downgrade tasks to make the totals appear manageable.
+- After the baseline is reviewed, users may optionally set their own planning
+  thresholds and use them to identify weeks requiring scope reduction,
+  reassignment, earlier work, or paid help.
 
 ## Status And Dependency Behavior
 
@@ -403,16 +548,24 @@ For one college, show application, affordability, recruiting, visit,
 submission, and financial-aid tasks together with the college's relevant
 existing tracker status.
 
-### Capacity View
+### Effort Summary
 
-Show planned normal and adjusted hours by owner and week, with visible warnings
-for:
+Show normal and adjusted effort by owner, phase, workstream, college, and week.
+The view must expose:
 
-- parent work above 4 hours;
-- parent work above the 6-hour hard ceiling;
-- student work above 10 hours;
-- a college list above 10 active schools; and
-- tasks with no owner or due date despite an approaching external deadline.
+- total and average weekly hours by role;
+- peak weeks and deadline clusters;
+- unplanned or unassigned effort;
+- tasks with no owner or planned week despite an approaching external
+  deadline;
+- the incremental effort associated with each college;
+- how much effort remains after identified assistant or professional
+  preparation; and
+- optional user-defined threshold warnings, if the family chooses thresholds
+  after reviewing the baseline plan.
+
+The default view must report the work without judging it against a
+preconfigured hour cap.
 
 ## Weekly Report Requirements
 
@@ -432,19 +585,26 @@ The report must be understandable in 15 minutes or less. Its first release may
 be an in-workbook view. Email delivery, scheduled generation, and calendar
 integration are future enhancements unless separately approved.
 
+The concise report review is separate from a 30-45 minute weekly Student/Parent
+planning meeting used to confirm progress, remove blockers, and schedule the
+next week's work.
+
 ## Core Workflows
 
 ### Initial Setup
 
 1. Set cycle start date and target application season.
 2. Confirm Student, Parent, and optional Counselor/Professional roles.
-3. Set parent and student weekly capacity.
-4. Set the parent effort multiplier.
+3. Set effort-estimation assumptions, including any parent adjustment.
+4. Leave weekly thresholds unset until the complete baseline plan is reviewed.
 5. Enter the annual college budget and debt limit.
 6. Confirm whether testing, athletic recruiting, visits, interviews, CSS
    Profile, and paid support are in scope.
 7. Generate the applicable starter plan.
 8. Review and remove non-applicable tasks before dates are finalized.
+9. Calculate total, average weekly, phase, and peak-week effort by role.
+10. Only then decide whether any tasks should move earlier, be reassigned,
+    receive assistant/professional support, or be removed as low value.
 
 ### Add Or Remove A College
 
@@ -459,9 +619,11 @@ integration are future enhancements unless separately approved.
 1. Review the generated weekly report.
 2. Resolve parent decisions.
 3. Confirm the student's selected work for the week.
-4. Reassign or obtain help for overloaded work.
-5. Update blocked and waiting tasks.
-6. Confirm that all external deadlines within 21 days have an owner and next
+4. Compare the coming week's work with the complete baseline and any thresholds
+   the family chose after reviewing it.
+5. Reassign, start earlier, reduce scope, or obtain help where appropriate.
+6. Update blocked and waiting tasks.
+7. Confirm that all external deadlines within 21 days have an owner and next
    action.
 
 ### Submission Readiness
@@ -501,8 +663,8 @@ a real application cycle.
 
 The feature is acceptable when:
 
-1. a user can generate an applicable 90-day plan for 8-10 colleges without
-   receiving obvious filler tasks;
+1. a user can generate an applicable 90-day plan for the selected colleges
+   without receiving obvious filler tasks;
 2. every active task has a stable ID, owner, status, effort, and completion
    definition;
 3. conditional task groups can be omitted without breaking the plan;
@@ -511,15 +673,20 @@ The feature is acceptable when:
    completed history;
 6. dependencies and blocked work are visible;
 7. the weekly view shows overdue, due-soon, blocked, and decision-needed work;
-8. workload totals use adjusted effort for parent tasks and show capacity
-   warnings;
+8. workload totals use adjusted effort for parent tasks and report total,
+   average weekly, phase, and peak-week effort by role without imposing a
+   default cap;
 9. the weekly report contains all required sections and can be reviewed in 15
    minutes or less;
 10. existing tracker data is not duplicated into a second independently edited
     source of truth;
 11. the system works with or without a counselor; and
 12. student-owned application and recruiting work remains assigned to the
-    student even when an assistant prepares research or a draft.
+    student even when an assistant prepares research or a draft;
+13. high-value senior-year work is included while admissions-only profile
+    building and indiscriminate small-scholarship work are excluded; and
+14. the plan makes separate application, merit/honors, financial-aid, and
+    recruiting deadlines visible for each applicable college.
 
 ## Preservation And Safety Requirements
 
@@ -544,14 +711,19 @@ Initial success measures:
 
 - the parent can identify required decisions and actions in 15 minutes or less
   each week;
-- parent-planned work normally remains at or below 4 hours per week;
+- the family knows the calculated 90-day total, weekly average, and peak-week
+  effort for Student, Parent, Counselor/Professional, and Shared work;
 - all deadlines within 21 days have a visible owner and next action;
 - no active college lacks affordability, academic-fit, and
   attend-without-track review;
 - student-owned work is not reassigned to the parent by default;
-- overdue and blocked tasks are visible without checking multiple sheets; and
+- overdue and blocked tasks are visible without checking multiple sheets;
 - adding a college exposes the incremental workload before the list is
-  approved.
+  approved;
+- every serious college has a dated official net-price estimate and its
+  application, aid, merit, honors, and recruiting requirements identified; and
+- the plan does not hide required work merely because a role's calculated
+  effort is high.
 
 ## Open Decisions For Review
 
@@ -563,30 +735,39 @@ Initial success measures:
 4. Should task dates be generated backward from each college's application
    deadline, forward from the 90-day start date, or by a hybrid rule?
 5. Which task statuses and priority labels should appear in dropdowns?
-6. Should the parent effort multiplier default to `2.0`, or should setup require
-   the user to choose it?
+6. Should parent-adjusted effort use one configurable multiplier, per-task
+   estimates, or both?
 7. Should coach responses be stored as task notes, linked to a future
    recruiting tracker, or summarized from another canonical field?
 8. How much of application readiness should be derived automatically from
    existing trackers versus confirmed manually?
 9. Should recurring weekly review tasks be generated as individual records or
    represented as one recurring checklist?
-10. Which 60-100 starter tasks belong in the first catalog? The full seed
-    catalog needs its own content review before implementation.
-11. Should version-one capacity planning include fixed weekly time blocks, or
-    only workload totals and warnings?
+10. Which value-selected starter tasks belong in the first catalog? The full
+    seed catalog needs its own content review before implementation.
+11. Should version-one effort planning include fixed weekly time blocks, or
+    only planned weeks and effort totals?
 12. Does the first release need printable or exportable weekly reports, even if
     scheduled email is deferred?
+13. After the baseline plan is calculated, should optional weekly thresholds be
+    stored globally, by role, or by individual week?
+14. What is the target submission date for the first real plan, and which
+    Early Decision, Early Action, and priority scholarship deadlines must drive
+    backward planning?
 
 ## Follow-On Work After Approval
 
 After the requirements are corrected and approved:
 
 1. reconcile `project-docs/plans/backlog.md` with the new product direction;
-2. write and review the complete starter task catalog;
-3. decide the canonical sheet and dashboard presentation;
-4. produce an implementation plan with schema, ownership, migration, repair,
+2. write and review the complete value-selected starter task catalog;
+3. instantiate it against a realistic college list and calculate total,
+   average weekly, phase, and peak-week effort by role;
+4. review the resulting work before choosing scope, delegation, or optional
+   weekly thresholds;
+5. decide the canonical sheet and dashboard presentation;
+6. produce an implementation plan with schema, ownership, migration, repair,
    and test details;
-5. prototype the weekly report and capacity view; and
-6. validate the design against a realistic 8-10-college application scenario
+7. prototype the weekly report and effort summary; and
+8. validate the design against a realistic rising-senior application scenario
    before implementation.
