@@ -48,7 +48,10 @@ const filesToUpdate = [
   'src/setup.js',
   'src/trackers.js',
   'src/utils.js',
-  'src/schema.js'
+  'src/schema.js',
+  'src/task-catalog.js',
+  'src/task-planner.js',
+  'src/task-management.js',
 ];
 
 let updatedFiles = 0;

@@ -71,6 +71,17 @@ the two-branch rule because `origin/main` has not been updated.
 
 ## Prioritized Backlog
 
+### Feature Branch Pending Verification
+
+- **Adaptive college task management** is implemented on
+  `feat/task-management-requirements`: 100 source-controlled templates,
+  deadline/module/role-aware generation, safe reconciliation, conditional
+  recruiting, tracker evidence, effort/capacity reporting, and `This Week`.
+  Local acceptance scenarios pass; disposable live Google Sheets execution is
+  still required before merge/release. See
+  `project-docs/plans/2026-07-30-task-management-requirements.md` and
+  `project-docs/task-management-verification.md`.
+
 Architecture/refactoring items remain separate backlog entries for priority tracking. The detailed implementation sequence for those related items lives in `project-docs/plans/appscript-refactoring-plan.md`; use that plan as the child plan when executing items 7-12 below.
 
 1. **Release current development after smoke testing.** Merge `development`

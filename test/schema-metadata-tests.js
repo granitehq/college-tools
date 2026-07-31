@@ -19,15 +19,33 @@ suite.test('schema declares row conventions for Colleges and tracker sheets', ()
   const applicationTimeline = CollegeTools.Schema.getSheet('APPLICATION_TIMELINE');
   const statusTracker = CollegeTools.Schema.getSheet('STATUS_TRACKER');
   const scholarshipTracker = CollegeTools.Schema.getSheet('SCHOLARSHIP_TRACKER');
+  const tasks = CollegeTools.Schema.getSheet('TASKS');
+  const taskSettings = CollegeTools.Schema.getSheet('TASK_SETTINGS');
 
   suite.assertEqual(colleges.headerRow, 2, 'Colleges headers should stay on row 2');
   suite.assertEqual(colleges.dataStartRow, 3, 'Colleges data should start on row 3');
 
-  [financialAid, campusVisit, applicationTimeline, statusTracker, scholarshipTracker]
+  [
+    financialAid, campusVisit, applicationTimeline, statusTracker, scholarshipTracker,
+    tasks, taskSettings,
+  ]
     .forEach((sheet) => {
       suite.assertEqual(sheet.headerRow, 1, `${sheet.sheetName} headers should stay on row 1`);
       suite.assertEqual(sheet.dataStartRow, 2, `${sheet.sheetName} data should start on row 2`);
     });
+});
+
+suite.test('schema declares stable task and scholarship identity columns', () => {
+  suite.assertEqual(CollegeTools.Schema.header('TASKS', 'TASK_ID'), 'Task ID',
+    'Tasks should expose a stable Task ID');
+  suite.assert(CollegeTools.Schema.isSystemColumn('TASKS', 'TASK_ID'),
+    'Task ID should be system-owned');
+  suite.assertEqual(CollegeTools.Schema.header('SCHOLARSHIP_TRACKER', 'SCHOLARSHIP_ID'),
+    'Scholarship ID', 'Scholarship opportunities should have stable identity');
+  suite.assert(CollegeTools.Schema.isSystemColumn('SCHOLARSHIP_TRACKER', 'SCHOLARSHIP_ID'),
+    'Scholarship ID should be system-owned');
+  suite.assert(CollegeTools.Schema.getSheet('RECRUITING_TRACKER').optional,
+    'Recruiting Tracker should remain conditional');
 });
 
 suite.test('schema declares a system-owned College ID column for Colleges and per-college trackers', () => {

@@ -42,6 +42,21 @@ suite.test('travel planner sheet and headers are configured', () => {
   ]), 'Travel Planner headers should stay stable');
 });
 
+suite.test('adaptive task-management sheet names and core headers are configured', () => {
+  const names = CollegeTools.Config.SHEET_NAMES;
+  suite.assertEqual(names.TASK_SETTINGS, 'Task Settings', 'Task Settings name should be stable');
+  suite.assertEqual(names.TASKS, 'Tasks', 'Tasks name should be stable');
+  suite.assertEqual(names.TASK_TEMPLATES, 'Task Templates', 'Task Templates name should be stable');
+  suite.assertEqual(names.THIS_WEEK, 'This Week', 'This Week name should be stable');
+  suite.assertEqual(names.RECRUITING_TRACKER, 'Recruiting Tracker',
+    'Recruiting Tracker name should be stable');
+  ['Task ID', 'Template ID', 'Due Date', 'Scheduled Block', 'Status', 'Notes']
+    .forEach((header) => {
+      suite.assert(CollegeTools.Config.HEADERS.TASKS.includes(header),
+        `Tasks should include ${header}`);
+    });
+});
+
 suite.test('critical Colleges headers snapshot stays stable', () => {
   const expected = [
     'College Name', 'City', 'State', 'Type (Public/Private)',

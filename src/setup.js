@@ -148,6 +148,18 @@ CollegeTools.Setup = (function() {
         },
       },
       {
+        id: 'task-management',
+        label: 'Adaptive task management',
+        required: true,
+        includeInCompleteSetup: true,
+        includeInRepair: false,
+        run: function() {
+          return CollegeTools.TaskManagement.setupTaskManagement({
+            suppressAlert: true,
+          });
+        },
+      },
+      {
         id: 'dashboard',
         label: 'Dashboard setup',
         required: true,
@@ -278,6 +290,18 @@ CollegeTools.Setup = (function() {
           if (timelineSheet) {
             CollegeTools.Trackers.enhanceApplicationTimelineFormatting(timelineSheet);
           }
+        },
+      },
+      {
+        id: 'task-management',
+        label: 'Task-management repair',
+        required: true,
+        includeInCompleteSetup: false,
+        includeInRepair: true,
+        run: function() {
+          return CollegeTools.TaskManagement.repairTaskManagement({
+            suppressAlert: true,
+          });
         },
       },
       {

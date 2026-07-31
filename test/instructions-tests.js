@@ -64,5 +64,17 @@ suite.test('Complete Setup can skip rebuilding current Instructions', () => {
     'Skipped Instructions should not issue line-by-line writes');
 });
 
+suite.test('Instructions explain adaptive task generation and preservation', () => {
+  const lines = renderedLines().join('\n');
+  suite.assert(lines.includes('Preview Task Plan Changes'),
+    'Instructions should direct users through non-mutating preview');
+  suite.assert(lines.includes('Completed tasks, notes, evidence, locked dates'),
+    'Instructions should explain regeneration preservation');
+  suite.assert(lines.includes('appear only when enabled'),
+    'Instructions should explain conditional task modules');
+  suite.assert(lines.includes('first plan is unconstrained'),
+    'Instructions should explain that thresholds follow baseline effort');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

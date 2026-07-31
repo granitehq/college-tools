@@ -12,6 +12,7 @@
     "test:repair": "node test/workbook-repair-tests.js",
     "test:schema": "node test/config-schema-tests.js",
     "test:menu": "node test/menu-wiring-tests.js",
+    "test:tasks": "node test/task-management-tests.js",
     "test:validation": "node test/validation-coverage-tests.js",
     "test:syntax": "node test/syntax-tests.js",
     "test:all": "npm run test",

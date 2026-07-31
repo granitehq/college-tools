@@ -130,6 +130,7 @@ suite.test('complete setup surfaces a registration warning when copy registratio
 
   CollegeTools.Instructions = {createInstructionsSheet() {}};
   CollegeTools.Trackers = {setupAllTrackers() {}};
+  CollegeTools.TaskManagement = {setupTaskManagement() {}};
   CollegeTools.Dashboard = {setupDashboard() {}};
   CollegeTools.Formatting = {enhanceFormatsDropdowns() {}};
   CollegeTools.Scoring = {ensureScoring() {}};

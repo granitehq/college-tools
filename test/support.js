@@ -225,6 +225,7 @@ class MockSheet {
     this.validations = {};
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     this.hiddenColumns = new Set();
+    this.hidden = false;
     this.activeRow = 3;
     this.maxRows = 1000;
   }
@@ -431,8 +432,12 @@ class MockSheet {
     return {
       setDescription: () => {},
       setUnprotectedRanges: () => {},
+      setWarningOnly: () => {},
     };
   }
+  hideSheet() { this.hidden = true; return this; }
+  showSheet() { this.hidden = false; return this; }
+  isSheetHidden() { return this.hidden; }
 }
 
 class MockSpreadsheet {
@@ -612,6 +617,14 @@ function createHarness(moduleFiles) {
       CollegeTools.Config.HEADERS.STATUS_TRACKER, 1);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER,
       CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS,
+      CollegeTools.Config.HEADERS.TASK_SETTINGS, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TASKS,
+      CollegeTools.Config.HEADERS.TASKS, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TASK_TEMPLATES,
+      CollegeTools.Config.HEADERS.TASK_TEMPLATES, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.THIS_WEEK,
+      CollegeTools.Config.HEADERS.THIS_WEEK, 1);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.LOOKUP, ['Official Name'], 1);
 
     mockSpreadsheet.setActiveSheet(colleges);

@@ -728,6 +728,7 @@ CollegeTools.Trackers = (function() {
     var sh = CollegeTools.Utils.ensureSheet(ss, CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
     var headers = CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER;
     migrateScholarshipRequirementColumns_(sh, headers);
+    CollegeTools.Utils.ensureHiddenLastColumn(sh, 'Scholarship ID', 1);
 
     if (!opts.deferFormatting) CollegeTools.Formatting.applyStandardValidations(sh);
   }

@@ -21,7 +21,16 @@ function onOpen() {
       .addItem('Fill current row', 'fillCollegeRow')
       .addItem('Fill selected rows', 'fillSelectedRows')
       .addSeparator()
-      .addItem('Search College Names', 'searchCollegeNames'))
+      .addItem('Search College Names', 'searchCollegeNames')
+      .addSeparator()
+      .addSubMenu(SpreadsheetApp.getUi().createMenu('✅ Task Management')
+        .addItem('Setup Task Management', 'setupTaskManagement')
+        .addItem('Preview Task Plan Changes', 'previewTaskPlan')
+        .addItem('Generate / Regenerate Task Plan', 'generateTaskPlan')
+        .addSeparator()
+        .addItem('Refresh This Week', 'refreshTaskViews')
+        .addItem('Sync Completion From Trackers', 'syncTaskCompletion')
+        .addItem('Repair Task Management', 'repairTaskManagement')))
     .addSeparator()
     .addSubMenu(SpreadsheetApp.getUi().createMenu('🛠️ Advanced / Setup')
       .addItem('Add/Update Trackers', 'setupAllTrackers')
@@ -56,10 +65,14 @@ function onOpen() {
  * @param {Object} e - Apps Script edit event
  */
 function onEdit(e) {
+  var travelResult = null;
   if (CollegeTools.Travel && CollegeTools.Travel.handleProfileEdit) {
-    return CollegeTools.Travel.handleProfileEdit(e);
+    travelResult = CollegeTools.Travel.handleProfileEdit(e);
   }
-  return null;
+  if (CollegeTools.TaskManagement && CollegeTools.TaskManagement.handleEdit) {
+    return CollegeTools.TaskManagement.handleEdit(e) || travelResult;
+  }
+  return travelResult;
 }
 
 function fillCollegeRow() {
@@ -100,6 +113,86 @@ function setupFinancialIntelligence() {
 }
 function searchCollegeNames() {
   return CollegeTools.Lookup.searchCollegeNames();
+}
+function setupTaskManagement() {
+  var result = CollegeTools.TaskManagement.setupTaskManagement();
+  SpreadsheetApp.getUi().alert(
+    'Task Management Ready',
+    'Configure the Task Settings tab, then preview or generate the task plan.\n\n' +
+      'Validated templates: ' + (result.templateCount || 0),
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
+  return result;
+}
+function previewTaskPlan() {
+  var result = CollegeTools.TaskManagement.previewTaskPlan();
+  if (!result.ok) {
+    SpreadsheetApp.getUi().alert(
+      'Task Plan Needs Configuration',
+      (result.errors || [result.message || 'Unable to build preview']).join('\n'),
+      SpreadsheetApp.getUi().ButtonSet.OK,
+    );
+    return result;
+  }
+  var preview = result.preview || {};
+  SpreadsheetApp.getUi().alert(
+    'Task Plan Preview',
+    'Generated instances: ' + result.generatedCount + '\n' +
+      'Add: ' + (preview.add || 0) + '\n' +
+      'Update: ' + (preview.update || 0) + '\n' +
+      'Reassign: ' + (preview.reassign || 0) + '\n' +
+      'Reschedule: ' + (preview.reschedule || 0) + '\n' +
+      'Dependency changes: ' + (preview.dependencyChanges || 0) + '\n' +
+      'Effort changes: ' + (preview.effortChanges || 0) + '\n' +
+      'Archive: ' + (preview.archive || 0) + '\n' +
+      'Completed tasks preserved: ' + (preview.preserveComplete || 0) + '\n\n' +
+      'No task rows were changed.',
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
+  return result;
+}
+function generateTaskPlan() {
+  var result = CollegeTools.TaskManagement.generateTaskPlan();
+  SpreadsheetApp.getUi().alert(
+    result.ok ? 'Task Plan Generated' : 'Task Plan Needs Configuration',
+    result.ok ?
+      'Tasks in plan: ' + result.taskCount + '\n' +
+        'Current actions: ' + result.currentActions + '\n' +
+        'Tracker-confirmed completions: ' + result.evidenceCompletions :
+      (result.errors || [result.message || 'Unable to generate task plan']).join('\n'),
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
+  return result;
+}
+function refreshTaskViews() {
+  var result = CollegeTools.TaskManagement.refreshTaskViews();
+  SpreadsheetApp.getUi().alert(
+    'Task Views Refreshed',
+    'Current actions: ' + (result.currentActions || 0) + '\n' +
+      'Rolling 90-day tasks: ' + (result.rolling90 || 0),
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
+  return result;
+}
+function syncTaskCompletion() {
+  var result = CollegeTools.TaskManagement.syncTaskCompletion();
+  SpreadsheetApp.getUi().alert(
+    'Task Completion Synchronized',
+    'Confirmed completions: ' + result.completed + '\n' +
+      'Items needing manual confirmation: ' + result.suggestions.length,
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
+  return result;
+}
+function repairTaskManagement() {
+  var result = CollegeTools.TaskManagement.repairTaskManagement();
+  SpreadsheetApp.getUi().alert(
+    'Task Management Repaired',
+    'Templates verified: ' + result.templateCount + '\n' +
+      'Tracker-confirmed completions: ' + result.evidenceCompletions,
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
+  return result;
 }
 function repairCollegeSync() {
   return CollegeTools.Trackers.repairCollegeSync();

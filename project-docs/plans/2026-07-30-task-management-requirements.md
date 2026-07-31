@@ -1,6 +1,6 @@
 # Adaptive College Task Management: Requirements And Implementation Plan
 
-**Status:** Draft for final review
+**Status:** Implemented on the feature branch; live copied-sheet verification pending
 
 **Date:** 2026-07-30
 
@@ -25,8 +25,9 @@ hour cap.
 
 - Keep task management in the existing workbook. Separate spreadsheets would
   duplicate deadlines/status and require fragile synchronization.
-- Add one canonical `Tasks` sheet, one hidden/system-managed `Task Templates`
-  sheet, and one generated `This Week` sheet.
+- Add a user-editable `Task Settings` sheet, one canonical `Tasks` sheet, one
+  hidden/system-managed `Task Templates` sheet, and one generated `This Week`
+  sheet.
 - Add `Recruiting Tracker` only when Athletic Recruiting is enabled.
 - Maintain a complete catalog but instantiate only tasks relevant to the
   family's timeline, colleges, roles, and enabled modules.
@@ -59,6 +60,7 @@ hour cap.
 | Scholarships and honors opportunities | `Scholarship Tracker` |
 | Visits | `Campus Visit Tracker` |
 | Submission and decision status | `Application Status Tracker` |
+| Planning dates, roles, modules, multipliers, and optional thresholds | `Task Settings` |
 | Coach contacts and recruiting history | Conditional `Recruiting Tracker` |
 | Task status, ownership, effort, dependencies | `Tasks` |
 | System task definitions | Hidden `Task Templates` |
@@ -351,7 +353,8 @@ completion for user confirmation. Manual corrections remain possible.
 ### SW-01 — Configuration, Schema, And Stable IDs
 
 - Add sheet names, headers, schema metadata, ownership groups, role/module
-  configuration, Task ID, Template ID, and Recruiting Contact ID contracts.
+  configuration, Task ID, Template ID, Scholarship ID, and Recruiting Contact
+  ID contracts.
 - Keep task/helper headers on row 1 and data on row 2.
 - Test config/schema contracts and stable-ID preservation.
 

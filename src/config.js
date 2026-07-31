@@ -37,6 +37,11 @@ CollegeTools.Config = (function() {
     SCHOLARSHIP_TRACKER: 'Scholarship Tracker',
     STATUS_TRACKER: 'Application Status Tracker',
     DASHBOARD: 'Dashboard',
+    TASK_SETTINGS: 'Task Settings',
+    TASKS: 'Tasks',
+    TASK_TEMPLATES: 'Task Templates',
+    THIS_WEEK: 'This Week',
+    RECRUITING_TRACKER: 'Recruiting Tracker',
   };
 
   // API configuration
@@ -167,7 +172,40 @@ CollegeTools.Config = (function() {
       'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types', 'Requirements Checklist',
       'Application Started Date',
       'Application Submitted Date', 'Decision Date', 'Award Status (Pending/Awarded/Declined)',
-      'Amount Awarded', 'Notes/Strategy',
+      'Amount Awarded', 'Notes/Strategy', 'Scholarship ID',
+    ],
+
+    TASK_SETTINGS: ['Setting', 'Value', 'Guidance'],
+
+    TASKS: [
+      'Task ID', 'Template ID', 'Workstream', 'Stage', 'Module', 'Scope Type',
+      'Scope ID', 'College', 'College ID', 'Task', 'Owner', 'Owner Role',
+      'Owner Locked', 'Support Role', 'Calculated Date', 'Due Date',
+      'Date Source', 'Date Locked', 'Planned Week', 'Scheduled Block',
+      'Schedule Flag', 'Priority', 'Priority Override', 'Status', 'Dependencies', 'Blocked By',
+      'Normal Effort (min)', 'Adjusted Effort (min)', 'Effort Override (min)',
+      'Deliverable', 'Resource Links', 'Decision Needed', 'Evidence Source',
+      'Completion Date', 'Notes', 'Manually Selected', 'Generated',
+      'Archived Reason',
+    ],
+
+    TASK_TEMPLATES: [
+      'Template ID', 'Workstream', 'Stage', 'Module', 'Scope', 'Task',
+      'Owner Role', 'Support Role', 'Applicability / Anchor', 'Offset Days',
+      'Dependencies', 'Effort (min)', 'Deliverable', 'Resource Links',
+    ],
+
+    THIS_WEEK: [
+      'Task ID', 'Due Date', 'Priority', 'Status', 'Owner', 'College', 'Task',
+      'Adjusted Effort (min)', 'Decision Needed', 'Schedule Flag',
+    ],
+
+    RECRUITING_TRACKER: [
+      'Recruiting Contact ID', 'College ID', 'College Name', 'Sport/Event',
+      'Coach/Contact Name', 'Title', 'Email', 'Phone',
+      'Recruiting Questionnaire Link', 'Questionnaire Submitted Date',
+      'Initial Outreach Date', 'Response/Interest', 'Last Contact',
+      'Next Follow-Up', 'Meeting/Visit', 'Student Next Action', 'Notes',
     ],
   };
 

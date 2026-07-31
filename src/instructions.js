@@ -232,6 +232,30 @@ CollegeTools.Instructions = (function() {
         ],
       },
       {
+        title: '✅ Adaptive Task Management',
+        highlightRules: [
+          {test: function(line) {
+            return /^\d+\./.test(line) || line.indexOf('Important:') === 0;
+          }, bold: true, background: '#d9ead3'},
+        ],
+        lines: [
+          'Task management builds one deadline-aware roadmap from the colleges and trackers already in this workbook.',
+          '',
+          '1. Run "Setup Task Management" once to create Task Settings, Tasks, This Week, and the hidden template catalog.',
+          '2. Complete Task Settings, especially the working deadline, roles, modules, and parent effort multiplier.',
+          '3. Enter authoritative college and aid deadlines in their existing tracker sheets.',
+          '4. Run "Preview Task Plan Changes" to review additions, reassignments, rescheduling, and archives.',
+          '5. Run "Generate / Regenerate Task Plan" to update the canonical Tasks sheet.',
+          '6. Work from This Week; update status, ownership, locks, effort overrides, and notes only in Tasks.',
+          '',
+          'Important: The first plan is unconstrained. Review effort totals before setting optional weekly thresholds.',
+          'Important: Completed tasks, notes, evidence, locked dates, locked owners, and manual tasks survive regeneration.',
+          'Important: Athletic Recruiting, Testing, CSS Profile, Visits, Interviews, and Portfolio tasks appear only when enabled.',
+          'The Recruiting Tracker is created only for athletic-recruiting families and keeps one row per coach or contact.',
+          'Reliable tracker evidence can complete a task automatically; ambiguous evidence requires manual confirmation.',
+        ],
+      },
+      {
         title: '📋 Menu Guide',
         highlightRules: [
           {
@@ -248,6 +272,11 @@ CollegeTools.Instructions = (function() {
           '   • Fill current row: Get data for one college',
           '   • Fill selected rows: Get data for multiple colleges (batch)',
           '   • Search College Names: Find colleges by name',
+          '   • Task Management > Setup: Create or repair the adaptive planning sheets',
+          '   • Task Management > Preview: Inspect changes without modifying Tasks',
+          '   • Task Management > Generate: Build or safely regenerate the plan',
+          '   • Task Management > Refresh This Week: Rebuild current and rolling views',
+          '   • Task Management > Sync Completion: Apply reliable tracker evidence',
           '',
           '🛠️ ADVANCED / SETUP (rarely needed day-to-day; mostly used when',
           '   customizing features or troubleshooting):',

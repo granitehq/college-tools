@@ -81,5 +81,22 @@ suite.test('travel planner refresh menu item is present', () => {
     'Travel Planner refresh adapter should exist');
 });
 
+suite.test('task-management menu exposes setup, safe preview, generation, refresh, sync, and repair', () => {
+  [
+    'Setup Task Management',
+    'Preview Task Plan Changes',
+    'Generate / Regenerate Task Plan',
+    'Refresh This Week',
+    'Sync Completion From Trackers',
+    'Repair Task Management',
+  ].forEach((label) => {
+    suite.assert(menuSource.includes(label), `Task menu should include ${label}`);
+  });
+  suite.assert(menuSource.includes('No task rows were changed.'),
+    'Preview adapter should explicitly confirm that preview is non-mutating');
+  suite.assert(menuSource.includes('CollegeTools.TaskManagement.handleEdit'),
+    'The edit trigger should keep generated task views current where safe');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);

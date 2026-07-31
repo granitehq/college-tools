@@ -83,6 +83,9 @@ const sourceFiles = [
   'config.js',
   'utils.js',
   'schema.js',
+  'task-catalog.js',
+  'task-planner.js',
+  'task-management.js',
 'colleges.js',
   'admissions.js',
   'dashboard.js',
@@ -145,6 +148,15 @@ tester.test('clasp push order includes every Apps Script source file', () => {
   sourceFiles.forEach((filename) => {
     tester.assert(pushOrder.includes('src/' + filename),
       'filePushOrder should include src/' + filename);
+  });
+});
+
+tester.test('version tooling includes every Apps Script source file', () => {
+  const versionScript = fs.readFileSync(
+    path.join(projectRoot, 'scripts', 'update-version.js'), 'utf8');
+  sourceFiles.forEach((filename) => {
+    tester.assert(versionScript.includes(`src/${filename}`),
+      `version tooling should include src/${filename}`);
   });
 });
 
