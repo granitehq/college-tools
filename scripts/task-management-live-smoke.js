@@ -21,6 +21,13 @@ function runTaskManagementLiveSmoke(mode) {
   var today = new Date();
   today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   var deadline = new Date(today.getTime() + (isAthlete ? 90 : 500) * 24 * 60 * 60 * 1000);
+  [
+    names.TASK_SETTINGS, names.TASKS, names.TASK_TEMPLATES, names.THIS_WEEK,
+    names.RECRUITING_TRACKER,
+  ].forEach(function(name) {
+    var existing = ss.getSheetByName(name);
+    if (existing) ss.deleteSheet(existing);
+  });
 
   /**
    * Rebuilds one base sheet for the disposable scenario.
@@ -151,6 +158,7 @@ function runTaskManagementLiveSmoke(mode) {
   var regenerated = CollegeTools.TaskManagement.generateTaskPlan();
 
   var tasks = CollegeTools.TaskManagement.readTasks();
+  var activeCollegeId = colleges.getRange(3, column(colleges, 'College ID', 2)).getValue();
   var taskIds = {};
   var duplicateIds = [];
   var preserved = null;
@@ -169,7 +177,8 @@ function runTaskManagementLiveSmoke(mode) {
     }
   }
   var submission = tasks.filter(function(task) {
-    return task.templateId === 'SUB-03';
+    return task.templateId === 'SUB-03' && !task.archivedReason &&
+      task.collegeId === activeCollegeId;
   })[0];
   var recruitingTasks = tasks.filter(function(task) {
     return task.module === 'Athletic Recruiting' && !task.archivedReason;
