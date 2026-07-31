@@ -56,6 +56,8 @@ class MockRange {
   getLastRow() { return this.row + this.numRows - 1; }
   getColumn() { return this.col; }
   getLastColumn() { return this.col + this.numCols - 1; }
+  getNumRows() { return this.numRows; }
+  getNumColumns() { return this.numCols; }
 
   setValue(value) {
     this.sheet.callCounts.setValue++;
@@ -77,6 +79,11 @@ class MockRange {
   }
 
   setValues(values) {
+    if (!Array.isArray(values) || values.length !== this.numRows ||
+        values.some((row) => !Array.isArray(row) || row.length !== this.numCols)) {
+      throw new Error(
+        `setValues dimensions must match ${this.numRows}x${this.numCols}`);
+    }
     this.sheet.callCounts.setValues++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
@@ -117,6 +124,11 @@ class MockRange {
   }
 
   setFormulas(formulas) {
+    if (!Array.isArray(formulas) || formulas.length !== this.numRows ||
+        formulas.some((row) => !Array.isArray(row) || row.length !== this.numCols)) {
+      throw new Error(
+        `setFormulas dimensions must match ${this.numRows}x${this.numCols}`);
+    }
     this.sheet.callCounts.setFormulas++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
@@ -214,6 +226,22 @@ class MockRange {
   setWrap() { return this; }
   setVerticalAlignment() { return this; }
   setHorizontalAlignment() { return this; }
+  createFilter() {
+    const criteria = {};
+    this.sheet.filter = {
+      range: this,
+      getRange: () => this,
+      getColumnFilterCriteria: (column) => criteria[column] || null,
+      setColumnFilterCriteria(column, value) {
+        criteria[column] = value;
+        return this;
+      },
+      remove: () => {
+        this.sheet.filter = null;
+      },
+    };
+    return this.sheet.filter;
+  }
 }
 
 class MockSheet {
@@ -226,6 +254,7 @@ class MockSheet {
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     this.hiddenColumns = new Set();
     this.hidden = false;
+    this.filter = null;
     this.activeRow = 3;
     this.maxRows = 1000;
   }
@@ -341,6 +370,7 @@ class MockSheet {
   setColumnWidth() { return this; }
   setColumnWidths() { return this; }
   setFrozenRows() { return this; }
+  getFilter() { return this.filter; }
   autoResizeColumn() { return this; }
   autoResizeColumns() { return this; }
   hideColumns(column, numColumns) {
@@ -424,7 +454,33 @@ class MockSheet {
     this.hiddenColumns = hidden;
     return this;
   }
-  deleteRows() { return this; }
+  insertRowsAfter(afterPosition, howMany) {
+    if (afterPosition !== this.maxRows) {
+      throw new Error('Mock insertRowsAfter only supports appending rows');
+    }
+    this.maxRows += howMany;
+    return this;
+  }
+  deleteRows(startRow, howMany) {
+    const endRow = startRow + howMany - 1;
+    const shiftMap = (source) => {
+      const shifted = {};
+      Object.keys(source).forEach((key) => {
+        const [row, col] = key.split(',').map((part) => parseInt(part, 10));
+        if (row >= startRow && row <= endRow) return;
+        const nextRow = row > endRow ? row - howMany : row;
+        shifted[this._key(nextRow, col)] = source[key];
+      });
+      return shifted;
+    };
+    this.values = shiftMap(this.values);
+    this.formulas = shiftMap(this.formulas);
+    this.validations = shiftMap(this.validations);
+    this.formats = shiftMap(this.formats || {});
+    this.notes = shiftMap(this.notes || {});
+    this.maxRows -= howMany;
+    return this;
+  }
   setConditionalFormatRules() { return this; }
   getConditionalFormatRules() { return []; }
   clearConditionalFormatRules() { return this; }

@@ -91,6 +91,8 @@ suite.test('catalog is exactly 100 unique validated implementation templates', (
     suite.assert(template.ownerRole, `${template.templateId} should have an accountable role`);
     suite.assert(template.deliverable, `${template.templateId} should define completion`);
     suite.assert(template.effortMinutes > 0, `${template.templateId} should estimate effort`);
+    suite.assert(template.scheduleRule && template.scheduleAnchor && template.offsetWindow,
+      `${template.templateId} should define its schedule contract`);
     suite.assertEqual(typeof template.offsetDays, 'number',
       `${template.templateId} should define a schedule`);
   });
@@ -161,6 +163,13 @@ suite.test('accelerated athlete plan applies modules, actual deadlines, FAFSA av
   const fafsaAccess = taskByTemplate(result.tasks, 'AID-02');
   const fafsaSubmit = taskByTemplate(result.tasks, 'AID-06');
   const npc = taskByTemplate(result.tasks, 'AID-03', 'C1');
+  const earlyStrategy = taskByTemplate(result.tasks, 'STR-01');
+  const plannedWeeks = new Set(result.tasks.map((task) =>
+    CollegeTools.TaskPlanner.dateKey(task.plannedWeek)));
+  const currentWeekKey = CollegeTools.TaskPlanner.dateKey(
+    CollegeTools.TaskPlanner.startOfWeek(today));
+  const currentWeekCount = result.tasks.filter((task) =>
+    CollegeTools.TaskPlanner.dateKey(task.plannedWeek) === currentWeekKey).length;
 
   suite.assert(result.ok, 'Accelerated athlete generation should succeed');
   ['TST-01', 'ATH-01', 'AID-08', 'VIS-01', 'VIS-05', 'PRT-01']
@@ -170,6 +179,12 @@ suite.test('accelerated athlete plan applies modules, actual deadlines, FAFSA av
     });
   suite.assertEqual(submit.dueDate.getTime(), actualDeadline.getTime(),
     'Actual college deadline should override the later working target');
+  suite.assert(earlyStrategy.calculatedDate < today && earlyStrategy.dueDate >= today,
+    'Late-start work should retain its ideal date and receive an actionable effective date');
+  suite.assert(earlyStrategy.scheduleFlag.includes('Adaptive late-start date'),
+    'Adaptive compression should remain visible instead of hiding the late start');
+  suite.assert(plannedWeeks.size >= 8 && currentWeekCount < result.tasks.length / 2,
+    'A 90-day plan should distribute work across the remaining window instead of one backlog week');
   suite.assert(fafsaAccess.dueDate < config.fafsaAvailabilityDate,
     'FAFSA access preparation should precede availability');
   suite.assert(fafsaSubmit.dueDate >= config.fafsaAvailabilityDate,
@@ -183,6 +198,10 @@ suite.test('accelerated athlete plan applies modules, actual deadlines, FAFSA av
   result.tasks.forEach((task) => {
     suite.assert(task.taskId && task.owner && task.dueDate && task.deliverable,
       `${task.taskId} should have identity, owner, schedule, and deliverable`);
+    suite.assert(
+      task.applicabilityRule && task.scheduleRule && task.scheduleAnchor &&
+        task.offsetWindow && task.calculatedDate && task.effectiveDate,
+      `${task.taskId} should expose applicability, schedule rule, anchor, offset, and effective date`);
     suite.assert(task.adjustedEffortMinutes > 0, `${task.taskId} should have effort`);
   });
 });
@@ -201,6 +220,36 @@ suite.test('disabled modules are excluded instead of requiring users to delete m
   suite.assert(!prefixes.includes('PRT'), 'Portfolio tasks should not be instantiated');
   suite.assert(!result.tasks.some((task) => task.templateId === 'AID-08'),
     'CSS tasks should not be instantiated');
+});
+
+suite.test('professional ownership and optional support adapt independently', () => {
+  const deadline = date(2026, 10, 28);
+  const context = {colleges: [college('C1', 'Support University', deadline)]};
+  const unsupported = CollegeTools.TaskPlanner.generatePlan(
+    baseConfig(deadline), context, date(2026, 7, 30));
+  suite.assertEqual(taskByTemplate(unsupported.tasks, 'ESS-06').ownerRole, 'Shared',
+    'Required professional-owned work should fall back when no professional owns it');
+  suite.assertEqual(taskByTemplate(unsupported.tasks, 'ESS-03').supportRole, '',
+    'Optional professional support should be absent when unavailable');
+
+  const supportOnlyConfig = baseConfig(deadline);
+  supportOnlyConfig.modules['Professional Support'] = true;
+  const supportOnly = CollegeTools.TaskPlanner.generatePlan(
+    supportOnlyConfig, context, date(2026, 7, 30));
+  suite.assertEqual(taskByTemplate(supportOnly.tasks, 'ESS-06').ownerRole, 'Shared',
+    'Support availability alone should not transfer accountable ownership');
+  suite.assertEqual(
+    taskByTemplate(supportOnly.tasks, 'ESS-03').supportRole,
+    'Counselor/Professional',
+    'Available professional support should remain visible on student-owned tasks');
+
+  const ownerConfig = baseConfig(deadline);
+  ownerConfig.counselorAvailable = true;
+  ownerConfig.roleNames['Counselor/Professional'] = 'Private Counselor';
+  const owned = CollegeTools.TaskPlanner.generatePlan(
+    ownerConfig, context, date(2026, 7, 30));
+  suite.assertEqual(taskByTemplate(owned.tasks, 'ESS-06').owner, 'Private Counselor',
+    'A participating professional should own catalog work assigned to that role');
 });
 
 suite.test('application-round defaults are labeled and used only when authoritative dates are absent', () => {
@@ -227,6 +276,35 @@ suite.test('application-round defaults are labeled and used only when authoritat
     'Derived round dates should explicitly require manual confirmation');
 });
 
+suite.test('authoritative college dates outrank working targets and unrelated action dates', () => {
+  const workingTarget = date(2026, 10, 1);
+  const actualDeadline = date(2026, 11, 1);
+  const context = {
+    colleges: [college('C1', 'Authoritative University', actualDeadline, {
+      aidDeadline: date(2026, 11, 15),
+      meritDeadline: date(2026, 11, 10),
+    })],
+    scholarships: [{
+      id: 'SCH1', scholarshipId: 'SCH1', scholarshipName: 'Unrelated Award',
+      deadline: date(2026, 8, 1),
+    }],
+    contacts: [{
+      id: 'RC1', contactId: 'RC1', collegeId: 'C1',
+      collegeName: 'Authoritative University', nextFollowUp: date(2026, 8, 2),
+    }],
+  };
+  const result = CollegeTools.TaskPlanner.generatePlan(
+    baseConfig(workingTarget), context, date(2026, 7, 30));
+  const submission = taskByTemplate(result.tasks, 'SUB-03', 'C1');
+
+  suite.assertEqual(result.firstDeadline.getTime(), actualDeadline.getTime(),
+    'Coach follow-ups, outside scholarships, and earlier family targets should not replace hard college dates');
+  suite.assertEqual(submission.dueDate.getTime(), actualDeadline.getTime(),
+    'A college-specific submission should keep its authoritative deadline');
+  suite.assertEqual(submission.dateSource, 'College application deadline',
+    'The schedule should record the authoritative source it actually used');
+});
+
 suite.test('reconfiguration preserves completed/manual work, locks, notes, and stable identity', () => {
   const today = date(2026, 7, 30);
   const deadline = date(2026, 10, 28);
@@ -246,6 +324,8 @@ suite.test('reconfiguration preserves completed/manual work, locks, notes, and s
   const athletic = taskByTemplate(existing, 'ATH-01');
   athletic.status = 'Complete';
   athletic.notes = 'Marks verified';
+  const pendingAthletic = taskByTemplate(existing, 'ATH-02');
+  pendingAthletic.notes = 'Resume drafting notes';
   existing.push({
     taskId: 'MANUAL::1', templateId: '', task: 'Call school office',
     owner: 'Parent', ownerRole: 'Parent/Guardian', status: 'Ready',
@@ -257,6 +337,7 @@ suite.test('reconfiguration preserves completed/manual work, locks, notes, and s
   const reconciled = CollegeTools.TaskPlanner.reconcile(second.tasks, existing);
   const preserved = reconciled.tasks.find((task) => task.taskId === locked.taskId);
   const archivedAthletic = reconciled.tasks.find((task) => task.taskId === athletic.taskId);
+  const archivedPending = reconciled.tasks.find((task) => task.taskId === pendingAthletic.taskId);
 
   suite.assertEqual(preserved.status, 'Complete', 'Completed state should survive regeneration');
   suite.assertEqual(preserved.notes, 'Verified with official calculator', 'Notes should survive');
@@ -267,10 +348,21 @@ suite.test('reconfiguration preserves completed/manual work, locks, notes, and s
     'Completed disabled-module task should remain a completed audit record');
   suite.assert(archivedAthletic.archivedReason,
     'Removed generated work should be archived with a reason');
+  suite.assertEqual(archivedPending.status, 'Skipped',
+    'Incomplete removed module work should be system-archived as Skipped');
   suite.assert(reconciled.tasks.some((task) => task.taskId === 'MANUAL::1'),
     'Manual tasks should survive regeneration');
   suite.assertEqual(new Set(reconciled.tasks.map((task) => task.taskId)).size,
     reconciled.tasks.length, 'Reconfiguration should never duplicate task instances');
+
+  const restoredGeneration = CollegeTools.TaskPlanner.generatePlan(config, context, today);
+  const restored = CollegeTools.TaskPlanner.reconcile(
+    restoredGeneration.tasks, reconciled.tasks).tasks;
+  const restoredPending = restored.find((task) => task.taskId === pendingAthletic.taskId);
+  suite.assert(!restoredPending.archivedReason && restoredPending.status !== 'Skipped',
+    'Re-enabled system-archived work should become active again');
+  suite.assertEqual(restoredPending.notes, 'Resume drafting notes',
+    'Reactivation should retain task notes');
 });
 
 suite.test('college rename keeps college-scoped task identity and user data through stable College ID', () => {
@@ -352,6 +444,68 @@ suite.test('reliable tracker evidence completes tasks while ambiguous evidence o
     item.taskId === 'SUB-04::C1'), 'Portal-only evidence should require confirmation');
   suite.assertEqual(taskByTemplate(ambiguous.tasks, 'SUB-04', 'C1').status, 'Not Started',
     'Ambiguous evidence should not auto-complete a task');
+
+  const manuallyCorrected = applied.tasks.map((task) => Object.assign({}, task));
+  const correctedSubmission = taskByTemplate(manuallyCorrected, 'SUB-03', 'C1');
+  correctedSubmission.status = 'In Progress';
+  const retained = CollegeTools.TaskPlanner.applyEvidence(
+    manuallyCorrected, context, date(2026, 10, 22));
+  suite.assertEqual(taskByTemplate(retained.tasks, 'SUB-03', 'C1').status, 'In Progress',
+    'A manual correction to an evidence-derived status should survive later synchronization');
+  suite.assert(retained.suggestions.some((item) =>
+    item.taskId === 'SUB-03::C1' && item.source.includes('Manual status override')),
+  'The workbook should report when canonical evidence still disagrees with a manual correction');
+});
+
+suite.test('financial, scholarship, visit, and recruiting trackers provide attributable completion evidence', () => {
+  const deadline = date(2026, 10, 28);
+  const config = baseConfig(deadline);
+  config.modules['CSS Profile'] = true;
+  config.modules['Athletic Recruiting'] = true;
+  config.modules.Visits = true;
+  const context = {
+    colleges: [college('C1', 'Tracker University', deadline)],
+    scholarships: [{
+      id: 'SCH1', scholarshipId: 'SCH1', scholarshipName: 'Tracker Award',
+      deadline: date(2026, 9, 1), submittedDate: date(2026, 8, 20),
+      decisionDate: date(2026, 9, 20), awardStatus: 'Awarded',
+    }],
+    visits: [{
+      id: 'V1', visitId: 'V1', collegeId: 'C1',
+      collegeName: 'Tracker University', visitDate: date(2026, 8, 15),
+    }],
+    contacts: [{
+      id: 'RC1', contactId: 'RC1', collegeId: 'C1',
+      collegeName: 'Tracker University',
+      questionnaireDate: date(2026, 8, 5),
+      initialOutreachDate: date(2026, 8, 6),
+      response: 'Interested',
+      lastContact: date(2026, 8, 8),
+      nextFollowUp: date(2026, 8, 15),
+    }],
+    fafsaSubmitted: true,
+    cssProfileSubmitted: true,
+  };
+  const generated = CollegeTools.TaskPlanner.generatePlan(
+    config, context, date(2026, 7, 30));
+  const applied = CollegeTools.TaskPlanner.applyEvidence(
+    generated.tasks, context, date(2026, 9, 21));
+  [
+    ['AID-06', 'GLOBAL'],
+    ['AID-10', 'GLOBAL'],
+    ['SCH-06', 'SCH1'],
+    ['SCH-07', 'SCH1'],
+    ['VIS-04', 'V1'],
+    ['ATH-07', 'C1'],
+    ['ATH-08', 'RC1'],
+    ['ATH-09', 'RC1'],
+  ].forEach(([templateId, scopeId]) => {
+    const task = taskByTemplate(applied.tasks, templateId, scopeId);
+    suite.assertEqual(task.status, 'Complete',
+      `${templateId} should complete from its canonical tracker`);
+    suite.assert(task.evidenceSource,
+      `${templateId} should retain attributable completion evidence`);
+  });
 });
 
 suite.test('views cap current actions, report rolling work, and apply week-specific capacity overrides', () => {
@@ -395,6 +549,13 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   suite.assertEqual(setup.templateCount, 100, 'Setup should render all 100 templates');
   suite.assert(templates.isSheetHidden(), 'Template sheet should be system-hidden');
   suite.assertEqual(tasks.getLastRow(), 1, 'Blank template should not preload family tasks');
+  suite.assertEqual(tasks.getMaxRows(), 200,
+    'Tasks should use a bounded working surface instead of the default thousand rows');
+  suite.assert(tasks.getFilter(), 'Tasks should provide a table filter');
+  suite.assertEqual(tasks.getFilter().getRange().getNumRows(), tasks.getMaxRows(),
+    'The task filter should cover the bounded task surface');
+  suite.assert(tasks.getRange(1, columnOf(tasks, 'Task ID')).getNote().includes('Stable identity'),
+    'Task headers should explain preservation behavior');
   suite.assert(!mockSpreadsheet.getSheetByName(
     CollegeTools.Config.SHEET_NAMES.RECRUITING_TRACKER),
   'Recruiting Tracker should not exist while recruiting is disabled');
@@ -416,11 +577,79 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   const generatedTasks = CollegeTools.TaskManagement.readTasks();
 
   suite.assert(generated.ok && generated.taskCount > 0, 'Workbook plan generation should succeed');
+  suite.assertEqual(
+    generated.applicableTemplateCount + generated.excludedTemplateCount, 100,
+    'Generation should report included and excluded catalog counts');
   suite.assert(recruiting, 'Recruiting Tracker should be created when enabled');
   suite.assert(generatedTasks.some((task) => task.templateId === 'ATH-01'),
     'Enabled recruiting tasks should be written to canonical Tasks');
   suite.assertEqual(thisWeek.getRange(1, 1).getValue(), 'Task ID',
     'This Week should be generated from Tasks with its own tab');
+
+  const unchangedPreview = CollegeTools.TaskManagement.previewTaskPlan();
+  suite.assertEqual(unchangedPreview.preview.add, 0,
+    'Preview after generation should not propose duplicate additions');
+  suite.assertEqual(unchangedPreview.preview.archive, 0,
+    'Preview after generation should not archive unchanged work');
+  suite.assertEqual(unchangedPreview.preview.update, 0,
+    'An unchanged workbook should produce an idempotent no-update preview');
+});
+
+suite.test('custom tasks receive stable IDs and participate in weekly and effort views', () => {
+  setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  const tasks = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
+  const plannedWeek = CollegeTools.TaskPlanner.startOfWeek(new Date());
+  const customValues = {
+    Workstream: 'Family Logistics',
+    Stage: 'Our Stage',
+    Module: 'Family Custom',
+    Task: 'Arrange custom family transportation',
+    Owner: 'Grandparent',
+    'Owner Role': 'Custom',
+    'Planned Week': plannedWeek,
+    'Effort Override (min)': 90,
+    Notes: 'Keep this family-specific note',
+  };
+  Object.keys(customValues).forEach((header) => {
+    tasks.getRange(2, columnOf(tasks, header)).setValue(customValues[header]);
+  });
+
+  CollegeTools.TaskManagement.refreshTaskViews();
+  const firstId = tasks.getRange(2, columnOf(tasks, 'Task ID')).getValue();
+  const custom = CollegeTools.TaskManagement.readTasks()[0];
+  const thisWeek = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.THIS_WEEK);
+  const rendered = thisWeek.getRange(
+    1, 1, thisWeek.getLastRow(), Math.max(2, thisWeek.getLastColumn())).getValues();
+
+  suite.assert(/^MANUAL::/.test(firstId),
+    'The first refresh should persist a stable ID for a newly entered custom task');
+  suite.assertEqual(custom.taskId, firstId, 'Subsequent reads should reuse the persisted ID');
+  suite.assertEqual(custom.status, 'Ready', 'A new custom task should receive a usable default status');
+  suite.assertEqual(tasks.getRange(2, columnOf(tasks, 'Status')).getValue(), 'Ready',
+    'First refresh should persist custom-task defaults in the canonical row');
+  suite.assertEqual(tasks.getRange(2, columnOf(tasks, 'Generated')).getValue(), 'No',
+    'Custom tasks should be visibly distinguished from system-generated work');
+  suite.assertEqual(custom.module, 'Family Custom', 'Custom categories should remain free-form');
+  suite.assertEqual(custom.adjustedEffortMinutes, 90,
+    'A custom task effort override should feed workload calculations');
+  suite.assert(rendered.some((row) => row.includes('Arrange custom family transportation')),
+    'A custom task planned for the current week should appear in This Week');
+  suite.assert(rendered.some((row) => row.includes('Effort By Module / Custom Category')),
+    'The generated report should expose custom-category effort');
+  suite.assert(rendered.some((row) => row[0] === 'Family Custom' && row[1] === 1.5),
+    'Custom effort should contribute to the generated category dashboard');
+
+  setSetting('Working First Application Deadline', date(2026, 11, 1));
+  CollegeTools.TaskManagement.generateTaskPlan();
+  CollegeTools.TaskManagement.setupTaskManagement();
+  CollegeTools.TaskManagement.repairTaskManagement();
+  const afterRepair = CollegeTools.TaskManagement.readTasks().find((task) => task.taskId === firstId);
+  suite.assert(afterRepair, 'Custom tasks should survive generation, setup, and repair');
+  suite.assertEqual(afterRepair.notes, 'Keep this family-specific note',
+    'Custom task notes should survive generation, setup, and repair');
+  suite.assertEqual(afterRepair.module, 'Family Custom',
+    'Custom categories should survive generation, setup, and repair');
 });
 
 suite.test('task context honors Colleges row-2 headers and row-3 data start', () => {
@@ -439,6 +668,34 @@ suite.test('task context honors Colleges row-2 headers and row-3 data start', ()
     'Stable College ID backfill should target the row-3 data row');
   suite.assertEqual(colleges.getRange(2, idColumn).getValue(), 'College ID',
     'College ID backfill must preserve the row-2 header');
+});
+
+suite.test('supplemental prompt inventory creates stable per-prompt essay work', () => {
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, columnOf(colleges, 'College Name', 2)).setValue('Prompt University');
+  const timeline = mockSpreadsheet.getSheetByName(
+    CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+  timeline.getRange(2, columnOf(timeline, 'College Name')).setValue('Prompt University');
+  timeline.getRange(2, columnOf(timeline, 'Application Deadline')).setValue(date(2026, 11, 1));
+  timeline.getRange(2, columnOf(timeline, 'Supplemental Essays Required (#)')).setValue(2);
+  timeline.getRange(2, columnOf(timeline, 'Supplemental Prompts / Topics'))
+    .setValue('Why this college?||Describe your community');
+
+  const context = CollegeTools.TaskManagement.buildContextFromWorkbook();
+  const generated = CollegeTools.TaskPlanner.generatePlan(
+    baseConfig(date(2026, 11, 1)), context, date(2026, 7, 30));
+  const drafts = generated.tasks.filter((task) => task.templateId === 'ESS-08');
+
+  suite.assertEqual(context.prompts.length, 2,
+    'Two recorded prompts should become two planning scopes');
+  suite.assertEqual(drafts.length, 2, 'Essay drafting should instantiate once per prompt');
+  suite.assertEqual(new Set(drafts.map((task) => task.taskId)).size, 2,
+    'Per-prompt task IDs should be stable and distinct from prompt wording');
+
+  timeline.getRange(2, columnOf(timeline, 'Supplemental Essays Required (#)')).setValue(0);
+  timeline.getRange(2, columnOf(timeline, 'Supplemental Prompts / Topics')).setValue('');
+  suite.assertEqual(CollegeTools.TaskManagement.buildContextFromWorkbook().prompts.length, 0,
+    'An explicit zero should suppress supplemental essay tasks for that college');
 });
 
 suite.test('sheet regeneration preserves task notes, completion, locks, and custom columns by Task ID', () => {
@@ -461,6 +718,16 @@ suite.test('sheet regeneration preserves task notes, completion, locks, and cust
   tasks.getRange(2, ownerLockedColumn).setValue('Yes');
   tasks.getRange(2, customColumn).setFormula('="Keep this"');
 
+  const rowWidth = tasks.getLastColumn();
+  const firstTwoValues = tasks.getRange(2, 1, 2, rowWidth).getValues();
+  const firstTwoFormulas = tasks.getRange(2, 1, 2, rowWidth).getFormulas();
+  const rowsWithFormulas = firstTwoValues.map((row, rowIndex) => row.map((value, columnIndex) =>
+    firstTwoFormulas[rowIndex][columnIndex] || value));
+  tasks.getRange(2, 1, 2, rowWidth).setValues(rowsWithFormulas.reverse());
+
+  CollegeTools.TaskManagement.refreshTaskViews();
+  CollegeTools.TaskManagement.setupTaskManagement();
+  CollegeTools.TaskManagement.repairTaskManagement();
   CollegeTools.TaskManagement.generateTaskPlan();
   const rows = CollegeTools.TaskManagement.readTasks();
   const idsAfterRegeneration = rows.map((task) => task.taskId);
@@ -474,7 +741,8 @@ suite.test('sheet regeneration preserves task notes, completion, locks, and cust
   suite.assertEqual(preserved.notes, 'Family verification note', 'Notes should survive regeneration');
   suite.assert(preserved.ownerLocked, 'Owner lock should survive regeneration');
   suite.assertEqual(tasks.getRange(preservedRow, columnOf(tasks, 'Private Check')).getFormula(),
-    '="Keep this"', 'Custom-column formulas should follow stable Task ID through rewrites');
+    '="Keep this"',
+    'Custom-column formulas should follow stable Task ID through sort, setup, repair, and regeneration');
   suite.assertEqual(new Set(idsAfterRegeneration).size, idsAfterRegeneration.length,
     'Repeated sheet generation should remain idempotent without duplicate task instances');
 });
@@ -507,6 +775,42 @@ suite.test('sheet tracker synchronization applies reliable completion and keeps 
   suite.assert(recruiting.isSheetHidden(), 'Disabled recruiting tracker should be hidden, not deleted');
   suite.assertEqual(recruiting.getRange(2, columnOf(recruiting, 'Notes')).getValue(),
     'Preserve coach notes', 'Disabling recruiting should preserve tracker notes');
+});
+
+suite.test('recruiting tracker supports multiple stable coach contacts per college', () => {
+  const {colleges} = setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  setSetting('Working First Application Deadline', date(2026, 10, 28));
+  setSetting('Athletic Recruiting Enabled', 'Yes');
+  colleges.getRange(3, columnOf(colleges, 'College Name', 2)).setValue('Two Coach University');
+  CollegeTools.TaskManagement.generateTaskPlan();
+  const collegeId = colleges.getRange(3, columnOf(colleges, 'College ID', 2)).getValue();
+  const recruiting = mockSpreadsheet.getSheetByName(
+    CollegeTools.Config.SHEET_NAMES.RECRUITING_TRACKER);
+
+  [2, 3].forEach((row, index) => {
+    recruiting.getRange(row, columnOf(recruiting, 'College ID')).setValue(collegeId);
+    recruiting.getRange(row, columnOf(recruiting, 'College Name')).setValue('Two Coach University');
+    recruiting.getRange(row, columnOf(recruiting, 'Coach/Contact Name'))
+      .setValue(index === 0 ? 'Head Coach' : 'Event Coach');
+    recruiting.getRange(row, columnOf(recruiting, 'Next Follow-Up'))
+      .setValue(date(2026, 8, 10 + index));
+  });
+
+  CollegeTools.TaskManagement.generateTaskPlan();
+  const context = CollegeTools.TaskManagement.buildContextFromWorkbook();
+  const ids = context.contacts.map((contact) => contact.contactId);
+  const outreach = CollegeTools.TaskManagement.readTasks().filter((task) =>
+    task.templateId === 'ATH-08' && !task.archivedReason);
+
+  suite.assertEqual(context.contacts.length, 2,
+    'Two coach rows for one college should remain distinct contacts');
+  suite.assertEqual(new Set(ids).size, 2, 'Every coach contact should receive a stable unique ID');
+  suite.assertEqual(outreach.length, 2, 'Contact-scoped outreach should generate once per coach');
+  recruiting.getRange(3, columnOf(recruiting, 'Coach/Contact Name')).setValue('Renamed Event Coach');
+  const renamedContext = CollegeTools.TaskManagement.buildContextFromWorkbook();
+  suite.assertEqual(renamedContext.contacts[1].contactId, ids[1],
+    'Editing a coach name should not replace the stable contact identity');
 });
 
 const success = suite.summary();

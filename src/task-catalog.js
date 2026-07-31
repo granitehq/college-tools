@@ -280,12 +280,36 @@ CollegeTools.TaskCatalog = (function() {
   };
 
   /**
+   * Describes the milestone source a template expects before runtime selects
+   * the authoritative date for a particular family or college.
+   * @param {string} templateId - Template ID
+   * @param {string} scope - Template scope
+   * @returns {string} Schedule anchor description
+   */
+  function scheduleAnchor_(templateId, scope) {
+    if (scope === 'recurring') return 'Rolling 90-day week';
+    if (scope === 'scholarship') return 'Scholarship deadline';
+    if (scope === 'contact') return 'Recruiting next action';
+    if (scope === 'visit') return 'Visit date';
+    if (scope === 'interview') return 'Interview date';
+    if (scope === 'portfolio') return 'Portfolio or application deadline';
+    if (scope === 'prompt') return 'College application deadline';
+    if (templateId.indexOf('AID-') === 0) return 'Aid availability or priority deadline';
+    if (templateId.indexOf('SCH-') === 0) return 'Merit, honors, or scholarship deadline';
+    if (scope === 'college') return 'College-specific authoritative deadline';
+    return 'Earliest relevant college deadline';
+  }
+
+  /**
    * Converts the compact catalog rows to immutable-style template objects.
    * @returns {Array<Object>} Task templates
    */
   function getTemplates() {
     return ROWS.map(function(row) {
       var prefix = row[0].split('-')[0];
+      var scope = SCOPES[row[0]] || 'global';
+      var offsetDays = Object.prototype.hasOwnProperty.call(OFFSET_OVERRIDES, row[0]) ?
+        OFFSET_OVERRIDES[row[0]] : DEFAULT_OFFSETS[prefix];
       return {
         templateId: row[0],
         task: row[1],
@@ -297,9 +321,13 @@ CollegeTools.TaskCatalog = (function() {
         workstream: WORKSTREAMS[prefix],
         stage: STAGE_BY_PREFIX[prefix],
         module: OPTIONAL_MODULES[row[0]] || 'Core',
-        scope: SCOPES[row[0]] || 'global',
-        offsetDays: Object.prototype.hasOwnProperty.call(OFFSET_OVERRIDES, row[0]) ?
-          OFFSET_OVERRIDES[row[0]] : DEFAULT_OFFSETS[prefix],
+        scope: scope,
+        scheduleRule: scope === 'recurring' ? 'Weekly recurrence' : 'Milestone offset',
+        scheduleAnchor: scheduleAnchor_(row[0], scope),
+        offsetDays: offsetDays,
+        offsetWindow: scope === 'recurring' ? 'Weekly inside rolling 90 days' :
+          (offsetDays === 0 ? 'On anchor date' :
+            Math.abs(offsetDays) + ' days ' + (offsetDays < 0 ? 'before' : 'after') + ' anchor'),
         dependencies: (DEPENDENCIES[row[0]] || []).slice(),
         resourceLinks: RESOURCE_LINKS[row[0]] || '',
       };
@@ -317,7 +345,8 @@ CollegeTools.TaskCatalog = (function() {
     templates.forEach(function(template) {
       if (seen[template.templateId]) errors.push('Duplicate template: ' + template.templateId);
       seen[template.templateId] = true;
-      ['task', 'ownerRole', 'applicability', 'deliverable', 'workstream', 'stage', 'scope']
+      ['task', 'ownerRole', 'applicability', 'deliverable', 'workstream', 'stage',
+        'scope', 'scheduleRule', 'scheduleAnchor', 'offsetWindow']
         .forEach(function(field) {
           if (!template[field]) errors.push(template.templateId + ' missing ' + field);
         });

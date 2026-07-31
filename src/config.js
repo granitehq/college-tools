@@ -142,6 +142,7 @@ CollegeTools.Config = (function() {
     // columns so they keep surfacing in Dashboard's What's Due Next.
     APPLICATION_TIMELINE: [
       'College Name', 'Application Type (ED/ED2/EA/REA/RD)', 'Application Opens', 'Application Deadline',
+      'Supplemental Essays Required (#)', 'Supplemental Prompts / Topics',
       'Test Score Deadline', 'Transcript Deadline', 'Counselor Rec Deadline', 'Teacher Rec Deadline',
       'FAFSA Opens', 'Merit Scholarship Deadline',
       'Other Deadline 1 Date', 'Other Deadline 2 Date', 'Mid-Year Report Due', 'Decision Release Date',
@@ -179,9 +180,11 @@ CollegeTools.Config = (function() {
 
     TASKS: [
       'Task ID', 'Template ID', 'Workstream', 'Stage', 'Module', 'Scope Type',
-      'Scope ID', 'College', 'College ID', 'Task', 'Owner', 'Owner Role',
+      'Scope ID', 'College', 'College ID', 'Task', 'Applicability Rule',
+      'Schedule Rule', 'Schedule Anchor', 'Anchor Date', 'Offset / Window',
+      'Owner', 'Owner Role',
       'Owner Locked', 'Support Role', 'Calculated Date', 'Due Date',
-      'Date Source', 'Date Locked', 'Planned Week', 'Scheduled Block',
+      'Effective Date', 'Date Source', 'Date Locked', 'Planned Week', 'Scheduled Block',
       'Schedule Flag', 'Priority', 'Priority Override', 'Status', 'Dependencies', 'Blocked By',
       'Normal Effort (min)', 'Adjusted Effort (min)', 'Effort Override (min)',
       'Deliverable', 'Resource Links', 'Decision Needed', 'Evidence Source',
@@ -191,7 +194,8 @@ CollegeTools.Config = (function() {
 
     TASK_TEMPLATES: [
       'Template ID', 'Workstream', 'Stage', 'Module', 'Scope', 'Task',
-      'Owner Role', 'Support Role', 'Applicability / Anchor', 'Offset Days',
+      'Owner Role', 'Support Role', 'Applicability', 'Schedule Rule', 'Anchor',
+      'Offset / Window',
       'Dependencies', 'Effort (min)', 'Deliverable', 'Resource Links',
     ],
 

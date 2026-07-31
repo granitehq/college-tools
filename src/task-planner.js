@@ -286,11 +286,13 @@ CollegeTools.TaskPlanner = (function() {
    * @returns {Date|null} Earliest deadline
    */
   function earliestRelevantDeadline_(config, context) {
-    var dates = [config.workingDeadline];
+    var dates = [];
     (context.colleges || []).forEach(function(college) {
+      var roundDefault = college.applicationDeadline ? null :
+        applicationRoundDeadline_(college, config);
       dates.push(
         college.applicationDeadline,
-        applicationRoundDeadline_(college, config),
+        roundDefault,
         college.meritDeadline,
         college.honorsDeadline,
         college.aidDeadline,
@@ -301,13 +303,7 @@ CollegeTools.TaskPlanner = (function() {
         college.portfolioDeadline,
       );
     });
-    (context.scholarships || []).forEach(function(item) {
-      dates.push(item.deadline);
-    });
-    (context.contacts || []).forEach(function(item) {
-      dates.push(item.nextFollowUp);
-    });
-    return earliest(dates);
+    return earliest(dates) || config.workingDeadline;
   }
 
   /**
@@ -323,81 +319,125 @@ CollegeTools.TaskPlanner = (function() {
     var data = scope.data || {};
     var college = scope.collegeId ? findCollege_(context, scope.collegeId) : null;
     var id = template.templateId;
-    var candidates = [];
+    var date = null;
     var source = 'Working first-application target';
+    var roundDefault = college ? applicationRoundDeadline_(college, config) : null;
+    var collegeFallback = function() {
+      if (college && toDate(college.applicationDeadline)) {
+        return {date: toDate(college.applicationDeadline), source: 'College application deadline'};
+      }
+      if (roundDefault) {
+        return {
+          date: roundDefault,
+          source: 'Application-round default; confirm manually',
+        };
+      }
+      return {date: config.workingDeadline, source: source};
+    };
 
     if (template.scope === 'scholarship') {
-      candidates = [data.deadline, config.workingDeadline];
+      date = toDate(data.deadline) || config.workingDeadline;
       source = data.deadline ? 'Scholarship deadline' : source;
     } else if (template.scope === 'contact') {
-      candidates = [data.nextFollowUp, college && college.applicationDeadline, config.workingDeadline];
-      source = data.nextFollowUp ? 'Recruiting next action' : 'College application deadline';
-    } else if (template.scope === 'visit') {
-      candidates = [data.visitDate, college && college.applicationDeadline, config.workingDeadline];
-      source = data.visitDate ? 'Visit date' : 'College application deadline';
-    } else if (template.scope === 'interview') {
-      candidates = [data.interviewDate, college && college.applicationDeadline, config.workingDeadline];
-      source = data.interviewDate ? 'Interview date' : 'College application deadline';
-    } else if (template.scope === 'portfolio') {
-      candidates = [college && college.portfolioDeadline, college && college.applicationDeadline,
-        config.workingDeadline];
-      source = college && college.portfolioDeadline ? 'Portfolio deadline' : 'College application deadline';
-    } else if (template.scope === 'prompt') {
-      candidates = [data.applicationDeadline, college && college.applicationDeadline, config.workingDeadline];
-      source = data.applicationDeadline || (college && college.applicationDeadline) ?
-        'College application deadline' : source;
-    } else if (college) {
-      var roundDefault = applicationRoundDeadline_(college, config);
-      if (id.indexOf('AID-') === 0) {
-        candidates = [
-          college.aidDeadline, college.applicationDeadline, roundDefault, config.workingDeadline,
-        ];
-        source = college.aidDeadline ? 'College aid-priority deadline' : 'College application deadline';
-      } else if (id.indexOf('SCH-') === 0) {
-        candidates = [
-          college.meritDeadline, college.honorsDeadline, college.applicationDeadline,
-          roundDefault, config.workingDeadline,
-        ];
-        source = college.meritDeadline || college.honorsDeadline ?
-          'Merit or honors deadline' : 'College application deadline';
-      } else if (id === 'TST-06') {
-        candidates = [
-          college.testScoreDeadline, college.applicationDeadline, roundDefault,
-          config.workingDeadline,
-        ];
-        source = college.testScoreDeadline ? 'Test-score deadline' : 'College application deadline';
-      } else if (id === 'REC-07') {
-        candidates = [college.transcriptDeadline, college.teacherRecDeadline,
-          college.counselorRecDeadline, college.applicationDeadline, roundDefault,
-          config.workingDeadline];
-        source = 'Earliest school-document deadline';
+      if (toDate(data.nextFollowUp)) {
+        date = toDate(data.nextFollowUp);
+        source = 'Recruiting next action';
       } else {
-        candidates = [college.applicationDeadline, roundDefault, config.workingDeadline];
-        source = college.applicationDeadline ? 'College application deadline' :
-          (roundDefault ? 'Application-round default; confirm manually' : source);
+        var contactFallback = collegeFallback();
+        date = contactFallback.date;
+        source = contactFallback.source;
+      }
+    } else if (template.scope === 'visit') {
+      if (toDate(data.visitDate)) {
+        date = toDate(data.visitDate);
+        source = 'Visit date';
+      } else {
+        var visitFallback = collegeFallback();
+        date = visitFallback.date;
+        source = visitFallback.source;
+      }
+    } else if (template.scope === 'interview') {
+      if (toDate(data.interviewDate)) {
+        date = toDate(data.interviewDate);
+        source = 'Interview date';
+      } else {
+        var interviewFallback = collegeFallback();
+        date = interviewFallback.date;
+        source = interviewFallback.source;
+      }
+    } else if (template.scope === 'portfolio') {
+      if (college && toDate(college.portfolioDeadline)) {
+        date = toDate(college.portfolioDeadline);
+        source = 'Portfolio deadline';
+      } else {
+        var portfolioFallback = collegeFallback();
+        date = portfolioFallback.date;
+        source = portfolioFallback.source;
+      }
+    } else if (template.scope === 'prompt') {
+      if (toDate(data.applicationDeadline)) {
+        date = toDate(data.applicationDeadline);
+        source = 'College application deadline';
+      } else {
+        var promptFallback = collegeFallback();
+        date = promptFallback.date;
+        source = promptFallback.source;
+      }
+    } else if (college) {
+      if (id.indexOf('AID-') === 0) {
+        if (toDate(college.aidDeadline)) {
+          date = toDate(college.aidDeadline);
+          source = 'College aid-priority deadline';
+        }
+      } else if (id.indexOf('SCH-') === 0) {
+        date = earliest([college.meritDeadline, college.honorsDeadline]);
+        if (date) source = 'Merit or honors deadline';
+      } else if (id === 'TST-06') {
+        if (toDate(college.testScoreDeadline)) {
+          date = toDate(college.testScoreDeadline);
+          source = 'Test-score deadline';
+        }
+      } else if (id === 'REC-07') {
+        date = earliest([
+          college.transcriptDeadline, college.teacherRecDeadline, college.counselorRecDeadline,
+        ]);
+        if (date) source = 'Earliest school-document deadline';
+      }
+      if (!date) {
+        var fallback = collegeFallback();
+        date = fallback.date;
+        source = fallback.source;
       }
     } else if (id.indexOf('AID-') === 0) {
+      var aidDates = [];
       (context.colleges || []).forEach(function(item) {
-        candidates.push(item.aidDeadline);
+        aidDates.push(item.aidDeadline);
       });
-      candidates.push(config.workingDeadline);
-      source = earliest(candidates.slice(0, candidates.length - 1)) ?
-        'Earliest aid-priority deadline' : source;
+      date = earliest(aidDates);
+      if (date) source = 'Earliest aid-priority deadline';
+      if (!date) {
+        date = firstDeadline || config.workingDeadline;
+        source = firstDeadline ? 'Earliest relevant deadline' : source;
+      }
     } else if (id.indexOf('SCH-') === 0) {
+      var scholarshipDates = [];
       (context.colleges || []).forEach(function(item) {
-        candidates.push(item.meritDeadline, item.honorsDeadline);
+        scholarshipDates.push(item.meritDeadline, item.honorsDeadline);
       });
       (context.scholarships || []).forEach(function(item) {
-        candidates.push(item.deadline);
+        scholarshipDates.push(item.deadline);
       });
-      candidates.push(config.workingDeadline);
-      source = earliest(candidates.slice(0, candidates.length - 1)) ?
-        'Earliest merit, honors, or scholarship deadline' : source;
+      date = earliest(scholarshipDates);
+      if (date) source = 'Earliest merit, honors, or scholarship deadline';
+      if (!date) {
+        date = firstDeadline || config.workingDeadline;
+        source = firstDeadline ? 'Earliest relevant deadline' : source;
+      }
     } else {
-      candidates = [firstDeadline, config.workingDeadline];
+      date = firstDeadline || config.workingDeadline;
       source = firstDeadline ? 'Earliest relevant deadline' : source;
     }
-    return {date: earliest(candidates), source: source};
+    return {date: date, source: source};
   }
 
   /**
@@ -412,7 +452,9 @@ CollegeTools.TaskPlanner = (function() {
       ownerRole = 'Shared';
     }
     var support = template.supportRole;
-    if (support === 'Counselor/Professional' && !config.counselorAvailable) support = '';
+    var professionalSupport = config.counselorAvailable ||
+      config.modules['Professional Support'];
+    if (support === 'Counselor/Professional' && !professionalSupport) support = '';
     return {
       ownerRole: ownerRole,
       owner: config.roleNames[ownerRole] || ownerRole,
@@ -503,6 +545,105 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Adds a schedule flag without repeating an existing message.
+   * @param {Object} task - Task
+   * @param {string} message - Flag text
+   */
+  function appendScheduleFlag_(task, message) {
+    var current = (task.scheduleFlag || '').toString();
+    if (current.indexOf(message) !== -1) return;
+    task.scheduleFlag = current ? current + '; ' + message : message;
+  }
+
+  /**
+   * Maps an ideal long-lead schedule into the remaining application window.
+   * Calculated Date remains the ideal date; Due/Effective Date become the
+   * actionable late-start date. Fixed/event dates are never moved.
+   * @param {Array<Object>} tasks - Generated tasks
+   * @param {Date} today - Planning date
+   * @param {Date|null} firstDeadline - Earliest real/default deadline
+   */
+  function adaptLateStartSchedule_(tasks, today, firstDeadline) {
+    if (!firstDeadline || firstDeadline <= today) return;
+    var excludedTemplates = {'AID-02': true, 'AID-06': true, 'AID-07': true};
+    var eligible = tasks.filter(function(task) {
+      return task.scopeType !== 'recurring' && task.scheduleOffsetDays < 0 &&
+        !excludedTemplates[task.templateId] && task.calculatedDate &&
+        task.calculatedDate <= firstDeadline;
+    });
+    var idealStart = earliest(eligible.map(function(task) {
+      return task.calculatedDate;
+    }));
+    if (!idealStart || idealStart >= today) return;
+    var idealSpan = Math.max(1, firstDeadline.getTime() - idealStart.getTime());
+    var availableSpan = firstDeadline.getTime() - today.getTime();
+    eligible.forEach(function(task) {
+      var progress = (task.calculatedDate.getTime() - idealStart.getTime()) / idealSpan;
+      progress = Math.max(0, Math.min(1, progress));
+      var mapped = toDate(new Date(today.getTime() + Math.round(progress * availableSpan)));
+      var latestBeforeAnchor = task.anchorDate ? addDays(task.anchorDate, -1) : null;
+      if (latestBeforeAnchor && mapped > latestBeforeAnchor) mapped = latestBeforeAnchor;
+      if (mapped < today) {
+        mapped = today;
+        task.priority = 'Critical';
+        appendScheduleFlag_(task, 'Not feasible: required lead time is unavailable');
+      } else {
+        if (task.calculatedDate < today &&
+            (task.priority === 'Normal' || task.priority === 'Low')) {
+          task.priority = 'High';
+        }
+        appendScheduleFlag_(task,
+          'Adaptive late-start date; ideal was ' + dateKey(task.calculatedDate));
+      }
+      task.dueDate = mapped;
+      task.effectiveDate = mapped;
+      task.plannedWeek = startOfWeek(mapped);
+    });
+  }
+
+  /**
+   * Ensures non-fixed work does not precede its planned prerequisites. A
+   * dependency that cannot fit before a fixed/anchor date is flagged instead
+   * of moving the external deadline.
+   * @param {Array<Object>} tasks - Tasks with resolved dependencies
+   */
+  function alignDependencyDates_(tasks) {
+    var byId = {};
+    tasks.forEach(function(task) {
+      byId[task.taskId] = task;
+    });
+    for (var pass = 0; pass < tasks.length; pass++) {
+      var changed = false;
+      tasks.forEach(function(task) {
+        var latestDependencyDate = null;
+        (task.dependencies || []).forEach(function(dependencyId) {
+          var dependency = byId[dependencyId];
+          var dependencyDate = dependency && toDate(dependency.dueDate);
+          if (dependencyDate &&
+              (!latestDependencyDate || dependencyDate > latestDependencyDate)) {
+            latestDependencyDate = dependencyDate;
+          }
+        });
+        var dueDate = toDate(task.dueDate);
+        if (!latestDependencyDate || !dueDate || latestDependencyDate <= dueDate) return;
+        var cannotMove = task.scheduleOffsetDays === 0 ||
+          (task.anchorDate && latestDependencyDate >= task.anchorDate);
+        if (cannotMove) {
+          task.priority = 'Critical';
+          appendScheduleFlag_(task, 'Dependency conflict: prerequisite is planned after fixed date');
+          return;
+        }
+        task.dueDate = new Date(latestDependencyDate.getTime());
+        task.effectiveDate = new Date(latestDependencyDate.getTime());
+        task.plannedWeek = startOfWeek(latestDependencyDate);
+        appendScheduleFlag_(task, 'Adjusted after prerequisite');
+        changed = true;
+      });
+      if (!changed) break;
+    }
+  }
+
+  /**
    * Generates the complete applicable task roadmap.
    * @param {Object} rawConfig - Family configuration
    * @param {Object=} context - Colleges, deadlines, opportunities, and contacts
@@ -562,6 +703,22 @@ CollegeTools.TaskPlanner = (function() {
           calculatedDate = aidReviewTarget < reviewTarget ? reviewTarget : aidReviewTarget;
           base.source = 'FAFSA submission window and earliest aid-priority deadline';
         }
+        var offsetWindow = template.offsetWindow;
+        if (base.source === 'Recruiting next action') {
+          if (template.templateId === 'ATH-08') {
+            calculatedDate = addDays(base.date, -7);
+            offsetWindow = '7 days before recruiting next action';
+          } else if (template.templateId === 'ATH-09') {
+            calculatedDate = addDays(base.date, -1);
+            offsetWindow = '1 day before recruiting next action';
+          } else if (template.templateId === 'ATH-10') {
+            calculatedDate = base.date;
+            offsetWindow = 'On recruiting next-action date';
+          }
+        }
+        var scheduleOffsetDays = base.date && calculatedDate ?
+          Math.round((calculatedDate.getTime() - base.date.getTime()) / DAY_MS) :
+          template.offsetDays;
         var id = taskId_(template.templateId, scope);
         var owner = ownerFor_(template, config);
         var effort = effortFor_(template, owner, config, id);
@@ -584,12 +741,19 @@ CollegeTools.TaskPlanner = (function() {
           college: scope.collegeName,
           collegeId: scope.collegeId,
           task: title,
+          applicabilityRule: template.applicability,
+          scheduleRule: template.scheduleRule,
+          scheduleAnchor: base.source,
+          anchorDate: base.date,
+          offsetWindow: offsetWindow,
+          scheduleOffsetDays: scheduleOffsetDays,
           owner: owner.owner,
           ownerRole: owner.ownerRole,
           ownerLocked: false,
           supportRole: owner.supportRole,
           calculatedDate: calculatedDate,
           dueDate: calculatedDate,
+          effectiveDate: calculatedDate,
           dateSource: base.source,
           dateLocked: false,
           plannedWeek: calculatedDate ? startOfWeek(calculatedDate < today ? today : calculatedDate) : null,
@@ -615,6 +779,8 @@ CollegeTools.TaskPlanner = (function() {
         });
       });
     });
+
+    adaptLateStartSchedule_(tasks, today, firstDeadline);
 
     var taskById = {};
     var tasksByTemplate = {};
@@ -653,6 +819,10 @@ CollegeTools.TaskPlanner = (function() {
       });
       if (!task.dependencies.length) task.status = 'Ready';
     });
+    alignDependencyDates_(tasks);
+    tasks.forEach(function(task) {
+      delete task.scheduleOffsetDays;
+    });
     var dependentCounts = {};
     tasks.forEach(function(task) {
       task.dependencies.forEach(function(dependencyTaskId) {
@@ -669,14 +839,16 @@ CollegeTools.TaskPlanner = (function() {
     });
 
     tasks.sort(compareTasks_);
+    var applicableTemplateCount = templates.filter(function(template) {
+      return templateEnabled_(template, config, today, firstDeadline);
+    }).length;
     return {
       ok: true,
       code: 'plan_generated',
       tasks: tasks,
       templateCount: validation.count,
-      applicableTemplateCount: templates.filter(function(template) {
-        return templateEnabled_(template, config, today, firstDeadline);
-      }).length,
+      applicableTemplateCount: applicableTemplateCount,
+      excludedTemplateCount: validation.count - applicableTemplateCount,
       firstDeadline: firstDeadline,
       today: today,
       config: config,
@@ -712,6 +884,17 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Removes sheet-location metadata before preview comparisons.
+   * @param {Object} task - Task model
+   * @returns {Object} Comparable copy
+   */
+  function comparableTask_(task) {
+    var comparable = copyTask_(task);
+    delete comparable._sourceRow;
+    return comparable;
+  }
+
+  /**
    * Merges a regenerated task with preserved user-owned fields.
    * @param {Object} generated - New generated task
    * @param {Object} existing - Existing task
@@ -720,7 +903,7 @@ CollegeTools.TaskPlanner = (function() {
   function mergeTask_(generated, existing) {
     var merged = copyTask_(generated);
     var alwaysPreserve = [
-      'status', 'notes', 'evidenceSource', 'completionDate', 'manuallySelected',
+      'notes', 'evidenceSource', 'completionDate', 'manuallySelected',
       'resourceLinks', 'priorityOverride', 'effortOverrideMinutes', 'scheduledBlock',
     ];
     alwaysPreserve.forEach(function(field) {
@@ -728,6 +911,9 @@ CollegeTools.TaskPlanner = (function() {
         merged[field] = existing[field];
       }
     });
+    var systemArchivedSkip = existing.status === 'Skipped' && !!existing.archivedReason &&
+      asBoolean(existing.generated, false);
+    if (!systemArchivedSkip && existing.status) merged.status = existing.status;
     if (asBoolean(existing.ownerLocked, false)) {
       merged.owner = existing.owner;
       merged.ownerRole = existing.ownerRole;
@@ -735,6 +921,7 @@ CollegeTools.TaskPlanner = (function() {
     }
     if (asBoolean(existing.dateLocked, false)) {
       merged.dueDate = existing.dueDate;
+      merged.effectiveDate = existing.dueDate;
       merged.plannedWeek = existing.plannedWeek;
       merged.dateLocked = true;
     }
@@ -746,7 +933,8 @@ CollegeTools.TaskPlanner = (function() {
 
     if (existing.status === 'Complete') {
       // Completed work is an audit record: keep its effective execution fields.
-      ['task', 'owner', 'ownerRole', 'supportRole', 'dueDate', 'plannedWeek',
+      ['task', 'owner', 'ownerRole', 'supportRole', 'dueDate', 'effectiveDate',
+        'plannedWeek',
         'adjustedEffortMinutes', 'deliverable'].forEach(function(field) {
         if (existing[field] !== '' && existing[field] !== null && existing[field] !== undefined) {
           merged[field] = existing[field];
@@ -818,8 +1006,6 @@ CollegeTools.TaskPlanner = (function() {
       if (Number(existing.adjustedEffortMinutes) !== Number(merged.adjustedEffortMinutes)) {
         preview.effortChanges++;
       }
-      var changed = JSON.stringify(merged) !== JSON.stringify(existing);
-      preview[changed ? 'update' : 'unchanged']++;
       tasks.push(merged);
     });
 
@@ -837,6 +1023,12 @@ CollegeTools.TaskPlanner = (function() {
       tasks.push(archived);
     });
     updateDependencyState_(tasks);
+    tasks.forEach(function(task) {
+      if (!generatedIds[task.taskId] || !existingById[task.taskId]) return;
+      var changed = JSON.stringify(comparableTask_(task)) !==
+        JSON.stringify(comparableTask_(existingById[task.taskId]));
+      preview[changed ? 'update' : 'unchanged']++;
+    });
     tasks.sort(compareTasks_);
     return {tasks: tasks, preview: preview};
   }
@@ -907,6 +1099,23 @@ CollegeTools.TaskPlanner = (function() {
     if (id === 'ATH-07' && data && data.questionnaireDate) {
       return {reliable: true, source: 'Recruiting Tracker: Questionnaire Submitted', date: data.questionnaireDate};
     }
+    if (id === 'ATH-07' && task.collegeId) {
+      var questionnaireContact = null;
+      (context.contacts || []).forEach(function(contact) {
+        if (!questionnaireContact &&
+            String(contact.collegeId || '') === String(task.collegeId) &&
+            contact.questionnaireDate) {
+          questionnaireContact = contact;
+        }
+      });
+      if (questionnaireContact) {
+        return {
+          reliable: true,
+          source: 'Recruiting Tracker: Questionnaire Submitted',
+          date: questionnaireContact.questionnaireDate,
+        };
+      }
+    }
     if (id === 'ATH-08' && data && data.initialOutreachDate) {
       return {reliable: true, source: 'Recruiting Tracker: Initial Outreach Date', date: data.initialOutreachDate};
     }
@@ -939,6 +1148,13 @@ CollegeTools.TaskPlanner = (function() {
         suggestions.push({taskId: copy.taskId, source: evidence.source});
         return copy;
       }
+      if (copy.evidenceSource && copy.status !== 'Complete') {
+        suggestions.push({
+          taskId: copy.taskId,
+          source: 'Manual status override retained; tracker still shows: ' + evidence.source,
+        });
+        return copy;
+      }
       copy.status = 'Complete';
       copy.evidenceSource = evidence.source;
       copy.completionDate = toDate(evidence.date) || today;
@@ -969,35 +1185,58 @@ CollegeTools.TaskPlanner = (function() {
     });
     var rolling90 = incomplete.filter(function(task) {
       var due = toDate(task.dueDate);
-      return !due || due <= horizonEnd;
+      var plannedWeek = toDate(task.plannedWeek);
+      return (!due && !plannedWeek) ||
+        (due && due <= horizonEnd) ||
+        (plannedWeek && plannedWeek <= horizonEnd);
     }).sort(compareTasks_);
+    var currentWeek = startOfWeek(today);
     var weeklyCandidates = incomplete.filter(function(task) {
       var due = toDate(task.dueDate);
+      var plannedWeek = toDate(task.plannedWeek);
       return task.status === 'Blocked' || task.status === 'Waiting' ||
         (!!task.blockedBy && due && due <= dueSoonEnd) ||
         asBoolean(task.decisionNeeded, false) || asBoolean(task.manuallySelected, false) ||
+        (plannedWeek && dateKey(startOfWeek(plannedWeek)) === dateKey(currentWeek)) ||
         (due && due <= weekEnd) ||
         (['Critical', 'High'].indexOf(task.priority) !== -1 && due && due <= dueSoonEnd);
     }).sort(compareTasks_);
     var thisWeek = weeklyCandidates.slice(0, 10);
     var effortByOwner = {};
+    var effortByRole = {};
     var effortByRoleAndWeek = {};
     var effortByWeek = {};
     var effortByCollege = {};
+    var effortByStage = {};
+    var effortByModule = {};
+    var totalEffortMinutes = 0;
     active.forEach(function(task) {
       var effort = Number(task.adjustedEffortMinutes) || 0;
       var owner = task.owner || task.ownerRole || 'Unassigned';
       var week = dateKey(toDate(task.plannedWeek)) || 'Unscheduled';
       var college = task.college || 'Shared project';
       var role = task.ownerRole || 'Shared';
+      var stage = task.stage || 'Uncategorized';
+      var module = task.module || 'Uncategorized';
+      totalEffortMinutes += effort;
       effortByOwner[owner] = (effortByOwner[owner] || 0) + effort;
+      effortByRole[role] = (effortByRole[role] || 0) + effort;
       effortByWeek[week] = (effortByWeek[week] || 0) + effort;
       effortByCollege[college] = (effortByCollege[college] || 0) + effort;
+      effortByStage[stage] = (effortByStage[stage] || 0) + effort;
+      effortByModule[module] = (effortByModule[module] || 0) + effort;
       effortByRoleAndWeek[role] = effortByRoleAndWeek[role] || {};
       effortByRoleAndWeek[role][week] = (effortByRoleAndWeek[role][week] || 0) + effort;
     });
+    var rolling90EffortMinutes = rolling90.reduce(function(total, task) {
+      return total + (Number(task.adjustedEffortMinutes) || 0);
+    }, 0);
+    var scheduledWeeks = Object.keys(effortByWeek).filter(function(week) {
+      return week !== 'Unscheduled';
+    });
+    var nextWeekKey = dateKey(addDays(currentWeek, 7));
     var peakWeek = '';
-    Object.keys(effortByWeek).forEach(function(week) {
+    scheduledWeeks.forEach(function(week) {
       if (!peakWeek || effortByWeek[week] > effortByWeek[peakWeek]) peakWeek = week;
     });
     var capacityWarnings = [];
@@ -1023,9 +1262,19 @@ CollegeTools.TaskPlanner = (function() {
       thisWeek: thisWeek,
       rolling90: rolling90,
       effortByOwner: effortByOwner,
+      effortByRole: effortByRole,
       effortByRoleAndWeek: effortByRoleAndWeek,
       effortByWeek: effortByWeek,
       effortByCollege: effortByCollege,
+      effortByStage: effortByStage,
+      effortByModule: effortByModule,
+      totalEffortMinutes: totalEffortMinutes,
+      rolling90EffortMinutes: rolling90EffortMinutes,
+      averageScheduledWeekMinutes: scheduledWeeks.length ?
+        Math.round(scheduledWeeks.reduce(function(total, week) {
+          return total + effortByWeek[week];
+        }, 0) / scheduledWeeks.length) : 0,
+      nextWeekEffortMinutes: effortByWeek[nextWeekKey] || 0,
       peakWeek: peakWeek,
       peakWeekMinutes: peakWeek ? effortByWeek[peakWeek] : 0,
       capacityWarnings: capacityWarnings,

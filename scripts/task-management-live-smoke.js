@@ -78,6 +78,11 @@ function runTaskManagementLiveSmoke(mode) {
   timeline.getRange(2, column(timeline, 'Application Type (ED/ED2/EA/REA/RD)', 1))
     .setValue('EA');
   timeline.getRange(2, column(timeline, 'Application Deadline', 1)).setValue(deadline);
+  timeline.getRange(2, column(timeline, 'Supplemental Essays Required (#)', 1))
+    .setValue(isAthlete ? 2 : 1);
+  timeline.getRange(2, column(timeline, 'Supplemental Prompts / Topics', 1))
+    .setValue(isAthlete ?
+      'Why this college?||Describe your community' : 'Why this college?');
 
   var setup = CollegeTools.TaskManagement.setupTaskManagement();
   setSetting('Planning Start Date', today);
@@ -100,9 +105,25 @@ function runTaskManagementLiveSmoke(mode) {
 
   var tasksSheet = ss.getSheetByName(names.TASKS);
   var taskIdColumn = column(tasksSheet, 'Task ID', 1);
+  var taskColumn = column(tasksSheet, 'Task', 1);
+  var workstreamColumn = column(tasksSheet, 'Workstream', 1);
+  var moduleColumn = column(tasksSheet, 'Module', 1);
+  var ownerColumn = column(tasksSheet, 'Owner', 1);
+  var dueDateColumn = column(tasksSheet, 'Due Date', 1);
+  var effortOverrideColumn = column(tasksSheet, 'Effort Override (min)', 1);
   var statusColumn = column(tasksSheet, 'Status', 1);
   var notesColumn = column(tasksSheet, 'Notes', 1);
   var ownerLockedColumn = column(tasksSheet, 'Owner Locked', 1);
+  var customTaskRow = tasksSheet.getLastRow() + 1;
+  tasksSheet.getRange(customTaskRow, taskColumn).setValue('Live family-defined task');
+  tasksSheet.getRange(customTaskRow, workstreamColumn).setValue('Family Logistics');
+  tasksSheet.getRange(customTaskRow, moduleColumn).setValue('Family Custom');
+  tasksSheet.getRange(customTaskRow, ownerColumn).setValue('Grandparent');
+  tasksSheet.getRange(customTaskRow, dueDateColumn).setValue(today);
+  tasksSheet.getRange(customTaskRow, effortOverrideColumn).setValue(90);
+  tasksSheet.getRange(customTaskRow, notesColumn).setValue('Live custom task note');
+  CollegeTools.TaskManagement.refreshTaskViews();
+  var customTaskId = tasksSheet.getRange(customTaskRow, taskIdColumn).getValue();
   var preservedTaskId = tasksSheet.getRange(2, taskIdColumn).getValue();
   var customColumn = tasksSheet.getLastColumn() + 1;
   tasksSheet.getRange(1, customColumn).setValue('Live Custom Formula');
@@ -118,10 +139,12 @@ function runTaskManagementLiveSmoke(mode) {
   var taskIds = {};
   var duplicateIds = [];
   var preserved = null;
+  var customTask = null;
   tasks.forEach(function(task) {
     if (taskIds[task.taskId]) duplicateIds.push(task.taskId);
     taskIds[task.taskId] = true;
     if (task.taskId === preservedTaskId) preserved = task;
+    if (task.taskId === customTaskId) customTask = task;
   });
   var preservedRow = 0;
   for (var row = 2; row <= tasksSheet.getLastRow(); row++) {
@@ -136,6 +159,24 @@ function runTaskManagementLiveSmoke(mode) {
   var recruitingTasks = tasks.filter(function(task) {
     return task.module === 'Athletic Recruiting' && !task.archivedReason;
   });
+  var supplementalDrafts = tasks.filter(function(task) {
+    return task.templateId === 'ESS-08' && !task.archivedReason;
+  });
+  var plannedWeeks = {};
+  var currentWeekKey = CollegeTools.TaskPlanner.dateKey(
+    CollegeTools.TaskPlanner.startOfWeek(today));
+  var currentWeekCount = 0;
+  tasks.forEach(function(task) {
+    var weekKey = CollegeTools.TaskPlanner.dateKey(task.plannedWeek);
+    if (weekKey) plannedWeeks[weekKey] = true;
+    if (weekKey === currentWeekKey) currentWeekCount++;
+  });
+  var thisWeek = ss.getSheetByName(names.THIS_WEEK);
+  var thisWeekIds = thisWeek.getRange(
+    2, 1, Math.min(10, Math.max(1, thisWeek.getLastRow() - 1)), 1).getValues()
+    .map(function(rowValue) {
+      return rowValue[0];
+    });
   var checks = {
     setupValidated100Templates: setup.templateCount === 100,
     generatedTasks: generated.ok && regenerated.ok && tasks.length > 0,
@@ -144,6 +185,13 @@ function runTaskManagementLiveSmoke(mode) {
     collegesDataOnRow3: colleges.getRange(3, 1).getValue() === collegeName,
     stableCollegeIdOnRow3: !!colleges.getRange(3, column(colleges, 'College ID', 2)).getValue(),
     thisWeekGenerated: !!ss.getSheetByName(names.THIS_WEEK),
+    customTaskStableAndVisible: /^MANUAL::/.test(customTaskId) && !!customTask &&
+      customTask.module === 'Family Custom' &&
+      customTask.notes === 'Live custom task note' &&
+      thisWeekIds.indexOf(customTaskId) !== -1,
+    tasksFilteredAndBounded: !!tasksSheet.getFilter() &&
+      tasksSheet.getMaxRows() >= tasks.length + 1 &&
+      tasksSheet.getMaxRows() <= Math.max(200, tasks.length + 51),
     completedTaskPreserved: !!preserved && preserved.status === 'Complete' &&
       preserved.notes === 'Live preservation evidence',
     customFormulaPreserved: preservedRow > 0 &&
@@ -151,6 +199,15 @@ function runTaskManagementLiveSmoke(mode) {
         .getFormula() === '="preserved"',
     submissionUsesDeadline: !!submission &&
       submission.dueDate.getTime() === deadline.getTime(),
+    scheduleContractExposed: !!submission && !!submission.applicabilityRule &&
+      !!submission.scheduleRule && !!submission.scheduleAnchor &&
+      !!submission.anchorDate && !!submission.offsetWindow &&
+      !!submission.calculatedDate && !!submission.effectiveDate,
+    supplementalPromptsScoped: supplementalDrafts.length === (isAthlete ? 2 : 1),
+    adaptiveHorizonUsable: isAthlete ?
+      Object.keys(plannedWeeks).length >= 8 && currentWeekCount < tasks.length / 2 :
+      submission.dueDate > new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000) &&
+        thisWeekIds.indexOf(submission.taskId) === -1,
     recruitingConditional: isAthlete ?
       recruitingTasks.length > 0 && !!ss.getSheetByName(names.RECRUITING_TRACKER) :
       recruitingTasks.length === 0 && !ss.getSheetByName(names.RECRUITING_TRACKER),

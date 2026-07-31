@@ -21,11 +21,11 @@ rendering or Apps Script runtime behavior.
 |---:|---|---|---|
 | 1 | 100 unique validated templates; conditional modules | `task-management-tests.js`: catalog and disabled-module scenarios | Automated pass |
 | 2 | Long-horizon roadmap without premature submission work | `task-management-tests.js`: long-horizon scenario | Automated pass |
-| 3 | Accelerated 90-day athlete plan through earliest deadline | `task-management-tests.js`: athlete scenario, actual deadline precedence, FAFSA sequencing | Automated pass; live pending |
-| 4 | Stable identity, owner, schedule, effort, deliverable, completion rule | Catalog validation plus generated-task assertions | Automated pass |
+| 3 | Accelerated 90-day athlete plan through earliest deadline | Athlete scenario: authoritative precedence, adaptive multi-week distribution, fixed deadlines, FAFSA sequencing | Automated pass; live pending |
+| 4 | Stable identity, owner, schedule, effort, deliverable, completion rule | Catalog validation plus explicit applicability/rule/anchor/offset/calculated/effective task assertions | Automated pass |
 | 5 | Professional-role fallback | No-professional athlete scenario | Automated pass |
-| 6 | Preview and safe regeneration preserve completed/manual work | Reconfiguration, rename, formula/custom-column, and idempotence scenarios | Automated pass |
-| 7 | Existing trackers remain canonical; evidence is attributable | Reliable-versus-ambiguous evidence scenarios | Automated pass |
+| 6 | Preview and safe regeneration preserve completed/manual work | Reconfiguration, custom-task ID/view/repair, rename, formula/custom-column, and idempotence scenarios | Automated pass |
+| 7 | Existing trackers remain canonical; evidence is attributable | Application, aid, scholarship, visit, and recruiting evidence plus manual-correction scenarios | Automated pass |
 | 8 | Generated `This Week` with manual refresh fallback | Sheet integration and menu-wiring scenarios | Automated pass |
 | 9 | Unconstrained baseline effort before optional capacity warnings | Effort, multiplier, threshold, and week-override scenarios | Automated pass |
 | 10 | Setup, refresh, repair, sort, module, and college changes preserve data | Workbook repair plus task preservation, rename, sort, and disable-module scenarios | Automated pass |
@@ -36,6 +36,9 @@ The task-context regression explicitly verifies the workbook footgun:
 use row 1 headers and row 2 data.
 
 ## Automated Commands
+
+Last full local run on 2026-07-30: all commands passed, including all 20
+task-management scenarios and the repository-wide test suite.
 
 ```bash
 npm run test:tasks
@@ -67,7 +70,10 @@ The live runner verifies:
 - `Colleges` row 2/row 3 handling;
 - stable College and Task IDs;
 - long-horizon and athlete-specific generation;
+- authoritative-deadline precedence and adaptive late-start distribution;
+- supplemental prompt-scoped essay tasks;
 - `This Week`;
 - deadline placement;
 - sort/regeneration preservation, including a custom formula; and
+- custom task ID assignment, weekly visibility, category effort, and repair preservation;
 - conditional recruiting behavior.

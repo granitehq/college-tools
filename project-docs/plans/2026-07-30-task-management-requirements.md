@@ -55,7 +55,7 @@ hour cap.
 | Data | Canonical location |
 |---|---|
 | College list, facts, fit | `Colleges` |
-| Application and document deadlines | `Application Timeline` |
+| Application and document deadlines plus supplemental prompt inventory | `Application Timeline` |
 | Aid requirements and offers | `Financial Aid Tracker` |
 | Scholarships and honors opportunities | `Scholarship Tracker` |
 | Visits | `Campus Visit Tracker` |
@@ -96,6 +96,12 @@ Use the most specific source available:
 Templates use fixed dates, milestone offsets, dependencies, suggested windows,
 or recurrence. The scheduler must not blindly compress tasks. It flags work as
 urgent, late, or no longer feasible when real lead time is unavailable.
+
+For a late start, `Calculated Date` retains the ideal long-lead date while
+`Effective Date` and `Due Date` distribute actionable work proportionally
+across the remaining window. Total effort is unchanged. Fixed external dates
+are never moved; a prerequisite that cannot fit before one is marked as a
+dependency conflict.
 
 The earliest relevant deadline drives shared prerequisite work, while each
 college-specific task keeps its own deadline. For example, FAFSA preparation
@@ -140,6 +146,13 @@ Every task instance supports:
 - normal effort, adjusted effort, and optional task override;
 - deliverable, official resource links, decision-needed flag, notes;
 - completion source and completion date.
+
+Families may add custom tasks directly to blank `Tasks` rows using any
+workstream, stage, module/category, owner, date or planned week, effort, and
+notes. They leave Task ID and Template ID blank. The next edit/menu refresh
+assigns a stable `MANUAL::` ID; the task then participates in `This Week`,
+rolling, owner, college, effort, and capacity views and survives generation,
+setup, repair, sorting, and reconfiguration.
 
 Template owners include a fallback order. Missing optional professionals
 reassign required work; they do not remove it. Disabled optional modules do not
@@ -346,7 +359,9 @@ next-week effort, and the next 5–10 actions. It should take no more than 15
 minutes to review.
 
 Derived completion must show its evidence source. Ambiguous evidence suggests
-completion for user confirmation. Manual corrections remain possible.
+completion for user confirmation. If a user reverses an evidence-derived
+completion, later synchronization retains the manual status and reports the
+remaining tracker disagreement.
 
 ## 8. Software Implementation Plan
 
@@ -392,7 +407,8 @@ completion for user confirmation. Manual corrections remain possible.
 
 - Create/repair the canonical table, validations, formatting, filters, notes,
   bounded rows, and safe user/system column ownership.
-- Add manual custom tasks without requiring a Template ID.
+- Add manual custom tasks without requiring Task ID or Template ID; persist a
+  stable ID on first refresh and include free-form categories in every view.
 - Test sorting, row movement, preservation, and repair.
 
 ### SW-07 — This Week And Other Views
@@ -452,7 +468,8 @@ completion for user confirmation. Manual corrections remain possible.
 4. Every generated task has a stable identity, accountable owner, schedule,
    effort, deliverable, and completion rule.
 5. Required work falls back correctly when no professional participates.
-6. Reconfiguration previews changes and preserves completed/manual work.
+6. Reconfiguration previews changes and preserves completed/manual work;
+   custom tasks receive stable IDs and participate in weekly and effort views.
 7. Existing trackers remain canonical; task completion links to evidence.
 8. `This Week` refreshes from `Tasks` and has a manual fallback.
 9. Effort totals report actual baseline work before optional thresholds.

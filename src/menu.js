@@ -137,7 +137,9 @@ function previewTaskPlan() {
   var preview = result.preview || {};
   SpreadsheetApp.getUi().alert(
     'Task Plan Preview',
-    'Generated instances: ' + result.generatedCount + '\n' +
+    'Applicable templates: ' + result.applicableTemplateCount + '\n' +
+      'Excluded templates: ' + result.excludedTemplateCount + '\n' +
+      'Generated instances: ' + result.generatedCount + '\n' +
       'Add: ' + (preview.add || 0) + '\n' +
       'Update: ' + (preview.update || 0) + '\n' +
       'Reassign: ' + (preview.reassign || 0) + '\n' +
@@ -157,6 +159,8 @@ function generateTaskPlan() {
     result.ok ? 'Task Plan Generated' : 'Task Plan Needs Configuration',
     result.ok ?
       'Tasks in plan: ' + result.taskCount + '\n' +
+        'Applicable / excluded templates: ' + result.applicableTemplateCount +
+          ' / ' + result.excludedTemplateCount + '\n' +
         'Current actions: ' + result.currentActions + '\n' +
         'Tracker-confirmed completions: ' + result.evidenceCompletions :
       (result.errors || [result.message || 'Unable to generate task plan']).join('\n'),

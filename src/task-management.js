@@ -44,10 +44,14 @@ CollegeTools.TaskManagement = (function() {
     ['Task ID', 'taskId'], ['Template ID', 'templateId'], ['Workstream', 'workstream'],
     ['Stage', 'stage'], ['Module', 'module'], ['Scope Type', 'scopeType'],
     ['Scope ID', 'scopeId'], ['College', 'college'], ['College ID', 'collegeId'],
-    ['Task', 'task'], ['Owner', 'owner'], ['Owner Role', 'ownerRole'],
+    ['Task', 'task'], ['Applicability Rule', 'applicabilityRule'],
+    ['Schedule Rule', 'scheduleRule'], ['Schedule Anchor', 'scheduleAnchor'],
+    ['Anchor Date', 'anchorDate'], ['Offset / Window', 'offsetWindow'],
+    ['Owner', 'owner'], ['Owner Role', 'ownerRole'],
     ['Owner Locked', 'ownerLocked'], ['Support Role', 'supportRole'],
     ['Calculated Date', 'calculatedDate'], ['Due Date', 'dueDate'],
-    ['Date Source', 'dateSource'], ['Date Locked', 'dateLocked'],
+    ['Effective Date', 'effectiveDate'], ['Date Source', 'dateSource'],
+    ['Date Locked', 'dateLocked'],
     ['Planned Week', 'plannedWeek'], ['Scheduled Block', 'scheduledBlock'],
     ['Schedule Flag', 'scheduleFlag'],
     ['Priority', 'priority'], ['Priority Override', 'priorityOverride'],
@@ -62,7 +66,8 @@ CollegeTools.TaskManagement = (function() {
   ];
 
   var DATE_FIELDS = {
-    calculatedDate: true, dueDate: true, plannedWeek: true, completionDate: true,
+    calculatedDate: true, dueDate: true, effectiveDate: true, anchorDate: true,
+    plannedWeek: true, completionDate: true,
   };
   var BOOLEAN_FIELDS = {
     ownerLocked: true, dateLocked: true, decisionNeeded: true,
@@ -74,6 +79,8 @@ CollegeTools.TaskManagement = (function() {
     'Priority Override': true, 'Status': true, 'Effort Override (min)': true,
     'Resource Links': true, 'Notes': true, 'Manually Selected': true,
   };
+  var TASK_MIN_ROWS = 200;
+  var TASK_ROW_BUFFER = 50;
 
   /**
    * Normalizes yes/no values for sheet persistence.
@@ -307,8 +314,9 @@ CollegeTools.TaskManagement = (function() {
       return [
         template.templateId, template.workstream, template.stage, template.module,
         template.scope, template.task, template.ownerRole, template.supportRole,
-        template.applicability, template.offsetDays, template.dependencies.join(', '),
-        template.effortMinutes, template.deliverable, template.resourceLinks,
+        template.applicability, template.scheduleRule, template.scheduleAnchor,
+        template.offsetWindow, template.dependencies.join(', '), template.effortMinutes,
+        template.deliverable, template.resourceLinks,
       ];
     });
     sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
@@ -353,12 +361,114 @@ CollegeTools.TaskManagement = (function() {
     ['Owner Locked', 'Date Locked', 'Decision Needed', 'Manually Selected'].forEach(function(header) {
       if (column[header]) sheet.getRange(2, column[header], rowCount, 1).setDataValidation(yesNoRule);
     });
-    ['Calculated Date', 'Due Date', 'Planned Week', 'Completion Date'].forEach(function(header) {
+    ['Anchor Date', 'Calculated Date', 'Due Date', 'Effective Date', 'Planned Week',
+      'Completion Date'].forEach(function(header) {
       if (column[header]) {
         sheet.getRange(2, column[header], rowCount, 1)
           .setDataValidation(dateRule).setNumberFormat('yyyy-mm-dd');
       }
     });
+  }
+
+  /**
+   * Keeps the canonical task table large enough for generated/manual work
+   * without leaving the default thousand-row validation/formatting surface.
+   * @param {Sheet} sheet - Tasks sheet
+   * @param {number} taskCount - Number of populated task rows
+   */
+  function sizeTaskSheet_(sheet, taskCount) {
+    var desiredRows = Math.max(TASK_MIN_ROWS, Number(taskCount || 0) + 1 + TASK_ROW_BUFFER);
+    var currentRows = sheet.getMaxRows();
+    if (currentRows < desiredRows && sheet.insertRowsAfter) {
+      sheet.insertRowsAfter(currentRows, desiredRows - currentRows);
+    } else if (currentRows > desiredRows) {
+      sheet.deleteRows(desiredRows + 1, currentRows - desiredRows);
+    }
+  }
+
+  /**
+   * Applies the durable table affordances needed for day-to-day task use.
+   * Existing filters are retained so user filter criteria are not discarded.
+   * @param {Sheet} sheet - Tasks sheet
+   */
+  function formatTasksSheet_(sheet) {
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var column = {};
+    headers.forEach(function(header, index) {
+      column[header] = index + 1;
+    });
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#1f4e78').setFontColor('#ffffff').setFontWeight('bold')
+      .setWrap(true);
+
+    [
+      ['Task', 320], ['Owner', 150], ['College', 180], ['Deliverable', 260],
+      ['Applicability Rule', 220], ['Schedule Anchor', 220],
+      ['Offset / Window', 160],
+      ['Dependencies', 200], ['Blocked By', 200], ['Resource Links', 220],
+      ['Evidence Source', 220], ['Notes', 280],
+    ].forEach(function(spec) {
+      if (column[spec[0]]) sheet.setColumnWidth(column[spec[0]], spec[1]);
+    });
+    ['Anchor Date', 'Calculated Date', 'Due Date', 'Effective Date', 'Planned Week',
+      'Completion Date'].forEach(function(header) {
+      if (column[header]) sheet.setColumnWidth(column[header], 105);
+    });
+    ['Task', 'Applicability Rule', 'Schedule Anchor', 'Offset / Window',
+      'Deliverable', 'Dependencies', 'Blocked By', 'Resource Links',
+      'Evidence Source', 'Notes'].forEach(function(header) {
+      if (column[header]) {
+        sheet.getRange(2, column[header], Math.max(1, sheet.getMaxRows() - 1), 1)
+          .setWrap(true).setVerticalAlignment('top');
+      }
+    });
+
+    if (column['Task ID']) {
+      sheet.getRange(1, column['Task ID']).setNote(
+        'Stable identity used to preserve this row through sorting and regeneration. ' +
+        'For a custom task, leave this blank; refresh assigns it automatically.');
+    }
+    if (column.Task) {
+      sheet.getRange(1, column.Task).setNote(
+        'Add a custom task on any blank row. Workstream, Stage, Module, Owner, dates, ' +
+        'effort, and notes may use family-defined values.');
+    }
+    if (column['Owner Locked']) {
+      sheet.getRange(1, column['Owner Locked']).setNote(
+        'Set to Yes before regeneration to preserve the current owner.');
+    }
+    if (column['Date Locked']) {
+      sheet.getRange(1, column['Date Locked']).setNote(
+        'Set to Yes before regeneration to preserve Due Date and Planned Week.');
+    }
+    if (column['Effort Override (min)']) {
+      sheet.getRange(1, column['Effort Override (min)']).setNote(
+        'Optional task-specific effort; overrides the configured role multiplier.');
+    }
+    var desiredFilterRows = Math.max(2, sheet.getMaxRows());
+    var filter = sheet.getFilter ? sheet.getFilter() : null;
+    var filterRange = filter && filter.getRange ? filter.getRange() : null;
+    var filterNeedsResize = filterRange &&
+      (filterRange.getNumRows() !== desiredFilterRows ||
+        filterRange.getNumColumns() !== headers.length);
+    if (!filter || filterNeedsResize) {
+      var criteria = {};
+      if (filter && filter.getColumnFilterCriteria) {
+        for (var filterColumn = 1; filterColumn <= headers.length; filterColumn++) {
+          criteria[filterColumn] = filter.getColumnFilterCriteria(filterColumn);
+        }
+      }
+      if (filter && filter.remove) filter.remove();
+      filter = sheet.getRange(1, 1, desiredFilterRows, headers.length).createFilter();
+      if (filter && filter.setColumnFilterCriteria) {
+        Object.keys(criteria).forEach(function(filterColumnKey) {
+          if (criteria[filterColumnKey]) {
+            filter.setColumnFilterCriteria(Number(filterColumnKey), criteria[filterColumnKey]);
+          }
+        });
+      }
+    }
   }
 
   /**
@@ -386,6 +496,28 @@ CollegeTools.TaskManagement = (function() {
     if (!task.taskId && task.task) {
       task.taskId = 'MANUAL::' + Utilities.getUuid();
       task.generated = false;
+      task._newManualId = true;
+    }
+    if (!task.templateId && task.task) {
+      task.generated = false;
+      task.workstream = task.workstream || 'Custom';
+      task.stage = task.stage || 'Family-defined';
+      task.module = task.module || 'Custom';
+      task.scopeType = task.scopeType || 'manual';
+      task.scopeId = task.scopeId || task.taskId;
+      task.applicabilityRule = task.applicabilityRule || 'Family-defined';
+      task.scheduleRule = task.scheduleRule || 'Manual';
+      task.scheduleAnchor = task.scheduleAnchor || 'Family-entered date or planned week';
+      task.anchorDate = task.anchorDate || task.dueDate || task.plannedWeek;
+      task.offsetWindow = task.offsetWindow || 'Family-defined';
+      task.owner = task.owner || 'Unassigned';
+      task.ownerRole = task.ownerRole || 'Custom';
+      task.priority = task.priority || task.priorityOverride || 'Normal';
+      task.status = task.status || 'Ready';
+      if (!Number(task.adjustedEffortMinutes) && Number(task.effortOverrideMinutes) > 0) {
+        task.adjustedEffortMinutes = Number(task.effortOverrideMinutes);
+      }
+      task.effectiveDate = task.effectiveDate || task.dueDate || task.plannedWeek;
     }
     return task;
   }
@@ -399,9 +531,32 @@ CollegeTools.TaskManagement = (function() {
     spreadsheet = spreadsheet || SpreadsheetApp.getActive();
     var sheet = spreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
     if (!sheet) return [];
-    return readTable_(sheet).map(rowToTask_).filter(function(task) {
+    var tasks = readTable_(sheet).map(rowToTask_).filter(function(task) {
       return !!task.taskId || !!task.task;
     });
+    var headerByField = {};
+    TASK_FIELDS.forEach(function(field) {
+      headerByField[field[1]] = field[0];
+    });
+    var manualDefaults = [
+      'taskId', 'workstream', 'stage', 'module', 'scopeType', 'scopeId',
+      'applicabilityRule', 'scheduleRule', 'scheduleAnchor', 'anchorDate',
+      'offsetWindow', 'owner', 'ownerRole', 'effectiveDate', 'priority', 'status',
+      'adjustedEffortMinutes', 'generated',
+    ];
+    tasks.forEach(function(task) {
+      if (task._newManualId && task._sourceRow) {
+        manualDefaults.forEach(function(field) {
+          var header = headerByField[field];
+          var column = header && CollegeTools.Utils.colIndex(sheet, header);
+          if (column && sheet.getRange(task._sourceRow, column).getValue() === '') {
+            sheet.getRange(task._sourceRow, column).setValue(taskValue_(task, field));
+          }
+        });
+      }
+      delete task._newManualId;
+    });
+    return tasks;
   }
 
   /**
@@ -471,9 +626,10 @@ CollegeTools.TaskManagement = (function() {
     if (oldLastRow > 1) {
       sheet.getRange(2, 1, oldLastRow - 1, headers.length).clearContent();
     }
+    sizeTaskSheet_(sheet, tasks.length);
     if (values.length) sheet.getRange(2, 1, values.length, headers.length).setValues(values);
     applyTaskValidations_(sheet, CollegeTools.TaskPlanner.normalizeConfig(readConfig(spreadsheet)));
-    sheet.setFrozenRows(1);
+    formatTasksSheet_(sheet);
     return {ok: true, count: values.length};
   }
 
@@ -600,6 +756,12 @@ CollegeTools.TaskManagement = (function() {
       var statusRow = trackerRow_(status, id, name);
       var financialRow = trackerRow_(financial, id, name);
       var visitRow = trackerRow_(visits, id, name);
+      var supplementalCountValue = timelineRow['Supplemental Essays Required (#)'];
+      var supplementalTopics = timelineRow['Supplemental Prompts / Topics'];
+      var supplementalCountKnown = supplementalCountValue !== '' &&
+        supplementalCountValue !== null && supplementalCountValue !== undefined;
+      var supplementalCount = supplementalCountKnown ?
+        Math.max(0, Number(supplementalCountValue) || 0) : null;
       return {
         id: id,
         collegeId: id,
@@ -629,7 +791,10 @@ CollegeTools.TaskManagement = (function() {
         interviewRequired: statusRow['Interview (Y/N)'],
         interviewDate: statusRow['Interview Date'],
         visitDate: visitRow['Visit Date'] || statusRow['Campus Visit Date'],
-        supplementsRequired: true,
+        supplementalCount: supplementalCount,
+        supplementalPrompts: supplementalTopics,
+        supplementsRequired: supplementalCountKnown ?
+          supplementalCount > 0 || !!supplementalTopics : true,
       };
     }).filter(function(college) {
       return !!college;
@@ -694,6 +859,31 @@ CollegeTools.TaskManagement = (function() {
         interviewDate: college.interviewDate,
       };
     });
+    var prompts = [];
+    colleges.forEach(function(college) {
+      if (!college.supplementsRequired) return;
+      var topics = (college.supplementalPrompts || '').toString()
+        .split(/\r?\n|\|\|/).map(function(topic) {
+          return topic.trim();
+        }).filter(function(topic) {
+          return !!topic;
+        });
+      var promptCount = Math.max(Number(college.supplementalCount) || 0, topics.length);
+      if (!promptCount) promptCount = 1;
+      for (var promptIndex = 0; promptIndex < promptCount; promptIndex++) {
+        var promptLabel = topics[promptIndex] ||
+          'Supplemental response ' + (promptIndex + 1) + ' (prompt to confirm)';
+        prompts.push({
+          id: college.id + '-supplement-' + (promptIndex + 1),
+          promptId: college.id + '-supplement-' + (promptIndex + 1),
+          collegeId: college.id,
+          collegeName: college.name,
+          label: college.name + ' — ' + promptLabel,
+          prompt: promptLabel,
+          applicationDeadline: college.applicationDeadline,
+        });
+      }
+    });
     var financialRows = readTable_(spreadsheet.getSheetByName(names.FINANCIAL_AID));
     var fafsaSubmitted = financialRows.some(function(row) {
       return isYes_(row['FAFSA Submitted (Y/N)']);
@@ -707,7 +897,7 @@ CollegeTools.TaskManagement = (function() {
       contacts: contacts,
       visits: visitContext,
       interviews: interviews,
-      prompts: [],
+      prompts: prompts,
       fafsaSubmitted: fafsaSubmitted,
       cssProfileSubmitted: cssSubmitted,
     };
@@ -751,19 +941,34 @@ CollegeTools.TaskManagement = (function() {
       ['Applications submitted / tracked',
         views.counts.applicationsSubmitted + ' / ' + views.counts.applicationsTracked],
       ['Recruiting actions in rolling 90 days', views.counts.recruitingActions],
+      ['Selected-horizon baseline effort (hours)',
+        Math.round((views.totalEffortMinutes / 60) * 10) / 10],
+      ['Rolling 90-day open effort (hours)',
+        Math.round((views.rolling90EffortMinutes / 60) * 10) / 10],
+      ['Average scheduled week (hours)',
+        Math.round((views.averageScheduledWeekMinutes / 60) * 10) / 10],
+      ['Next-week effort (hours)',
+        Math.round((views.nextWeekEffortMinutes / 60) * 10) / 10],
       ['Peak planned week', views.peakWeek],
       ['Peak-week effort (hours)', Math.round((views.peakWeekMinutes / 60) * 10) / 10],
       ['Capacity warnings', views.capacityWarnings.length],
     ];
     sheet.getRange(row, 1, reportRows.length, 2).setValues(reportRows);
     row += reportRows.length + 2;
-    sheet.getRange(row, 1).setValue('Effort By Owner').setFontWeight('bold').setBackground('#cfe2f3');
-    row++;
-    var ownerRows = Object.keys(views.effortByOwner).sort().map(function(owner) {
-      return [owner, Math.round((views.effortByOwner[owner] / 60) * 10) / 10];
-    });
-    if (ownerRows.length) sheet.getRange(row, 1, ownerRows.length, 2).setValues(ownerRows);
-    row += ownerRows.length + 2;
+    var writeEffortBreakdown = function(title, values) {
+      sheet.getRange(row, 1).setValue(title).setFontWeight('bold').setBackground('#cfe2f3');
+      row++;
+      var rows = Object.keys(values).sort().map(function(label) {
+        return [label, Math.round((values[label] / 60) * 10) / 10];
+      });
+      if (rows.length) sheet.getRange(row, 1, rows.length, 2).setValues(rows);
+      row += rows.length + 2;
+    };
+    writeEffortBreakdown('Effort By Owner', views.effortByOwner);
+    writeEffortBreakdown('Effort By Role', views.effortByRole);
+    writeEffortBreakdown('Effort By Planning Stage', views.effortByStage);
+    writeEffortBreakdown('Effort By Module / Custom Category', views.effortByModule);
+    writeEffortBreakdown('Effort By College', views.effortByCollege);
     if (views.capacityWarnings.length) {
       sheet.getRange(row, 1).setValue('Capacity Warnings')
         .setFontWeight('bold').setBackground('#f4cccc');
@@ -806,7 +1011,9 @@ CollegeTools.TaskManagement = (function() {
     var tasksSheet = CollegeTools.Utils.ensureSheet(
       spreadsheet, CollegeTools.Config.SHEET_NAMES.TASKS);
     ensureSheetShape_(tasksSheet, CollegeTools.Config.HEADERS.TASKS);
+    sizeTaskSheet_(tasksSheet, readTasks(spreadsheet).length);
     applyTaskValidations_(tasksSheet, config);
+    formatTasksSheet_(tasksSheet);
     setupRecruitingTracker_(spreadsheet, config.modules['Athletic Recruiting']);
     var views = CollegeTools.TaskPlanner.buildViews(readTasks(spreadsheet), null, config);
     writeThisWeek_(spreadsheet, views);
@@ -837,6 +1044,7 @@ CollegeTools.TaskManagement = (function() {
       preview: reconciled.preview,
       generatedCount: generated.tasks.length,
       applicableTemplateCount: generated.applicableTemplateCount,
+      excludedTemplateCount: generated.excludedTemplateCount,
       firstDeadline: generated.firstDeadline,
     };
   }
@@ -865,6 +1073,7 @@ CollegeTools.TaskManagement = (function() {
       message: 'Task plan generated and This Week refreshed',
       taskCount: evidenced.tasks.length,
       applicableTemplateCount: generated.applicableTemplateCount,
+      excludedTemplateCount: generated.excludedTemplateCount,
       preview: reconciled.preview,
       evidenceCompletions: evidenced.completed,
       evidenceSuggestions: evidenced.suggestions,
