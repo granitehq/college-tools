@@ -247,5 +247,14 @@ function runTaskManagementLiveSmoke(mode) {
     taskCount: tasks.length,
     failedChecks: failed,
     checks: checks,
+    observations: {
+      expectedDeadline: CollegeTools.TaskPlanner.dateKey(deadline),
+      submissionDueDate: submission ?
+        CollegeTools.TaskPlanner.dateKey(submission.dueDate) : '',
+      submissionAnchorDate: submission ?
+        CollegeTools.TaskPlanner.dateKey(submission.anchorDate) : '',
+      submissionDateSource: submission ? submission.dateSource : '',
+      submissionTaskId: submission ? submission.taskId : '',
+    },
   };
 }
