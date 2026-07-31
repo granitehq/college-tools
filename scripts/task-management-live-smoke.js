@@ -214,7 +214,8 @@ function runTaskManagementLiveSmoke(mode) {
       tasksSheet.getRange(preservedRow, column(tasksSheet, 'Live Custom Formula', 1))
         .getFormula() === '="preserved"',
     submissionUsesDeadline: !!submission &&
-      submission.dueDate.getTime() === deadline.getTime(),
+      CollegeTools.TaskPlanner.dateKey(submission.dueDate) ===
+        CollegeTools.TaskPlanner.dateKey(deadline),
     scheduleContractExposed: !!submission && !!submission.applicabilityRule &&
       !!submission.scheduleRule && !!submission.scheduleAnchor &&
       !!submission.anchorDate && !!submission.offsetWindow &&
