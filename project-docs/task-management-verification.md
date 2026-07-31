@@ -6,14 +6,13 @@
 
 ## Verification Status
 
-The implementation and automated acceptance scenarios are complete. Live
-Google Sheets execution in two disposable bound spreadsheets remains a release
-gate because uploading the feature source to those temporary Apps Script
-projects requires explicit authorization.
+The implementation, automated acceptance scenarios, and both live copied-sheet
+scenarios are complete. Production/template Apps Script was not touched.
 
 The Node harness proves catalog, scheduling, reconciliation, preservation,
-schema, menu, and generated-sheet behavior. It does not prove Google Sheets UI
-rendering or Apps Script runtime behavior.
+schema, menu, and generated-sheet behavior. The disposable live tests add
+Google Sheets rendering, Apps Script runtime, filter, date/time-zone, and
+preservation evidence.
 
 ## Acceptance Matrix
 
@@ -21,15 +20,15 @@ rendering or Apps Script runtime behavior.
 |---:|---|---|---|
 | 1 | 100 unique validated templates; conditional modules | `task-management-tests.js`: catalog and disabled-module scenarios | Automated pass |
 | 2 | Long-horizon roadmap without premature submission work | `task-management-tests.js`: long-horizon scenario | Automated pass |
-| 3 | Accelerated 90-day athlete plan through earliest deadline | Athlete scenario: authoritative precedence, adaptive multi-week distribution, fixed deadlines, FAFSA sequencing | Automated pass; live pending |
+| 3 | Accelerated 90-day athlete plan through earliest deadline | Athlete scenario: authoritative precedence, adaptive multi-week distribution, fixed deadlines, FAFSA sequencing | Automated and live pass |
 | 4 | Stable identity, owner, schedule, effort, deliverable, completion rule | Catalog validation plus explicit applicability/rule/anchor/offset/calculated/effective task assertions | Automated pass |
 | 5 | Professional-role fallback | No-professional athlete scenario | Automated pass |
-| 6 | Preview and safe regeneration preserve completed/manual work | Reconfiguration, custom-task ID/view/repair, rename, formula/custom-column, and idempotence scenarios | Automated pass |
+| 6 | Preview and safe regeneration preserve completed/manual work | Reconfiguration, partial/custom-task ID/view/repair, rename, formula/custom-column, and idempotence scenarios | Automated and live pass |
 | 7 | Existing trackers remain canonical; evidence is attributable | Application, aid, scholarship, visit, and recruiting evidence plus manual-correction scenarios | Automated pass |
-| 8 | Generated `This Week` with manual refresh fallback | Sheet integration and menu-wiring scenarios | Automated pass |
-| 9 | Unconstrained baseline effort before optional capacity warnings | Effort, multiplier, threshold, and week-override scenarios | Automated pass |
-| 10 | Setup, refresh, repair, sort, module, and college changes preserve data | Workbook repair plus task preservation, rename, sort, and disable-module scenarios | Automated pass |
-| 11 | Full Node gate, diff check, and two copied-sheet scenarios | `npm run check`; `git diff --check`; live runner below | Local gates pass; live pending |
+| 8 | Generated `This Week` with manual refresh fallback | Category-coverage/truncation, sheet integration, and menu-wiring scenarios | Automated and live pass |
+| 9 | Unconstrained baseline effort before optional capacity warnings | Remaining-effort, multiplier, threshold, and week-override scenarios | Automated pass |
+| 10 | Setup, refresh, repair, sort, module, and college changes preserve data | Partial custom-row sync, workbook repair, task preservation, rename, sort, and disable-module scenarios | Automated and live pass |
+| 11 | Full Node gate, diff check, and two copied-sheet scenarios | `npm run check`; `git diff --check`; live runner below | Pass |
 
 The task-context regression explicitly verifies the workbook footgun:
 `Colleges` uses row 2 headers and row 3 data, while task/tracker/helper sheets
@@ -37,7 +36,7 @@ use row 1 headers and row 2 data.
 
 ## Automated Commands
 
-Last full local run on 2026-07-30: all commands passed, including all 20
+Last full local run on 2026-07-30: all commands passed, including all 25
 task-management scenarios and the repository-wide test suite.
 
 ```bash
@@ -47,21 +46,28 @@ git diff --check
 node --check scripts/task-management-live-smoke.js
 ```
 
-## Live Copied-Workbook Gate
+## Live Copied-Workbook Results
 
-Use two disposable Google Sheets bound to temporary Apps Script projects. Do
-not push this feature branch to the production/template Apps Script project.
+Final run on 2026-07-30 used commit `70fc66a` in two owner-only disposable
+Google Sheets bound to temporary Apps Script projects. Both returned structured
+JSON with `ok: true` and `failedChecks: []`.
 
-For each temporary project:
+| Scenario | Tasks | Deadline evidence | Result |
+|---|---:|---|---|
+| Long horizon | 83 | Timeline, submission due date, and anchor all normalized to `2027-12-12` | Pass |
+| Athlete 90-day | 95 | Timeline, submission due date, and anchor all normalized to `2026-10-28` | Pass |
 
-1. copy the feature `src/*.js` files and
-   `scripts/task-management-live-smoke.js` into the temporary project;
-2. add `executionApi.access = "MYSELF"` to the temporary manifest;
-3. push and deploy the temporary project;
-4. run `runTaskManagementLiveSmoke("long-horizon")` in the first project;
-5. run `runTaskManagementLiveSmoke("athlete-90-day")` in the second project;
-6. require `ok: true` and no `failedChecks` from both results; and
-7. delete the disposable spreadsheets/projects after recording results.
+The first live attempt exposed an out-of-bounds filter-criteria read when a
+custom column made the new Tasks filter wider than the old filter. The
+corrected code reads criteria only from existing filter columns, and the local
+mock now reproduces Apps Script's bounds error.
+
+Live deadline checks also exposed a one-day shift when the spreadsheet and
+Apps Script project used different time zones. Task-management table reads and
+writes now convert calendar dates explicitly across those time zones. The
+final runs prove that the authoritative Timeline date, submission due date,
+and schedule anchor retain the same calendar day even when their display
+formats differ.
 
 The live runner verifies:
 
@@ -75,5 +81,6 @@ The live runner verifies:
 - `This Week`;
 - deadline placement;
 - sort/regeneration preservation, including a custom formula; and
-- custom task ID assignment, weekly visibility, category effort, and repair preservation;
+- partial custom-row preservation during tracker edits, stable ID assignment,
+  weekly visibility, category effort, and repair preservation;
 - conditional recruiting behavior.

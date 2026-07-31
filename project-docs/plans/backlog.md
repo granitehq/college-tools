@@ -71,14 +71,15 @@ the two-branch rule because `origin/main` has not been updated.
 
 ## Prioritized Backlog
 
-### Feature Branch Pending Verification
+### Feature Branch Pending Merge
 
 - **Adaptive college task management** is implemented on
   `feat/task-management-requirements`: 100 source-controlled templates,
   deadline/module/role-aware generation, safe reconciliation, conditional
   recruiting, tracker evidence, effort/capacity reporting, and `This Week`.
-  Local acceptance scenarios pass; disposable live Google Sheets execution is
-  still required before merge/release. See
+  All local acceptance scenarios and both disposable live Google Sheets
+  scenarios pass. The feature remains unmerged and is not deployed to
+  production. See
   `project-docs/plans/2026-07-30-task-management-requirements.md` and
   `project-docs/task-management-verification.md`.
 
