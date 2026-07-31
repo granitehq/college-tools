@@ -1,6 +1,6 @@
 # College Task Management Requirements Specification
 
-**Status:** Draft for review, revision 3
+**Status:** Draft for review, revision 4
 
 **Date:** 2026-07-30
 
@@ -156,6 +156,11 @@ Typical professional work includes college-list review, application schedule
 review, essay critique, athletic-fit assessment, and specialized financial-aid
 review.
 
+`Counselor/Professional` is one standard owner category. If a family has both
+a private counselor and another consultant, it may add each person as a custom
+owner and delegate individual tasks between them. Reporting should retain the
+shared standard category while still showing the assigned person's name.
+
 ### Assistant Support
 
 Assistant support is a capability, not the accountable owner of student or
@@ -268,6 +273,7 @@ Changing the family configuration later must:
   net-price calculators.
 - A general-purpose kanban, chat, or document-management product.
 - Automated email or calendar notifications in the first release.
+- Printable or exported task-plan reports in the first release.
 - A second live project-plan spreadsheet or bidirectional cross-spreadsheet
   synchronization in the first release.
 - Legal, tax, or financial advice.
@@ -288,6 +294,9 @@ trackers.
 - `Campus Visit Tracker` remains the source for visit details.
 - `Application Status Tracker` remains the source for submitted application
   and decision status.
+- `Recruiting Tracker`, when the Athletic Recruiting module is enabled, is the
+  source for coach contacts, outreach dates, responses, follow-ups,
+  questionnaires, and recruiting notes.
 - `Dashboard` may surface task summaries and the weekly report, but the task
   data must have one canonical home.
 
@@ -319,8 +328,30 @@ The integrated design should add the smallest practical surface:
 - `Tasks`: the canonical, user-editable task-instance table;
 - `Task Templates`: a system-managed catalog, hidden or otherwise kept out of
   the normal user workflow; and
-- `This Week`: either a generated sheet or a Dashboard section, to be decided
-  during presentation design.
+- `This Week`: a separate generated sheet that refreshes automatically from
+  `Tasks` where practical and always has a manual refresh path.
+
+When Athletic Recruiting is enabled, add a conditional `Recruiting Tracker`
+sheet. Disabling the module later must preserve its historical data rather than
+deleting the sheet.
+
+The Recruiting Tracker should use one row per coach/contact and support:
+
+- stable Recruiting Contact ID and linked College ID;
+- college, sport, event, coach name/title, and contact information;
+- recruiting questionnaire link and completion status;
+- initial outreach date and communication method;
+- response/interest status;
+- last-contact and next-follow-up dates;
+- visit, call, or meeting status;
+- student-owned next action; and
+- recruiting notes.
+
+Recruiting task instances should link to the relevant Recruiting Contact ID.
+Reliable tracker fields may satisfy tasks such as `Send initial outreach`,
+`Complete questionnaire`, or `Record coach response`; the notes and
+communication history remain in Recruiting Tracker rather than being copied
+into Tasks.
 
 The existing trackers remain canonical for their domain data. Task rows should
 link to those records by stable identifiers and derive completion where the
@@ -437,6 +468,24 @@ The plan must support multiple concurrent deadlines. A single generic
 "applications due" date is not sufficient because application, merit, honors,
 FAFSA/CSS, recommendation, transcript, testing, and recruiting work may have
 different anchors.
+
+The earliest relevant deadline should drive shared upstream work, but not every
+task in the project:
+
+- the earliest application, merit, honors, or school-document deadline drives
+  shared application components needed by that date;
+- each college-specific submission and audit remains anchored to that
+  college's own deadline;
+- FAFSA preparation is anchored before public availability, while FAFSA
+  completion is anchored to public availability and the earliest applicable
+  state or college aid priority deadline; and
+- recruiting tasks follow their own coach, questionnaire, visit, and
+  application milestones.
+
+For the current 2027–28 cycle, Federal Student Aid plans public FAFSA release
+by October 1, 2026. Treat that as a verified working availability milestone,
+not as a universal financial-aid submission deadline. Source:
+[Federal Student Aid 2027–28 FAFSA Beta Testing Plan](https://fsapartners.ed.gov/knowledge-center/library/electronic-announcements/2026-07-21/2027-28-fafsa-beta-testing-plan).
 
 ### Scheduling Rule Types
 
@@ -677,12 +726,14 @@ Every task must support:
 | Status | At minimum Not Started, Ready, In Progress, Waiting, Blocked, Complete, or Skipped |
 | Normal effort | Baseline active-work estimate |
 | Parent-adjusted effort | Adjusted estimate for parent-owned work |
+| Effort override | Optional task-specific estimate that takes precedence over the configured role multiplier |
 | Deliverable | Evidence or output that defines completion |
 | Resource links | Official or authoritative references where applicable |
 | Assistant support | None, Research, Draft, Review, or Mostly Prepare |
 | Professional help | None, Optional, Recommended, or Required |
 | Decision needed | Whether parent or student judgment is blocking progress |
 | Notes/outcome | Short context, response, or completion note |
+| Completion source | Manual confirmation or the canonical tracker field that supplied reliable evidence |
 | Completed date | Recorded when a task is completed |
 
 ### Resource Source Rules
@@ -708,9 +759,11 @@ coach communication.
 ### Effort Estimation And Role Totals
 
 - Normal effort and parent-adjusted effort must be stored separately.
-- The parent effort adjustment must be configurable. A `2.0` multiplier is a
+- The parent effort multiplier must be configurable. A `2.0` multiplier is a
   planning hypothesis from the source conversation, not a cap or a reason to
   omit work.
+- A user may override the adjusted estimate for an individual task when the
+  multiplier is inaccurate.
 - The adjustment applies only to parent work, not student, counselor, or
   assistant-prepared work.
 - Assistant preparation should reduce the remaining active effort estimate
@@ -737,6 +790,25 @@ coach communication.
 
 ## Status And Dependency Behavior
 
+- The standard statuses are:
+  - `Not Started`: applicable but not yet available or selected for work;
+  - `Ready`: dependencies are complete and work can begin;
+  - `In Progress`: active work has begun;
+  - `Waiting`: an external response, document, or event is pending;
+  - `Blocked`: progress cannot continue and intervention is required;
+  - `Complete`: the defined deliverable or reliable tracker evidence is
+    satisfied; and
+  - `Skipped`: intentionally not completed, with a required reason.
+- The standard priorities are:
+  - `Critical`: an external deadline, critical-path dependency, or severe
+    consequence requires immediate protection;
+  - `High`: important near-term work with meaningful admission, affordability,
+    or recruiting value;
+  - `Normal`: planned work with adequate schedule margin; and
+  - `Low`: useful work that may be deferred or removed before higher-value
+    tasks.
+- The system may suggest priority from external deadlines, critical-path
+  dependencies, and consequences, while allowing a user to override it.
 - A task is overdue when its due date has passed and its status is not
   `Complete` or `Skipped`.
 - A task is blocked when an incomplete dependency prevents useful work or when
@@ -746,6 +818,12 @@ coach communication.
   include the party or event being awaited.
 - Completing a task records the completion date and may make dependent tasks
   ready.
+- When a reliable canonical tracker field proves completion, the task may be
+  marked complete automatically and must show the evidence source. When
+  evidence is incomplete or ambiguous, the system should suggest completion
+  and let the user confirm it manually.
+- A user may manually confirm or correct a derived status. The task must retain
+  whether completion was derived or user-confirmed.
 - Skipping a task requires a short reason such as `Not required by school`,
   `Testing removed from plan`, or `College removed from list`.
 - Changing an upstream deadline must make affected downstream dates or
@@ -756,6 +834,9 @@ coach communication.
   evidence are preserved during regeneration.
 - Regeneration must be idempotent: rerunning the same configuration must not
   create duplicate task instances.
+- Recurring templates should generate individual task instances only within
+  the rolling 90-day window. This preserves weekly completion history without
+  filling a multi-year roadmap with every future occurrence.
 
 ## Required Views
 
@@ -967,9 +1048,19 @@ The feature is acceptable when:
 15. student-owned application and recruiting work remains assigned to the
     student even when an assistant prepares research or a draft;
 16. high-value senior-year work is included while admissions-only profile
-    building and indiscriminate small-scholarship work are excluded; and
+    building and indiscriminate small-scholarship work are excluded;
 17. the plan makes separate application, merit/honors, financial-aid, and
-    recruiting deadlines visible for each applicable college.
+    recruiting deadlines visible for each applicable college;
+18. `This Week` is a separate generated tab that refreshes automatically where
+    practical and can always be refreshed manually;
+19. custom owners retain a standard role category for fallback logic and
+    reporting;
+20. coach outreach, responses, follow-ups, questionnaires, and notes have one
+    canonical home in the conditional `Recruiting Tracker`;
+21. recurring tasks preserve individual completion history without generating
+    occurrences beyond the rolling 90-day window; and
+22. no printable or exported task-plan report is required for the first
+    release.
 
 ## Preservation And Safety Requirements
 
@@ -1009,35 +1100,139 @@ Initial success measures:
 - the plan does not hide required work merely because a role's calculated
   effort is high.
 
-## Open Decisions For Review
+## Decision Record
 
-1. Within the integrated workbook, should `This Week` be a separate generated
-   sheet or a section of `Dashboard`?
-2. Should `Counselor/Professional` be one owner value or two distinct roles?
-3. Should users be allowed to add custom owner names while retaining the four
-   standard owner categories?
-4. Which task templates should use backward milestone offsets,
-   dependency-driven scheduling, suggested windows, or fixed external dates?
-5. Which task statuses and priority labels should appear in dropdowns?
-6. Should parent-adjusted effort use one configurable multiplier, per-task
-   estimates, or both?
-7. Should coach responses be stored as task notes, linked to a future
-   recruiting tracker, or summarized from another canonical field?
-8. How much of application readiness should be derived automatically from
-   existing trackers versus confirmed manually?
-9. Should recurring weekly review tasks be generated as individual records or
-   represented as one recurring checklist?
-10. Which value-selected starter tasks belong in the first catalog? The full
-    seed catalog needs its own content review before implementation.
-11. Should version-one effort planning include fixed weekly time blocks, or
-    only planned weeks and effort totals?
-12. Does the first release need printable or exportable weekly reports, even if
-    scheduled email is deferred?
-13. After the baseline plan is calculated, should optional weekly thresholds be
-    stored globally, by role, or by individual week?
-14. What is the target submission date for the first real plan, and which
-    Early Decision, Early Action, and priority scholarship deadlines must drive
-    backward planning?
+| # | Status | Decision |
+|---:|---|---|
+| 1 | Resolved | `This Week` is a separate generated tab that updates automatically where practical and includes a manual refresh path. |
+| 2 | Resolved | Use one standard `Counselor/Professional` category. A parent can delegate to named custom owners when the family has both a counselor and another consultant. |
+| 3 | Resolved | Allow custom owner names while retaining standard role categories for defaults and reporting. |
+| 4 | Delegated design | Assign the correct scheduling rule to each task while building the catalog: authoritative fixed dates first, then milestone offsets, dependency scheduling, or suggested windows as appropriate. |
+| 5 | Resolved | Use `Not Started`, `Ready`, `In Progress`, `Waiting`, `Blocked`, `Complete`, and `Skipped`; use `Critical`, `High`, `Normal`, and `Low` priorities. |
+| 6 | Resolved | Configure a parent effort multiplier and allow task-specific overrides. |
+| 7 | Resolved | Add a conditional `Recruiting Tracker`; store coach outreach, responses, follow-ups, questionnaires, and notes there. |
+| 8 | Resolved | Derive completion from reliable canonical tracker data and let users confirm or correct it manually. |
+| 9 | Delegated design | Generate individual recurring-task instances only within the rolling 90-day window so history is preserved without filling a multi-year roadmap. |
+| 10 | Needs final choice | Review the starter-catalog example below before approving the first catalog's breadth. |
+| 11 | Needs final choice | Review planned-week versus fixed-block examples below. |
+| 12 | Resolved | Do not add printable or exported reports in the first release. |
+| 13 | Needs final choice | Review threshold-storage examples below. Thresholds remain unset until the baseline plan is calculated. |
+| 14 | Rule resolved; dates pending | The earliest relevant deadline drives shared prerequisite work. Each task still uses its own most-specific milestone. FAFSA public availability is currently planned for October 1, 2026; actual state, college, merit, and application deadlines must be loaded before final scheduling. |
+
+## Concrete Examples For Remaining Choices
+
+### Decision 10: Starter Catalog Breadth
+
+This is an illustrative excerpt, not the final task catalog:
+
+| Template | Module | Example task | Applicability |
+|---|---|---|---|
+| `PLAN-01` | Core | Confirm application cycle, planning start, and known deadlines | Every family |
+| `STRAT-01` | Core | Set annual contribution and borrowing limits | Every family |
+| `LIST-01` | Core | Define academic, affordability, geography, and fit criteria | Every family |
+| `COL-01` | Core | Evaluate one college against the family criteria | Per active college |
+| `FIN-01` | Core | Run and save the official net-price calculator result | Per serious college |
+| `APP-01` | Application | Complete the Common App base profile | Common App users |
+| `APP-02` | Application | Draft activities and honors sections | Application-stage families |
+| `REC-01` | Recommendations | Request teacher recommendations and supply requested materials | When recommendations apply |
+| `ESS-01` | Essays | Build story inventory and draft the personal statement | When an essay applies |
+| `ESS-02` | Essays | Draft and revise one required supplemental essay | Per required supplement |
+| `SUB-01` | Submission | Audit the generated application PDF and confirm receipt after submission | Per application |
+| `AID-01` | Financial Aid | Prepare FAFSA contributors, accounts, and source documents | Families seeking aid |
+| `CSS-01` | CSS Profile | Prepare and submit required CSS Profile information | Only CSS schools/families |
+| `TEST-01` | Testing | Decide testing and score-submission strategy | Testing module enabled |
+| `ATH-01` | Athletic Recruiting | Assemble verified marks, results, profile, and media | Athletic Recruiting enabled |
+| `ATH-02` | Athletic Recruiting | Send and track personalized coach outreach | Per recruiting college |
+| `VISIT-01` | Visits | Plan and document a high-value visit or virtual event | Visits module enabled |
+
+Two plausible first-release choices:
+
+1. **Core-first:** ship Core, Application, Recommendations, Essays, Financial
+   Aid, and Submission; defer optional modules.
+2. **Complete adaptive catalog:** ship the core catalog plus Athletic
+   Recruiting, Testing, CSS Profile, and Visits, with setup filtering out
+   irrelevant modules.
+
+Recommendation: use the complete adaptive catalog because Athletic Recruiting
+is required for the current family and filtering prevents irrelevant work from
+appearing for other families.
+
+### Decision 11: Planned Week Versus Fixed Work Block
+
+**Planned-week example**
+
+`Draft activities section` is planned for the week of August 3 with an
+estimated effort of three hours. The family chooses the actual work time.
+
+Advantages:
+
+- less setup and maintenance;
+- tolerates changing family schedules; and
+- sufficient for weekly effort reporting.
+
+Limitation: it does not reserve actual time, so a busy week may still become
+overcommitted.
+
+**Fixed-block example**
+
+The same task is scheduled for Sunday from 9:00 a.m. to noon.
+
+Advantages:
+
+- converts intent into reserved time;
+- exposes collisions between tasks; and
+- may reduce context switching.
+
+Limitations:
+
+- requires more ongoing maintenance;
+- becomes stale when personal calendars change; and
+- is not a true calendar integration.
+
+Recommendation: require `Planned Week` and effort in the first release. Keep
+`Scheduled Block` optional for families that want more precision; do not build
+a calendar scheduler yet.
+
+### Decision 13: Optional Threshold Storage
+
+Thresholds are planning warnings, not task caps.
+
+| Choice | Example | Tradeoff |
+|---|---|---|
+| One global threshold | Warn when total family work exceeds 18 hours in a week | Simple, but can hide that one person carries most of the work |
+| Threshold by role | Parent 8 hours, Student 12 hours, Professional 4 hours | Makes ownership pressure visible but assumes fairly stable weeks |
+| Threshold by individual week | Parent normally 8 hours, but 3 hours during a travel week | Most realistic, but requires more setup |
+
+Recommendation: after the baseline plan is calculated, allow optional
+role-level thresholds with optional overrides for individual weeks. Do not use
+a global family threshold by itself.
+
+### Decision 14: Earliest-Deadline Example
+
+Assume these illustrative milestones:
+
+- October 1: FAFSA is expected to become publicly available;
+- October 15: College A institutional-merit deadline that requires a completed
+  application;
+- November 1: College B Early Action deadline; and
+- January 5: College C Regular Decision deadline.
+
+The schedule should behave as follows:
+
+- shared Common App, activities, recommendations, and personal-statement work
+  needed by College A schedules backward from October 15;
+- College A's supplement and submission audit use October 15;
+- College B's supplement and submission audit use November 1;
+- College C's college-specific work can remain later unless it blocks shared
+  work;
+- FAFSA contributor/account/document preparation schedules before October 1;
+  and
+- FAFSA completion schedules after public release but before the earliest
+  applicable state or college priority-aid deadline.
+
+Therefore, no single date drives the entire project. The earliest applicable
+deadline drives each shared critical path, while task-specific work retains its
+own anchor.
 
 ## Follow-On Work After Approval
 
