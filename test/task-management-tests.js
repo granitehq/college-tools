@@ -79,14 +79,17 @@ function columnOf(sheet, header, headerRow) {
   return headers.indexOf(header) + 1;
 }
 
-suite.test('catalog is exactly 100 unique validated implementation templates', () => {
+suite.test('catalog contains uncapped, unique, validated implementation templates', () => {
   const validation = CollegeTools.TaskCatalog.validate();
   const templates = CollegeTools.TaskCatalog.getTemplates();
   const ids = templates.map((template) => template.templateId);
 
   suite.assert(validation.ok, `Catalog should validate: ${validation.errors.join(', ')}`);
-  suite.assertEqual(validation.count, 100, 'Catalog should contain exactly 100 templates');
-  suite.assertEqual(new Set(ids).size, 100, 'Every template ID should be unique');
+  suite.assert(templates.length > 100,
+    'Catalog should grow past the old 100-template cap once late-stage coverage is added');
+  suite.assertEqual(new Set(ids).size, templates.length, 'Every template ID should be unique');
+  suite.assert(!validation.errors.some((error) => /Expected \d+ templates/.test(error)),
+    'Validation should no longer enforce a fixed template count');
   templates.forEach((template) => {
     suite.assert(template.ownerRole, `${template.templateId} should have an accountable role`);
     suite.assert(template.deliverable, `${template.templateId} should define completion`);
@@ -96,6 +99,52 @@ suite.test('catalog is exactly 100 unique validated implementation templates', (
     suite.assertEqual(typeof template.offsetDays, 'number',
       `${template.templateId} should define a schedule`);
   });
+});
+
+suite.test('catalog covers the post-acceptance decision and enrollment phase', () => {
+  const templates = CollegeTools.TaskCatalog.getTemplates();
+  const byId = {};
+  templates.forEach((template) => {
+    byId[template.templateId] = template;
+  });
+
+  suite.assertEqual(CollegeTools.TaskCatalog.WORKSTREAMS.DEC, 'Decision And Enrollment',
+    'Catalog should define a Decision And Enrollment workstream');
+  ['DEC-01', 'DEC-02', 'DEC-03', 'DEC-04', 'DEC-05', 'DEC-06', 'DEC-07'].forEach((id) => {
+    suite.assert(byId[id], `Catalog should include ${id}`);
+    suite.assertEqual(byId[id].workstream, 'Decision And Enrollment',
+      `${id} should belong to the Decision And Enrollment workstream`);
+    suite.assertEqual(byId[id].scope, 'college', `${id} should be scoped per college`);
+  });
+  suite.assert(byId['TST-07'], 'Catalog should include AP/IB score sending');
+  suite.assert(byId['STR-09'], 'Catalog should include Early Decision agreement signing');
+});
+
+suite.test('CSS Profile submission allows the IDOC-recommended two-week buffer', () => {
+  const templates = CollegeTools.TaskCatalog.getTemplates();
+  const byId = {};
+  templates.forEach((template) => {
+    byId[template.templateId] = template;
+  });
+
+  suite.assertEqual(byId['AID-10'].offsetDays, -14,
+    'CSS Profile submission should be due at least two weeks before the deadline for IDOC processing');
+});
+
+suite.test('Student Foundation offsets are staggered to respect their dependency chain', () => {
+  const templates = CollegeTools.TaskCatalog.getTemplates();
+  const byId = {};
+  templates.forEach((template) => {
+    byId[template.templateId] = template;
+  });
+
+  suite.assert(byId['PRO-02'].offsetDays > byId['PRO-01'].offsetDays,
+    'PRO-02 (verify transcript) should be scheduled after PRO-01 (collect transcript) it depends on');
+  suite.assert(byId['PRO-05'].offsetDays > byId['PRO-03'].offsetDays &&
+    byId['PRO-05'].offsetDays > byId['PRO-04'].offsetDays,
+  'PRO-05 (resume) should be scheduled after the PRO-03/PRO-04 inventories it depends on');
+  suite.assert(byId['PRO-07'].offsetDays > byId['PRO-06'].offsetDays,
+    'PRO-07 (narrative) should be scheduled after PRO-06 (story inventory) it depends on');
 });
 
 suite.test('long-horizon plan includes a full roadmap without premature submission work', () => {
@@ -204,6 +253,97 @@ suite.test('accelerated athlete plan applies modules, actual deadlines, FAFSA av
       `${task.taskId} should expose applicability, schedule rule, anchor, offset, and effective date`);
     suite.assert(task.adjustedEffortMinutes > 0, `${task.taskId} should have effort`);
   });
+});
+
+suite.test('decision-phase tasks anchor to tracked decision, deposit, and housing dates', () => {
+  const today = date(2026, 7, 30);
+  const deadline = date(2026, 11, 1);
+  const decisionDate = date(2027, 3, 1);
+  const enrollmentDepositDeadline = date(2027, 5, 1);
+  const housingDepositDue = date(2027, 6, 1);
+  const templatesById = {};
+  CollegeTools.TaskCatalog.getTemplates().forEach((template) => {
+    templatesById[template.templateId] = template;
+  });
+  function addDays(base, days) {
+    return new Date(base.getFullYear(), base.getMonth(), base.getDate() + days);
+  }
+
+  const result = CollegeTools.TaskPlanner.generatePlan(
+    baseConfig(deadline),
+    {colleges: [college('C1', 'Decision University', deadline, {
+      decisionDate, enrollmentDepositDeadline, housingDepositDue,
+    })]},
+    today,
+  );
+
+  const decisionTask = taskByTemplate(result.tasks, 'DEC-01', 'C1');
+  const depositTask = taskByTemplate(result.tasks, 'DEC-06', 'C1');
+  const housingTask = taskByTemplate(result.tasks, 'DEC-07', 'C1');
+
+  suite.assertEqual(decisionTask.dateSource, 'Decision release date',
+    'DEC-01 should anchor to the tracked decision release date');
+  suite.assertEqual(decisionTask.effectiveDate.getTime(),
+    addDays(decisionDate, templatesById['DEC-01'].offsetDays).getTime(),
+    'DEC-01 should apply its offset to the tracked decision date');
+
+  suite.assertEqual(depositTask.dateSource, 'Enrollment deposit deadline',
+    'DEC-06 should anchor to the tracked enrollment deposit deadline');
+  suite.assertEqual(depositTask.effectiveDate.getTime(),
+    addDays(enrollmentDepositDeadline, templatesById['DEC-06'].offsetDays).getTime(),
+    'DEC-06 should apply its offset to the tracked deposit deadline');
+
+  suite.assertEqual(housingTask.dateSource, 'Housing deposit due date',
+    'DEC-07 should anchor to the tracked housing deposit due date');
+  suite.assertEqual(housingTask.effectiveDate.getTime(),
+    addDays(housingDepositDue, templatesById['DEC-07'].offsetDays).getTime(),
+    'DEC-07 should apply its offset to the tracked housing due date');
+});
+
+suite.test('decision-phase tasks fall back to a computed National Candidates Reply Date', () => {
+  const today = date(2026, 7, 30);
+  const deadline = date(2026, 11, 1);
+  const result = CollegeTools.TaskPlanner.generatePlan(
+    baseConfig(deadline),
+    {colleges: [college('C1', 'No Decision Data University', deadline)]},
+    today,
+  );
+
+  const decisionTask = taskByTemplate(result.tasks, 'DEC-01', 'C1');
+  const depositTask = taskByTemplate(result.tasks, 'DEC-06', 'C1');
+
+  suite.assert(decisionTask.dateSource.includes('National Candidates Reply Date'),
+    'DEC-01 should fall back to a computed default instead of the application deadline');
+  suite.assertEqual(decisionTask.anchorDate.getFullYear(), 2027,
+    'The computed default should fall in the spring of the decision year');
+  suite.assertEqual(decisionTask.anchorDate.getMonth(), 4,
+    'The computed default should anchor on May 1');
+  suite.assertEqual(decisionTask.anchorDate.getDate(), 1,
+    'The computed default should anchor on May 1');
+  suite.assert(depositTask.dateSource.includes('National Candidates Reply Date'),
+    'DEC-06 should fall back to a computed default when no deposit deadline is tracked');
+});
+
+suite.test('AP/IB score sending anchors to the fixed June 20 free-send deadline', () => {
+  const today = date(2026, 7, 30);
+  const deadline = date(2026, 11, 1);
+  const config = baseConfig(deadline);
+  config.modules.Testing = true;
+  const result = CollegeTools.TaskPlanner.generatePlan(
+    config,
+    {colleges: [college('C1', 'Testing University', deadline)]},
+    today,
+  );
+
+  const apScores = taskByTemplate(result.tasks, 'TST-07', 'C1');
+
+  suite.assert(apScores, 'AP/IB score sending should be generated when Testing is enabled');
+  suite.assert(apScores.dateSource.includes('June 20'),
+    'AP/IB score sending should anchor to the fixed June 20 free-send deadline');
+  suite.assertEqual(apScores.anchorDate.getMonth(), 5,
+    'The computed AP/IB default should fall in June');
+  suite.assertEqual(apScores.anchorDate.getDate(), 20,
+    'The computed AP/IB default should fall on the 20th');
 });
 
 suite.test('disabled modules are excluded instead of requiring users to delete maximum-plan tasks', () => {
@@ -687,7 +827,8 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     CollegeTools.Config.SHEET_NAMES.TASK_TEMPLATES);
   const tasks = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
 
-  suite.assertEqual(setup.templateCount, 100, 'Setup should render all 100 templates');
+  suite.assertEqual(setup.templateCount, CollegeTools.TaskCatalog.validate().count,
+    'Setup should render every catalog template');
   suite.assert(templates.isSheetHidden(), 'Template sheet should be system-hidden');
   suite.assertEqual(tasks.getLastRow(), 1, 'Blank template should not preload family tasks');
   suite.assertEqual(tasks.getMaxRows(), 200,
@@ -716,6 +857,11 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
   timeline.getRange(2, columnOf(timeline, 'College Name')).setValue('Sheet University');
   timeline.getRange(2, columnOf(timeline, 'Application Deadline')).setValue(date(2026, 10, 28));
+  const status = mockSpreadsheet.getSheetByName(
+    CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+  status.getRange(2, columnOf(status, 'College Name')).setValue('Sheet University');
+  status.getRange(2, columnOf(status, 'Application Status')).setValue('Decision Received');
+  status.getRange(2, columnOf(status, 'Decision/Result')).setValue('Accepted');
 
   const generated = CollegeTools.TaskManagement.generateTaskPlan();
   const recruiting = mockSpreadsheet.getSheetByName(
@@ -725,13 +871,20 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
 
   suite.assert(generated.ok && generated.taskCount > 0, 'Workbook plan generation should succeed');
   suite.assertEqual(
-    generated.applicableTemplateCount + generated.excludedTemplateCount, 100,
+    generated.applicableTemplateCount + generated.excludedTemplateCount,
+    CollegeTools.TaskCatalog.validate().count,
     'Generation should report included and excluded catalog counts');
   suite.assert(recruiting, 'Recruiting Tracker should be created when enabled');
   suite.assert(generatedTasks.some((task) => task.templateId === 'ATH-01'),
     'Enabled recruiting tasks should be written to canonical Tasks');
   suite.assertEqual(thisWeek.getRange(1, 1).getValue(), 'Task ID',
     'This Week should be generated from Tasks with its own tab');
+  const weeklyText = thisWeek.getRange(1, 1, thisWeek.getLastRow(), 2)
+    .getValues().flat().join(' | ');
+  suite.assert(weeklyText.includes('Decision Received: 1'),
+    'Weekly report should summarize canonical application statuses');
+  suite.assert(weeklyText.includes('Accepted: 1'),
+    'Weekly report should summarize canonical decision results');
 
   const unchangedPreview = CollegeTools.TaskManagement.previewTaskPlan();
   suite.assertEqual(unchangedPreview.preview.add, 0,

@@ -165,12 +165,15 @@ student next action, and notes.
 
 ## 6. Seed College Task Catalog
 
-This catalog contains exactly 100 task templates. College-, essay-, coach-, or
-scholarship-specific templates may create multiple instances. `S` = Student,
-`P` = Parent/Guardian, `C` = Counselor/Professional, `X` = external party.
-Effort is a baseline active-work estimate before role multipliers.
+This catalog is source-controlled and uncapped: templates are added or removed
+as coverage requires, and `CollegeTools.TaskCatalog.validate()` enforces
+structural correctness (unique IDs, required fields, resolvable dependencies)
+rather than a fixed count. College-, essay-, coach-, or scholarship-specific
+templates may create multiple instances. `S` = Student, `P` = Parent/Guardian,
+`C` = Counselor/Professional, `X` = external party. Effort is a baseline
+active-work estimate before role multipliers.
 
-### Strategy And Configuration (8)
+### Strategy And Configuration (9)
 
 | ID | Task | Owner | Applies / anchor | Effort | Complete when |
 |---|---|---|---|---:|---|
@@ -182,6 +185,7 @@ Effort is a baseline active-work estimate before role multipliers.
 | `STR-06` | Set annual contribution and borrowing limits | P | Before affordability review | 90m | Written financial limits |
 | `STR-07` | Define Reach/Target/Likely and financial-safety rules | Shared/C | After STR-04–06 | 60m | Classification rules saved |
 | `STR-08` | Choose ED/EA/REA/RD strategy and decision conditions | Shared/C | After preliminary cost/list review | 90m | Written application-round strategy |
+| `STR-09` | Sign Early Decision agreement with student, parent, and counselor signatures | Shared/C | If applying ED, ED2, or REA | 30m | Signed binding agreement on file |
 
 ### Student Foundation (8)
 
@@ -239,7 +243,7 @@ Effort is a baseline active-work estimate before role multipliers.
 | `SCH-06` | Complete required merit/honors/scholarship submission | S/P | Per selected opportunity | 180m default | Submission confirmed |
 | `SCH-07` | Record result, amount, conditions, and next action | P/S | Per submitted opportunity | 15m | Tracker updated |
 
-### Testing (6, Conditional)
+### Testing (7, Conditional)
 
 | ID | Task | Owner | Applies / anchor | Effort | Complete when |
 |---|---|---|---|---:|---|
@@ -249,6 +253,7 @@ Effort is a baseline active-work estimate before role multipliers.
 | `TST-04` | Create and execute preparation/checkpoint plan | S, tutor support | Before test | 600m default | Planned checkpoints completed |
 | `TST-05` | Decide test-submit/test-optional strategy | Shared/C | Per college, after scores | 20m | Decision recorded |
 | `TST-06` | Send required official scores and verify receipt | S/P | Per college deadline | 20m | Portal/agency confirmation |
+| `TST-07` | Designate free AP/IB score recipients or send official scores to the enrolling college | S | If AP/IB scores are required | 20m | Scores sent before the free-send deadline |
 
 ### Recommendations And School Records (7)
 
@@ -334,6 +339,26 @@ Effort is a baseline active-work estimate before role multipliers.
 | `SUB-04` | Activate portal and verify application receipt | S | After SUB-03 | 30m | Portal active and received |
 | `SUB-05` | Resolve missing items and track post-submit requirements | S/P/X | After portal review | 30m | Missing items cleared/owned |
 
+### Decision And Enrollment (7)
+
+Covers the post-acceptance phase that ends when a family submits an
+application: comparing awards, deciding on waitlists, choosing where to
+enroll, and paying the deposit. Anchors to `Decision Release Date`,
+`Enrollment Deposit Deadline`, and `Housing Deposit Due` on Application
+Timeline, and to `Decision/Result` on the Application Status tracker; falls
+back to a computed National Candidates Reply Date (May 1 of the decision year)
+when a college-specific date is not yet tracked.
+
+| ID | Task | Owner | Applies / anchor | Effort | Complete when |
+|---|---|---|---|---:|---|
+| `DEC-01` | Record admission decision result | Shared | Per college, after decision released | 15m | Decision/Result recorded |
+| `DEC-02` | Reconcile actual financial-aid award against the net-price estimate | P | Per admitted college | 60m | Award recorded and net-price variance noted |
+| `DEC-03` | Draft and submit a financial-aid appeal if the award is insufficient | P/C | Per admitted college, if warranted | 90m | Appeal submitted or decision to accept recorded |
+| `DEC-04` | Decide waitlist response and submit a Letter of Continued Interest if pursuing | S/C | Per waitlisted college | 90m | Waitlist response submitted or withdrawal recorded |
+| `DEC-05` | Compare admitted-college affordability and decide whether to enroll or decline | Shared | Per admitted college, before deposit | 60m | Enroll or decline decision recorded for this college |
+| `DEC-06` | Submit enrollment deposit and confirm seat by the National Candidates Reply Date or an earlier binding deadline | P | For the college chosen to enroll | 30m | Deposit paid and confirmation saved |
+| `DEC-07` | Register for orientation and submit housing deposit or preferences | S/P | For the enrolling college | 45m | Orientation registered and housing preferences submitted |
+
 ### Project Control (1 Recurring Template)
 
 | ID | Task | Owner | Applies / anchor | Effort | Complete when |
@@ -375,7 +400,7 @@ remaining tracker disagreement.
 
 ### SW-02 — Catalog Module And Template Sheet
 
-- Create a source-controlled task catalog containing the 100 templates above.
+- Create a source-controlled task catalog containing the templates above.
 - Validate unique IDs, owners/fallbacks, applicability, anchors, dependencies,
   effort, and deliverables.
 - Render the hidden `Task Templates` sheet from the catalog; user edits do not
@@ -459,7 +484,7 @@ remaining tracker disagreement.
 
 ## 9. Acceptance Criteria
 
-1. The catalog contains 100 unique, validated templates and generates only
+1. The catalog contains unique, validated templates and generates only
    applicable modules.
 2. A more-than-one-year family receives a long roadmap without premature
    submission work.

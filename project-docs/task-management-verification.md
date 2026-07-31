@@ -9,6 +9,17 @@
 The implementation, automated acceptance scenarios, and both live copied-sheet
 scenarios are complete. Production/template Apps Script was not touched.
 
+**Update (2026-07-30, later same day):** the catalog's 100-template cap was
+removed and a 9-template Decision And Enrollment phase (`DEC-01`..`DEC-07`,
+`STR-09`, `TST-07`) was added to close a post-acceptance coverage gap
+identified via external research (award-letter comparison, National
+Candidates Reply Date deposit, waitlist response, AP/IB score sending, ED
+agreement signing). This addition is covered by new Node-harness scheduling
+tests (decision/deposit/housing anchor resolution, National Candidates Reply
+Date fallback, AP/IB June 20 fallback) but has not yet been re-run through a
+live copied-sheet smoke test; do that before merging/deploying per the
+project's testing-limits policy.
+
 The Node harness proves catalog, scheduling, reconciliation, preservation,
 schema, menu, and generated-sheet behavior. The disposable live tests add
 Google Sheets rendering, Apps Script runtime, filter, date/time-zone, and
@@ -18,7 +29,7 @@ preservation evidence.
 
 | # | Requirement | Evidence | Status |
 |---:|---|---|---|
-| 1 | 100 unique validated templates; conditional modules | `task-management-tests.js`: catalog and disabled-module scenarios | Automated pass |
+| 1 | Uncapped, unique, validated templates; conditional modules | `task-management-tests.js`: catalog and disabled-module scenarios | Automated pass |
 | 2 | Long-horizon roadmap without premature submission work | `task-management-tests.js`: long-horizon scenario | Automated pass |
 | 3 | Accelerated 90-day athlete plan through earliest deadline | Athlete scenario: authoritative precedence, adaptive multi-week distribution, fixed deadlines, FAFSA sequencing | Automated and live pass |
 | 4 | Stable identity, owner, schedule, effort, deliverable, completion rule | Catalog validation plus explicit applicability/rule/anchor/offset/calculated/effective task assertions | Automated pass |
@@ -75,7 +86,7 @@ formats differ.
 
 The live runner verifies:
 
-- the 100-template catalog;
+- the full task catalog;
 - real sheet creation and writes;
 - `Colleges` row 2/row 3 handling;
 - stable College and Task IDs;

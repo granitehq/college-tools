@@ -18,6 +18,7 @@ CollegeTools.TaskPlanner = (function() {
     'STR-03': true, 'STR-06': true, 'STR-07': true, 'STR-08': true,
     'COL-08': true, 'COL-09': true, 'COL-10': true, 'AID-11': true,
     'SCH-05': true, 'TST-02': true, 'TST-05': true,
+    'DEC-03': true, 'DEC-04': true, 'DEC-05': true,
   };
 
   /**
@@ -82,14 +83,11 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
-   * Returns a labeled default deadline when only an application round is known.
-   * @param {Object} college - College
+   * Returns the fall application year inferred from cycle, grad year, or deadline.
    * @param {Object} config - Configuration
-   * @returns {Date|null} Round default
+   * @returns {number|null} Fall application year
    */
-  function applicationRoundDeadline_(college, config) {
-    var round = (college.applicationType || '').toString().trim().toUpperCase();
-    if (!round) return null;
+  function applicationFallYear_(config) {
     var fallYear = null;
     var cycleMatch = /^(\d{4})/.exec((config.applicationCycle || '').toString());
     if (cycleMatch) fallYear = Number(cycleMatch[1]);
@@ -100,10 +98,46 @@ CollegeTools.TaskPlanner = (function() {
       fallYear = config.workingDeadline.getMonth() < 6 ?
         config.workingDeadline.getFullYear() - 1 : config.workingDeadline.getFullYear();
     }
+    return fallYear || null;
+  }
+
+  /**
+   * Returns a labeled default deadline when only an application round is known.
+   * @param {Object} college - College
+   * @param {Object} config - Configuration
+   * @returns {Date|null} Round default
+   */
+  function applicationRoundDeadline_(college, config) {
+    var round = (college.applicationType || '').toString().trim().toUpperCase();
+    if (!round) return null;
+    var fallYear = applicationFallYear_(config);
     if (!fallYear) return null;
     if (round === 'ED2' || round === 'RD') return new Date(fallYear + 1, 0, 15);
     if (round === 'ROLLING') return new Date(fallYear + 1, 1, 1);
     return new Date(fallYear, 10, 1);
+  }
+
+  /**
+   * Returns the National Candidates Reply Date (May 1) default for the
+   * decision-year spring following the fall application year, used when no
+   * college-specific decision, deposit, or housing date is tracked.
+   * @param {Object} config - Configuration
+   * @returns {Date|null} May 1 default
+   */
+  function nationalReplyDateDefault_(config) {
+    var fallYear = applicationFallYear_(config);
+    return fallYear ? new Date(fallYear + 1, 4, 1) : null;
+  }
+
+  /**
+   * Returns the fixed AP/IB free-score-sending deadline (June 20) for the
+   * decision-year spring following the fall application year.
+   * @param {Object} config - Configuration
+   * @returns {Date|null} June 20 default
+   */
+  function apScoreSendingDefault_(config) {
+    var fallYear = applicationFallYear_(config);
+    return fallYear ? new Date(fallYear + 1, 5, 20) : null;
   }
 
   /**
@@ -410,6 +444,31 @@ CollegeTools.TaskPlanner = (function() {
           college.transcriptDeadline, college.teacherRecDeadline, college.counselorRecDeadline,
         ]);
         if (date) source = 'Earliest school-document deadline';
+      } else if (id === 'TST-07') {
+        date = apScoreSendingDefault_(config);
+        source = 'AP/IB score-sending deadline (June 20)';
+      } else if (id.indexOf('DEC-') === 0) {
+        if (id === 'DEC-05' || id === 'DEC-06') {
+          if (toDate(college.enrollmentDepositDeadline)) {
+            date = toDate(college.enrollmentDepositDeadline);
+            source = 'Enrollment deposit deadline';
+          }
+        } else if (id === 'DEC-07') {
+          if (toDate(college.housingDepositDue)) {
+            date = toDate(college.housingDepositDue);
+            source = 'Housing deposit due date';
+          } else if (toDate(college.enrollmentDepositDeadline)) {
+            date = toDate(college.enrollmentDepositDeadline);
+            source = 'Enrollment deposit deadline';
+          }
+        } else if (toDate(college.decisionDate)) {
+          date = toDate(college.decisionDate);
+          source = 'Decision release date';
+        }
+        if (!date) {
+          date = nationalReplyDateDefault_(config);
+          source = 'National Candidates Reply Date default (May 1)';
+        }
       }
       if (!date) {
         var fallback = collegeFallback();

@@ -26,6 +26,7 @@ CollegeTools.TaskCatalog = (function() {
     VIS: 'Visits, Interviews, And Demonstrated Interest',
     PRT: 'Portfolio And Audition',
     SUB: 'Submission And Portals',
+    DEC: 'Decision And Enrollment',
     PM: 'Project Control',
   };
 
@@ -39,6 +40,7 @@ CollegeTools.TaskCatalog = (function() {
     ['STR-06', 'Set annual contribution and borrowing limits', 'Parent/Guardian', '', 'Before affordability review', 90, 'Written financial limits'],
     ['STR-07', 'Define Reach/Target/Likely and financial-safety rules', 'Shared', 'Counselor/Professional', 'After STR-04 through STR-06', 60, 'Classification rules saved'],
     ['STR-08', 'Choose ED/EA/REA/RD strategy and decision conditions', 'Shared', 'Counselor/Professional', 'After preliminary cost/list review', 90, 'Written application-round strategy'],
+    ['STR-09', 'Sign Early Decision agreement with student, parent, and counselor signatures', 'Shared', 'Counselor/Professional', 'If applying ED, ED2, or REA', 30, 'Signed binding agreement on file'],
     ['PRO-01', 'Collect current transcript and course schedule', 'Student', 'Parent/Guardian', 'Start', 30, 'Current records stored'],
     ['PRO-02', 'Verify transcript, GPA, courses, and errors', 'Student', 'External dependency', 'After PRO-01', 60, 'Accuracy confirmed or corrections requested'],
     ['PRO-03', 'Build complete activities inventory', 'Student', '', 'Before Common App', 120, 'Activities and impact evidence listed'],
@@ -81,6 +83,7 @@ CollegeTools.TaskCatalog = (function() {
     ['TST-04', 'Create and execute preparation and checkpoint plan', 'Student', 'Tutor', 'Before test', 600, 'Planned checkpoints completed'],
     ['TST-05', 'Decide test-submit or test-optional strategy', 'Shared', 'Counselor/Professional', 'Per college after scores', 20, 'Decision recorded'],
     ['TST-06', 'Send required official scores and verify receipt', 'Shared', '', 'Per college deadline', 20, 'Portal or agency confirmation'],
+    ['TST-07', 'Designate free AP/IB score recipients or send official scores to the enrolling college', 'Student', '', 'If AP/IB scores are required', 20, 'Scores sent before the free-send deadline'],
     ['REC-01', 'Document high-school recommendation and transcript process', 'Student', 'External dependency', 'Start of application phase', 45, 'Process and internal dates recorded'],
     ['REC-02', 'Select appropriate teacher recommenders', 'Student', 'Counselor/Professional', 'Before requests', 45, 'Recommenders chosen'],
     ['REC-03', 'Request teacher recommendations', 'Student', '', 'School request deadline', 30, 'Teachers confirm'],
@@ -130,6 +133,13 @@ CollegeTools.TaskCatalog = (function() {
     ['SUB-03', 'Submit application and pay fee or use waiver', 'Shared', '', 'College deadline', 30, 'Submission confirmation saved'],
     ['SUB-04', 'Activate portal and verify application receipt', 'Student', '', 'After submission', 30, 'Portal active and application received'],
     ['SUB-05', 'Resolve missing items and track post-submit requirements', 'Shared', 'External dependency', 'After portal review', 30, 'Missing items cleared or owned'],
+    ['DEC-01', 'Record admission decision result', 'Shared', '', 'Per college, after decision released', 15, 'Decision/Result recorded'],
+    ['DEC-02', 'Reconcile actual financial-aid award against the net-price estimate', 'Parent/Guardian', '', 'Per admitted college', 60, 'Award recorded and net-price variance noted'],
+    ['DEC-03', 'Draft and submit a financial-aid appeal if the award is insufficient', 'Parent/Guardian', 'Counselor/Professional', 'Per admitted college, if warranted', 90, 'Appeal submitted or decision to accept recorded'],
+    ['DEC-04', 'Decide waitlist response and submit a Letter of Continued Interest if pursuing', 'Student', 'Counselor/Professional', 'Per waitlisted college', 90, 'Waitlist response submitted or withdrawal recorded'],
+    ['DEC-05', 'Compare admitted-college affordability and decide whether to enroll or decline', 'Shared', '', 'Per admitted college, before deposit', 60, 'Enroll or decline decision recorded for this college'],
+    ['DEC-06', 'Submit enrollment deposit and confirm seat by the National Candidates Reply Date or an earlier binding deadline', 'Parent/Guardian', '', 'For the college chosen to enroll', 30, 'Deposit paid and confirmation saved'],
+    ['DEC-07', 'Register for orientation and submit housing deposit or preferences', 'Student', 'Parent/Guardian', 'For the enrolling college', 45, 'Orientation registered and housing preferences submitted'],
     ['PM-01', 'Review completed and overdue work, decisions, 21-day deadlines, blockers, recruiting, and next week', 'Shared', '', 'Weekly inside rolling 90 days', 45, 'Plan updated and next actions assigned'],
   ];
 
@@ -141,6 +151,7 @@ CollegeTools.TaskCatalog = (function() {
     'TST-04': 'Testing',
     'TST-05': 'Testing',
     'TST-06': 'Testing',
+    'TST-07': 'Testing',
     'AID-08': 'CSS Profile',
     'AID-09': 'CSS Profile',
     'AID-10': 'CSS Profile',
@@ -166,6 +177,7 @@ CollegeTools.TaskCatalog = (function() {
   };
 
   var SCOPES = {
+    'STR-09': 'college',
     'COL-02': 'college', 'COL-03': 'college', 'COL-04': 'college',
     'COL-05': 'college', 'COL-06': 'college', 'COL-07': 'college',
     'COL-08': 'college', 'COL-09': 'college',
@@ -173,7 +185,7 @@ CollegeTools.TaskCatalog = (function() {
     'AID-11': 'college',
     'SCH-01': 'college', 'SCH-02': 'college', 'SCH-03': 'college',
     'SCH-06': 'scholarship', 'SCH-07': 'scholarship',
-    'TST-05': 'college', 'TST-06': 'college',
+    'TST-05': 'college', 'TST-06': 'college', 'TST-07': 'college',
     'REC-07': 'college',
     'ESS-08': 'prompt', 'ESS-09': 'prompt', 'ESS-10': 'college',
     'ATH-05': 'college', 'ATH-06': 'college', 'ATH-07': 'college',
@@ -183,6 +195,9 @@ CollegeTools.TaskCatalog = (function() {
     'PRT-01': 'portfolio', 'PRT-02': 'portfolio', 'PRT-03': 'portfolio',
     'SUB-01': 'college', 'SUB-02': 'college', 'SUB-03': 'college',
     'SUB-04': 'college', 'SUB-05': 'college',
+    'DEC-01': 'college', 'DEC-02': 'college', 'DEC-03': 'college',
+    'DEC-04': 'college', 'DEC-05': 'college', 'DEC-06': 'college',
+    'DEC-07': 'college',
     'PM-01': 'recurring',
   };
 
@@ -190,24 +205,25 @@ CollegeTools.TaskCatalog = (function() {
     STR: 'Explore', PRO: 'Prepare', COL: 'Research', AID: 'Affordability',
     SCH: 'Scholarships', TST: 'Testing', REC: 'School Documents',
     APP: 'Application', ESS: 'Essays', ATH: 'Recruiting', VIS: 'Engagement',
-    PRT: 'Portfolio', SUB: 'Submit', PM: 'Control',
+    PRT: 'Portfolio', SUB: 'Submit', DEC: 'Decision', PM: 'Control',
   };
 
   var DEFAULT_OFFSETS = {
     STR: -300, PRO: -220, COL: -190, AID: -120, SCH: -100, TST: -170,
     REC: -100, APP: -80, ESS: -60, ATH: -150, VIS: -90, PRT: -60,
-    SUB: -5, PM: 0,
+    SUB: -5, DEC: -14, PM: 0,
   };
 
   var OFFSET_OVERRIDES = {
     'STR-01': -420, 'STR-02': -415, 'STR-03': -410, 'STR-08': -110,
-    'PRO-08': -210,
+    'STR-09': -14,
+    'PRO-02': -213, 'PRO-05': -200, 'PRO-07': -205, 'PRO-08': -210,
     'COL-01': -260, 'COL-10': -95,
     'AID-01': -180, 'AID-02': -150, 'AID-06': -20, 'AID-07': -14,
-    'AID-09': -45, 'AID-10': -7, 'AID-11': -30,
+    'AID-09': -45, 'AID-10': -14, 'AID-11': -30,
     'SCH-05': -70, 'SCH-06': -7, 'SCH-07': 14,
     'TST-01': -240, 'TST-02': -225, 'TST-03': -210, 'TST-04': -200,
-    'TST-05': -75, 'TST-06': -21,
+    'TST-05': -75, 'TST-06': -21, 'TST-07': 0,
     'REC-01': -140, 'REC-02': -135, 'REC-03': -125, 'REC-04': -115,
     'REC-05': -120, 'REC-06': -30, 'REC-07': -7,
     'APP-01': -110, 'APP-02': -100, 'APP-03': -95, 'APP-04': -80,
@@ -222,11 +238,14 @@ CollegeTools.TaskCatalog = (function() {
     'VIS-05': -14, 'VIS-06': 0,
     'PRT-01': -90, 'PRT-02': -75, 'PRT-03': -3,
     'SUB-01': -7, 'SUB-02': -3, 'SUB-03': 0, 'SUB-04': 2, 'SUB-05': 7,
+    'DEC-01': 3, 'DEC-02': 10, 'DEC-03': 21, 'DEC-04': 14, 'DEC-05': -14,
+    'DEC-06': -2, 'DEC-07': -3,
   };
 
   var DEPENDENCIES = {
     'STR-07': ['STR-04', 'STR-05', 'STR-06'],
     'STR-08': ['COL-09', 'AID-03'],
+    'STR-09': ['STR-08'],
     'PRO-02': ['PRO-01'], 'PRO-05': ['PRO-03', 'PRO-04'],
     'PRO-07': ['PRO-06'], 'PRO-08': ['STR-04'],
     'COL-01': ['STR-04', 'STR-05', 'STR-06'],
@@ -255,6 +274,9 @@ CollegeTools.TaskCatalog = (function() {
     'PRT-02': ['PRT-01'], 'PRT-03': ['PRT-02'],
     'SUB-01': ['APP-08', 'ESS-07', 'REC-07'], 'SUB-02': ['SUB-01'],
     'SUB-03': ['SUB-02'], 'SUB-04': ['SUB-03'], 'SUB-05': ['SUB-04'],
+    'DEC-01': ['SUB-04'], 'DEC-02': ['DEC-01', 'AID-04'],
+    'DEC-03': ['DEC-02'], 'DEC-04': ['DEC-01'], 'DEC-05': ['DEC-02'],
+    'DEC-06': ['DEC-05'], 'DEC-07': ['DEC-06'],
   };
 
   var RESOURCE_LINKS = {
@@ -296,6 +318,8 @@ CollegeTools.TaskCatalog = (function() {
     if (scope === 'prompt') return 'College application deadline';
     if (templateId.indexOf('AID-') === 0) return 'Aid availability or priority deadline';
     if (templateId.indexOf('SCH-') === 0) return 'Merit, honors, or scholarship deadline';
+    if (templateId === 'TST-07') return 'AP/IB score-sending deadline (June 20)';
+    if (templateId.indexOf('DEC-') === 0) return 'Decision, deposit, or housing date';
     if (scope === 'college') return 'College-specific authoritative deadline';
     return 'Earliest relevant college deadline';
   }
@@ -364,7 +388,6 @@ CollegeTools.TaskCatalog = (function() {
         }
       });
     });
-    if (templates.length !== 100) errors.push('Expected 100 templates; found ' + templates.length);
     return {ok: errors.length === 0, count: templates.length, errors: errors};
   }
 

@@ -834,6 +834,10 @@ CollegeTools.TaskManagement = (function() {
         essaysComplete: statusRow['Essays Complete'],
         submittedDate: statusRow['Submitted Date'],
         applicationStatus: statusRow['Application Status'],
+        decisionDate: timelineRow['Decision Release Date'],
+        decisionResult: statusRow['Decision/Result'],
+        enrollmentDepositDeadline: timelineRow['Enrollment Deposit Deadline'],
+        housingDepositDue: timelineRow['Housing Deposit Due'],
         portal: statusRow['App Portal'],
         documentsComplete: statusRow['Documents Complete'],
         portfolioRequired: statusRow['Portfolio Required (Y/N)'],
@@ -954,6 +958,32 @@ CollegeTools.TaskManagement = (function() {
   }
 
   /**
+   * Summarizes the canonical Application Status Tracker for the weekly report.
+   * @param {Spreadsheet} spreadsheet - Workbook
+   * @returns {Object} Status and decision counts
+   */
+  function applicationStatusSummary_(spreadsheet) {
+    var rows = readTable_(spreadsheet.getSheetByName(
+      CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER));
+    var summary = {
+      tracked: 0,
+      statuses: {},
+      decisions: {},
+    };
+    rows.forEach(function(row) {
+      if (!row['College Name'] && !row['College ID']) return;
+      summary.tracked++;
+      var status = (row['Application Status'] || 'Not Started').toString().trim();
+      var decision = (row['Decision/Result'] || '').toString().trim();
+      summary.statuses[status] = (summary.statuses[status] || 0) + 1;
+      if (decision && decision !== 'Pending') {
+        summary.decisions[decision] = (summary.decisions[decision] || 0) + 1;
+      }
+    });
+    return summary;
+  }
+
+  /**
    * Renders the generated This Week and rolling/effort report.
    * @param {Spreadsheet} spreadsheet - Workbook
    * @param {Object} views - Planner views
@@ -985,6 +1015,12 @@ CollegeTools.TaskManagement = (function() {
       var counts = views.thisWeekCategoryCounts[category];
       return category + ' ' + counts.shown + '/' + counts.eligible;
     }).join('; ');
+    var applicationSummary = applicationStatusSummary_(spreadsheet);
+    var summarizeCounts = function(counts) {
+      return Object.keys(counts).sort().map(function(label) {
+        return label + ': ' + counts[label];
+      }).join('; ') || 'None recorded';
+    };
     var reportRows = [
       ['Current actions shown / eligible',
         views.thisWeek.length + ' / ' + views.thisWeekCandidateCount],
@@ -999,6 +1035,8 @@ CollegeTools.TaskManagement = (function() {
       ['Deadlines within 21 days', views.counts.dueWithin21Days],
       ['Applications submitted / tracked',
         views.counts.applicationsSubmitted + ' / ' + views.counts.applicationsTracked],
+      ['Application status breakdown', summarizeCounts(applicationSummary.statuses)],
+      ['Decision results', summarizeCounts(applicationSummary.decisions)],
       ['Recruiting actions in rolling 90 days', views.counts.recruitingActions],
       ['Remaining baseline effort (hours)',
         Math.round((views.totalEffortMinutes / 60) * 10) / 10],

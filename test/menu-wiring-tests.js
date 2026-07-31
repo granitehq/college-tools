@@ -60,6 +60,10 @@ suite.test('repair entire workbook adapter owns confirmation and final alert', (
     'Repair Entire Workbook adapter should call the service without nested alerts');
   suite.assert(repairBody.includes('Workbook Repair Complete'),
     'Repair Entire Workbook adapter should show the final completion alert');
+  suite.assert(repairBody.includes('Repairing Tasks and refreshing This Week'),
+    'Repair confirmation should disclose task-management repair');
+  suite.assert(repairBody.includes("detailById['task-management']"),
+    'Repair result should report the task-management step');
 });
 
 suite.test('repair menu item is present', () => {

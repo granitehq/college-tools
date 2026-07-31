@@ -289,7 +289,8 @@ CollegeTools.Formatting = (function() {
   };
   STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE] = {
     range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
-    date: ['Application Deadline', 'Decision Release Date'],
+    date: ['Application Deadline', 'Decision Release Date', 'Enrollment Deposit Deadline',
+      'Housing Deposit Due'],
     list: [
       ['Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']],
       ['Priority Level', ['High', 'Medium', 'Low', 'Other']],

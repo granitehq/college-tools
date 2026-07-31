@@ -210,6 +210,7 @@ function repairEntireWorkbook() {
     '• Reapplying dropdowns and formatting\n' +
     '• Rebuilding scoring formulas (custom weights are kept)\n' +
     '• Refreshing Travel Planner estimates\n' +
+    '• Repairing Tasks and refreshing This Week\n' +
     '• Refreshing dashboard data when present\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO,
@@ -232,6 +233,9 @@ function repairEntireWorkbook() {
       ((detailById['validation-formatting'] && detailById['validation-formatting'].sectionsApplied || []).length) +
       '\n' +
     'Travel rows refreshed: ' + (detailById['travel-planner'] && detailById['travel-planner'].count || 0) +
+      '\n' +
+    'Task management: ' +
+      (detailById['task-management'] && detailById['task-management'].message || 'Not available') +
       '\n\n' +
     'This is safe to run again if needed.',
     ui.ButtonSet.OK,

@@ -211,7 +211,7 @@ function runTaskManagementLiveSmoke(mode) {
       return rowValue[0];
     });
   var checks = {
-    setupValidated100Templates: setup.templateCount === 100,
+    setupValidatedFullCatalog: setup.templateCount === CollegeTools.TaskCatalog.validate().count,
     generatedTasks: generated.ok && regenerated.ok && tasks.length > 0,
     uniqueTaskIds: duplicateIds.length === 0,
     collegesHeaderOnRow2: colleges.getRange(2, 1).getValue() === 'College Name',
