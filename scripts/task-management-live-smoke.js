@@ -88,7 +88,10 @@ function runTaskManagementLiveSmoke(mode) {
   timeline.getRange(2, column(timeline, 'College Name', 1)).setValue(collegeName);
   timeline.getRange(2, column(timeline, 'Application Type (ED/ED2/EA/REA/RD)', 1))
     .setValue('EA');
-  timeline.getRange(2, column(timeline, 'Application Deadline', 1)).setValue(deadline);
+  var timelineDeadlineRange = timeline.getRange(
+    2, column(timeline, 'Application Deadline', 1));
+  timelineDeadlineRange.setValue(deadline);
+  var expectedDeadlineDisplay = timelineDeadlineRange.getDisplayValue();
   timeline.getRange(2, column(timeline, 'Supplemental Essays Required (#)', 1))
     .setValue(isAthlete ? 2 : 1);
   timeline.getRange(2, column(timeline, 'Supplemental Prompts / Topics', 1))
@@ -184,6 +187,8 @@ function runTaskManagementLiveSmoke(mode) {
     return task.templateId === 'SUB-03' && !task.archivedReason &&
       task.collegeId === activeCollegeId;
   })[0];
+  var submissionDueDisplay = submission ?
+    tasksSheet.getRange(submission._sourceRow, dueDateColumn).getDisplayValue() : '';
   var recruitingTasks = tasks.filter(function(task) {
     return task.module === 'Athletic Recruiting' && !task.archivedReason;
   });
@@ -227,8 +232,7 @@ function runTaskManagementLiveSmoke(mode) {
       tasksSheet.getRange(preservedRow, column(tasksSheet, 'Live Custom Formula', 1))
         .getFormula() === '="preserved"',
     submissionUsesDeadline: !!submission &&
-      CollegeTools.TaskPlanner.dateKey(submission.dueDate) ===
-        CollegeTools.TaskPlanner.dateKey(deadline),
+      submissionDueDisplay === expectedDeadlineDisplay,
     scheduleContractExposed: !!submission && !!submission.applicabilityRule &&
       !!submission.scheduleRule && !!submission.scheduleAnchor &&
       !!submission.anchorDate && !!submission.offsetWindow &&
@@ -253,8 +257,10 @@ function runTaskManagementLiveSmoke(mode) {
     checks: checks,
     observations: {
       expectedDeadline: CollegeTools.TaskPlanner.dateKey(deadline),
+      expectedDeadlineDisplay: expectedDeadlineDisplay,
       submissionDueDate: submission ?
         CollegeTools.TaskPlanner.dateKey(submission.dueDate) : '',
+      submissionDueDisplay: submissionDueDisplay,
       submissionAnchorDate: submission ?
         CollegeTools.TaskPlanner.dateKey(submission.anchorDate) : '',
       submissionDateSource: submission ? submission.dateSource : '',
