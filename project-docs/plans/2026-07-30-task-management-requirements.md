@@ -1,6 +1,6 @@
 # College Task Management Requirements Specification
 
-**Status:** Draft for review, revision 2
+**Status:** Draft for review, revision 3
 
 **Date:** 2026-07-30
 
@@ -11,8 +11,12 @@
 ## Purpose
 
 Add a task-management layer to `college-tools` that turns the college
-application process into a structured, owner-aware 90-day plan. For the current
-rising-senior scenario, the project objective is:
+application process into a structured, owner-aware, deadline-anchored plan.
+The same system must support a family beginning more than a year before
+applications and a family, like the current one, entering an accelerated final
+90 days.
+
+For the current rising-senior scenario, the project objective is:
 
 > By the target early-application date, submit the strongest possible
 > applications to colleges the student would actually attend and the family
@@ -28,12 +32,13 @@ task-by-task implementation plan or final sheet layout.
 
 ## Problem Statement
 
-The college process is expected to contain approximately 70-100 meaningful
-tasks across strategy, research, affordability, testing, recommendations,
-applications, essays, athletic recruiting, visits, submission, and financial
-aid. The existing workbook tracks colleges, deadlines, financial aid, visits,
-and application status, but it is not a project-management system for the work
-required to reach those outcomes.
+The current rising-senior college process is expected to contain approximately
+70-100 meaningful tasks across strategy, research, affordability, testing,
+recommendations, applications, essays, athletic recruiting, visits,
+submission, and financial aid. A family starting earlier may have a longer
+roadmap with a different applicable task set. The existing workbook tracks
+colleges, deadlines, financial aid, visits, and application status, but it is
+not a project-management system for the work required to reach those outcomes.
 
 Without a single task source of truth:
 
@@ -73,25 +78,32 @@ reviewer. A successful result allows the parent to:
    information, factual review, fees, signatures, and verification.
 4. **The weekly view is the primary operating view.** The full plan exists for
    completeness; users should normally work from a small current-action view.
-5. **Estimate before constraining.** The first complete plan must calculate the
+5. **The schedule adapts to real milestones.** Current grade and graduation
+   year determine which work may apply, while actual application, school,
+   financial-aid, scholarship, and recruiting deadlines determine when it is
+   due.
+6. **Estimate before constraining.** The first complete plan must calculate the
    work required by role and week without suppressing, deferring, or removing
    valuable work to fit a predetermined hour limit. Capacity decisions come
    after the family reviews that baseline.
-6. **Tasks must be applicable and actionable.** Do not pad the plan with filler
+7. **Tasks must be applicable and actionable.** Do not pad the plan with filler
    or create tasks for testing, CSS Profile, interviews, visits, or recruiting
    when those activities do not apply.
-7. **Each college must justify its workload.** The system should support the
+8. **Each college must justify its workload.** The system should support the
    family's chosen list size, show the incremental work created by each school,
    and make it easy to remove schools that are unaffordable, poor fits, or not
    worth attending without track.
-8. **Support is separate from ownership.** An assistant can prepare research
+9. **Support is separate from ownership.** An assistant can prepare research
    or drafts and a professional can advise, while the task still belongs to
    the student or parent.
-9. **Prioritize high-value senior-year work.** Applications, affordability,
+10. **Prioritize high-value work for the available horizon.** In the final
+   application period, applications, affordability,
    essays, recruiting, recommendations, and submission readiness take priority
    over adding new extracurriculars, starting an admissions-only passion
-   project, or chasing many low-value scholarships.
-10. **College and estate work remain separate.** This feature is a college
+   project, or chasing many low-value scholarships. Families starting earlier
+   may receive meaningful course, testing, activity, exploration, financial,
+   and recruiting preparation tasks.
+11. **College and estate work remain separate.** This feature is a college
    application command center, not a general household, work, or estate task
    manager.
 
@@ -126,9 +138,9 @@ The parent is the default owner of:
 - decisions or external actions that require parental authority.
 
 The requirements must not impose a parent-hour ceiling before the detailed
-90-day plan is built. The plan should first calculate the work that is worth
-doing, then show the parent total, weekly average, and peak weeks so the family
-can make an informed scope or delegation decision.
+plan is built. The plan should first calculate the work that is worth doing,
+then show the parent total, weekly average, and peak weeks for the selected
+horizon so the family can make an informed scope or delegation decision.
 
 ### Counselor Or Paid Professional
 
@@ -167,20 +179,76 @@ Use `Shared` only when the deliverable genuinely requires active work from
 more than one person. Shared ownership must not become a catch-all that hides
 accountability.
 
+### Role And Module Adaptation
+
+The product should maintain a comprehensive system catalog but generate only
+the task modules and role assignments that apply to the family. Users should
+not be expected to delete irrelevant roles and tasks from a maximum plan.
+
+Initial setup should identify:
+
+- participating family roles, including Student and one or more
+  Parent/Guardian roles;
+- whether a private counselor, application consultant, essay coach, recruiting
+  specialist, tutor, or other paid professional is participating;
+- whether the student is pursuing athletic recruitment;
+- whether standardized testing remains in scope;
+- whether CSS Profile, portfolios/auditions, interviews, visits, or other
+  conditional pathways apply; and
+- whether a role is an active workbook user, an accountable owner, a support
+  provider, or an external party being awaited.
+
+The system should then apply two different rules:
+
+1. **Module applicability:** Do not instantiate a module such as Athletic
+   Recruiting when it does not apply.
+2. **Owner resolution:** For work that still must happen, choose the default
+   owner from the roles that actually exist. A task does not disappear merely
+   because a consultant is absent.
+
+Examples:
+
+- without athletic recruiting, coach research, recruiting questionnaires,
+  performance comparisons, and coach follow-ups are not generated;
+- with athletic recruiting, those tasks are generated and assigned primarily
+  to the student, with appropriate parent or specialist support;
+- without a private counselor, required list, essay, or schedule work falls
+  back to Student, Parent/Guardian, or Shared according to the template;
+- with a private counselor, selected research, review, planning, and
+  accountability tasks may be assigned to that professional, while authentic
+  student work remains student-owned; and
+- a school counselor may be an external dependency even when that person never
+  edits the workbook.
+
+Changing the family configuration later must:
+
+- show a preview of tasks to add, reassign, archive, or leave unchanged;
+- update only incomplete system-generated tasks by default;
+- preserve completed tasks, notes, evidence, and manual ownership decisions;
+- archive or mark a no-longer-applicable task `Skipped` with a reason rather
+  than silently delete its history; and
+- recalculate dates, dependencies, and effort summaries after confirmation.
+
 ## Scope
 
 ### In Scope
 
-- A master 90-day college task plan.
+- An adaptive master college roadmap covering the family's applicable planning
+  horizon.
+- A rolling 90-day plan generated from the master roadmap.
+- An accelerated final-90-day scenario for the current family.
 - A value-selected task catalog expected to produce approximately 70-100
-  applicable tasks for a typical application process.
+  applicable tasks for the current rising-senior application process; other
+  horizons may produce different totals.
 - One-time, recurring, and college-specific tasks.
-- Student, Parent, Counselor/Professional, and Shared ownership.
+- Configurable Student, Parent/Guardian, Counselor/Professional, Shared, and
+  external-dependency roles.
+- Optional task modules selected through family configuration.
 - Dependencies, deadlines, priorities, effort, status, deliverables, and
   authoritative resource links.
 - Separate normal and parent-adjusted effort estimates.
 - Assistant-preparation and professional-help indicators.
-- Total, phase, and weekly effort summaries by role.
+- Total, planning-stage, and weekly effort summaries by role.
 - Peak-week and deadline-collision visibility.
 - Weekly, owner-specific, overdue, blocked, decision-needed, and due-soon
   views.
@@ -200,6 +268,8 @@ accountability.
   net-price calculators.
 - A general-purpose kanban, chat, or document-management product.
 - Automated email or calendar notifications in the first release.
+- A second live project-plan spreadsheet or bidirectional cross-spreadsheet
+  synchronization in the first release.
 - Legal, tax, or financial advice.
 
 ## Relationship To Existing Workbook Features
@@ -231,6 +301,79 @@ does not assume general task tracking. Approval of this specification would be
 a product-direction change; the backlog must be reconciled before
 implementation begins.
 
+## Workbook Architecture Decision
+
+### Recommendation: One Integrated Workbook
+
+Task management should be part of the existing `college-tools` workbook, not a
+separate live project-plan spreadsheet.
+
+The task plan depends directly on college identity, application deadlines,
+financial-aid requirements, scholarships, visits, application status, and
+dashboard data. Keeping those records together preserves one source of truth
+and avoids asking families to enter or reconcile the same deadline or status
+twice.
+
+The integrated design should add the smallest practical surface:
+
+- `Tasks`: the canonical, user-editable task-instance table;
+- `Task Templates`: a system-managed catalog, hidden or otherwise kept out of
+  the normal user workflow; and
+- `This Week`: either a generated sheet or a Dashboard section, to be decided
+  during presentation design.
+
+The existing trackers remain canonical for their domain data. Task rows should
+link to those records by stable identifiers and derive completion where the
+tracker already provides reliable proof. The system must not copy application,
+financial-aid, scholarship, visit, or status fields into separately editable
+task columns.
+
+The effort summary, rolling 90-day view, and other filtered views should reuse
+`Tasks` data rather than create independently editable task copies.
+
+### Integrated-Workbook Tradeoffs
+
+The workbook is already large, and task management adds rows, formulas, setup
+logic, and at least one visible sheet. Mitigations must include:
+
+- keep only one canonical task table;
+- generate views from the task table instead of duplicating data;
+- use batch reads and writes rather than per-cell service calls;
+- avoid volatile whole-column formulas where bounded ranges or generated
+  values are sufficient;
+- trim unused rows consistently with existing workbook behavior;
+- archive prior application cycles rather than leaving every historical task
+  active; and
+- keep template/configuration data hidden from the normal family workflow.
+
+These costs are lower than the operational risk of maintaining two connected
+spreadsheets.
+
+### Separate-Workbook Contingency
+
+A separate project-plan workbook is not recommended for the first release.
+Formula-based imports would be primarily one-way, require separate access
+approval, and can become stale or fragile when sheet layouts change.
+Bidirectional Apps Script synchronization would add permissions, spreadsheet
+IDs, conflict resolution, copy/setup complexity, retries, and new failure
+modes.
+
+If a separate workbook is required later, synchronization must use these
+boundaries:
+
+- the main `college-tools` workbook remains authoritative for colleges,
+  deadlines, financial aid, scholarships, visits, and application status;
+- the project-plan workbook is authoritative only for task-specific fields
+  such as owner, planned week, status, notes, and completion;
+- records join through stable IDs, never row numbers or mutable names;
+- synchronization is explicit and observable, with a manual refresh option,
+  last-sync time, and surfaced errors;
+- each field has exactly one owning workbook; and
+- conflicts are reported rather than silently resolved.
+
+A read-only export, printable report, or temporary shareable view is preferable
+to maintaining a second live system.
+
 ## Current Scenario Assumptions
 
 The first task catalog and validation scenario should reflect the family's
@@ -254,12 +397,82 @@ current situation:
 These assumptions guide the starter catalog without turning one student's
 preferences into hard-coded requirements for every workbook user.
 
-## Planning Model
+## Adaptive Scheduling Model
 
-### Ninety-Day Phases
+### Required Planning Inputs
 
-The initial plan should organize tasks into four overlapping phases. Workstreams
-such as recruiting, affordability, and essays may span multiple phases.
+Initial setup should request or derive:
+
+- student's current grade and expected high-school graduation year;
+- planning start date, defaulting to the current date;
+- application cycle;
+- participating family members and optional professional-support roles;
+- enabled task modules and conditional pathways;
+- a working first-application deadline when school-specific deadlines are not
+  known yet;
+- actual application round and deadline for each college when known;
+- separate merit, honors, financial-aid, scholarship, school-document, and
+  recruiting milestones where applicable;
+- the high school's recommendation and transcript process dates when known;
+  and
+- whether testing, recruiting, visits, interviews, CSS Profile, portfolios,
+  and other conditional work apply.
+
+The system should calculate days remaining. Users should not have to maintain a
+manually entered "number of days before applications" value.
+
+Graduation year and grade are applicability inputs, not the primary scheduling
+clock. Exact task dates should come from real milestones whenever possible.
+
+### Deadline Precedence
+
+When scheduling a task, use the most specific reliable anchor available:
+
+1. actual school-, college-, scholarship-, aid-, or recruiting-specific date;
+2. application-round or school-process default;
+3. family working target date; and
+4. a clearly labeled suggested window when no authoritative date exists.
+
+The plan must support multiple concurrent deadlines. A single generic
+"applications due" date is not sufficient because application, merit, honors,
+FAFSA/CSS, recommendation, transcript, testing, and recruiting work may have
+different anchors.
+
+### Scheduling Rule Types
+
+Each task template should use one of these scheduling approaches:
+
+- **Fixed external date:** the task is due on an authoritative milestone.
+- **Relative to milestone:** the task is planned a configurable number of days
+  before or after an anchor.
+- **Dependency-driven:** the task becomes ready after prerequisite work and is
+  scheduled within the remaining window.
+- **Suggested window:** the task belongs in a grade, season, or planning stage
+  but has no authoritative date.
+- **Recurring cadence:** the task repeats on a weekly or other configured
+  schedule while applicable.
+
+The engine must not blindly scale every task to the available time. Tasks with
+real lead times or external deadlines must be marked late, urgent, or no longer
+feasible when the family starts too late.
+
+### Planning Horizons
+
+| Time remaining | Plan emphasis |
+|---|---|
+| More than one year | Exploration, course and testing decisions, meaningful activity development, early affordability, and recruiting preparation |
+| Six to twelve months | College research, visits, testing completion, activity/resume inventory, recommendations preparation, affordability, and recruiting |
+| Three to six months | Final list, Common App preparation, essays, recommendations, financial documents, and active coach outreach |
+| Ninety days or less | Accelerated applications, affordability verification, essays, recruiting, aid deadlines, submission audit, and portal confirmation |
+
+These are default planning modes, not rigid bands. Applicable tasks and real
+deadlines determine the actual plan.
+
+### Current Family: Accelerated Ninety-Day Scenario
+
+The current family's generated plan should organize tasks into four overlapping
+phases. Workstreams such as recruiting, affordability, and essays may span
+multiple phases.
 
 1. **Days 1-14: Establish the foundation**
    - set budget and debt limits;
@@ -303,8 +516,9 @@ such as recruiting, affordability, and essays may span multiple phases.
    - track follow-up requirements, institutional scholarships, and continuing
      coach communication.
 
-Phase boundaries should be configurable because actual dates depend on the
-application cycle and school deadlines.
+These four phases describe the current family's accelerated scenario, not the
+universal product schedule. Their boundaries should be generated from the
+available window and actual deadlines.
 
 ### College-List Guardrails
 
@@ -371,10 +585,11 @@ reach a target.
 | Visits and demonstrated interest | 4-6 | Virtual events, selected visits, interviews, admissions contacts |
 | Submission and financial aid | 8-10 | PDF audit, submission, portals, FAFSA, CSS Profile, institutional scholarships |
 
-The total active task count is expected to land around 70-100 after
-non-applicable work is removed and school-specific work is instantiated. This
-is an expected result, not a minimum or maximum. The value and necessity of a
-task determine whether it belongs in the plan.
+For the current rising-senior scenario, the total active task count is expected
+to land around 70-100 after non-applicable work is removed and school-specific
+work is instantiated. A longer-horizon family may receive additional
+preparation tasks distributed across a much longer roadmap. Task value and
+applicability, not a target count, determine what belongs in either plan.
 
 ### Value Filter
 
@@ -412,6 +627,21 @@ The catalog must distinguish:
   visits, supplements, or recruiting apply; and
 - **recurring tasks**, such as weekly progress review or coach follow-up.
 
+Every template must also declare:
+
+- applicable grade, season, or time horizon;
+- applicable feature/module conditions;
+- required or optional participating roles;
+- default owner and fallback owner order;
+- support roles that may prepare or review the work;
+- scheduling rule type;
+- milestone anchor type;
+- default offset or suggested window;
+- prerequisite template IDs;
+- whether late-start compression is allowed;
+- whether the task becomes unnecessary after a cutoff; and
+- whether the task is recommended, conditional, or required.
+
 Adding a college should clearly show which new tasks are created. Removing a
 college should not silently delete completed history; related open tasks should
 be archived or marked no longer applicable.
@@ -423,15 +653,26 @@ Every task must support:
 | Field | Requirement |
 |---|---|
 | Task ID | Stable, unique identifier that does not change when task text or sorting changes |
+| Template ID | Stable link to the system task definition, blank only for a fully custom task |
 | Workstream | One of the defined catalog workstreams |
-| Phase | One of the four 90-day phases |
+| Module | Core or optional pathway such as Athletic Recruiting, Testing, CSS Profile, Visits, or Portfolio |
+| Planning stage | Lifecycle stage such as Exploration, Foundation, Selection, Production, Submission, or Follow-Up |
+| Horizon applicability | Grade, season, or days-remaining conditions that make the task relevant |
 | Task | Specific action written with a verb and a clear completion point |
 | College | Optional link for college-specific tasks |
-| Owner | Student, Parent, Counselor/Professional, or Shared |
-| Due date | Required when the task is deadline-driven; otherwise schedulable |
+| Owner | Configured accountable person or role |
+| Support roles | Optional configured people or roles that prepare, advise, review, or provide an external input |
+| Schedule rule | Fixed external date, relative to milestone, dependency-driven, suggested window, recurring, or manual |
+| Anchor | Referenced application, aid, school, scholarship, recruiting, or family milestone |
+| Offset/window | Default lead time or suggested work window |
+| Calculated due date | System-generated date before a user override |
+| Due date | Effective deadline used by views and overdue logic |
+| Due-date source | Actual external date, round default, family target, suggested window, or manual |
+| Date locked | Whether user intent prevents automatic rescheduling |
 | Planned week | Week in which active work is expected, independent of the external deadline |
 | Scheduled block | Optional fixed work block used to reduce context switching |
 | Dependencies | Zero or more task IDs that must be completed first |
+| Compression rule | Whether and how the task may be accelerated in a shorter plan |
 | Priority | At minimum Critical, High, Normal, or Low |
 | Status | At minimum Not Started, Ready, In Progress, Waiting, Blocked, Complete, or Skipped |
 | Normal effort | Baseline active-work estimate |
@@ -479,10 +720,10 @@ coach communication.
   Student and Parent.
 - Weekly effort must be based on the planned work week, not only the external
   due date.
-- The first complete plan must report:
+- The complete plan for the selected horizon must report:
   - total hours by Student, Parent, Counselor/Professional, and Shared;
   - average hours per week by role over the planning period;
-  - effort by phase and workstream;
+  - effort by planning stage and workstream;
   - planned effort by role for every week;
   - the peak week for each role;
   - effort not yet assigned to a planned week;
@@ -509,14 +750,28 @@ coach communication.
   `Testing removed from plan`, or `College removed from list`.
 - Changing an upstream deadline must make affected downstream dates or
   conflicts visible; it must not silently overwrite user-edited due dates.
+- Replanning must present a before-and-after preview before changing active
+  task dates, owners, applicability, or dependencies.
+- Completed tasks, manually locked dates, manual ownership changes, notes, and
+  evidence are preserved during regeneration.
+- Regeneration must be idempotent: rerunning the same configuration must not
+  create duplicate task instances.
 
 ## Required Views
 
 ### Master Plan
 
-The complete, filterable 90-day task list. It must support sorting and
-filtering by owner, workstream, phase, college, due date, status, priority,
-assistant support, and professional-help level.
+The complete, filterable roadmap for the family's selected horizon. It must
+support sorting and filtering by owner, module, workstream, planning stage,
+college, due date, status, priority, assistant support, and professional-help
+level.
+
+### Rolling Ninety Days
+
+A generated view of applicable work planned or due within the next 90 days,
+plus overdue tasks and later tasks that already block near-term work. For the
+current family, this view is initially the primary project plan. For a family
+starting earlier, it is the active slice of a longer roadmap.
 
 ### This Week
 
@@ -535,9 +790,10 @@ It must include:
 At minimum:
 
 - Student work;
-- Parent decisions and actions;
-- Counselor/Professional work; and
-- Shared work.
+- each configured Parent/Guardian's decisions and actions;
+- each configured Counselor/Professional's work;
+- Shared work; and
+- external inputs being awaited.
 
 The parent view should favor brief decision and verification tasks over
 student-production tasks.
@@ -550,8 +806,8 @@ existing tracker status.
 
 ### Effort Summary
 
-Show normal and adjusted effort by owner, phase, workstream, college, and week.
-The view must expose:
+Show normal and adjusted effort by owner, planning stage, module, workstream,
+college, and week. The view must expose:
 
 - total and average weekly hours by role;
 - peak weeks and deadline clusters;
@@ -575,7 +831,8 @@ The system must produce one concise weekly college report containing:
 2. tasks overdue;
 3. decisions needed from the parent;
 4. deadlines within 21 days;
-5. coach responses or recruiting follow-ups;
+5. coach responses or recruiting follow-ups when athletic recruiting is
+   enabled;
 6. current application status by college;
 7. blocked or waiting tasks;
 8. planned workload by owner for the next week; and
@@ -593,18 +850,35 @@ next week's work.
 
 ### Initial Setup
 
-1. Set cycle start date and target application season.
-2. Confirm Student, Parent, and optional Counselor/Professional roles.
-3. Set effort-estimation assumptions, including any parent adjustment.
-4. Leave weekly thresholds unset until the complete baseline plan is reviewed.
-5. Enter the annual college budget and debt limit.
-6. Confirm whether testing, athletic recruiting, visits, interviews, CSS
-   Profile, and paid support are in scope.
-7. Generate the applicable starter plan.
-8. Review and remove non-applicable tasks before dates are finalized.
-9. Calculate total, average weekly, phase, and peak-week effort by role.
-10. Only then decide whether any tasks should move earlier, be reassigned,
+1. Set the student's current grade, expected graduation year, planning start
+   date, and application cycle.
+2. Enter the working first-application target and any known school-specific
+   deadlines.
+3. Configure Student, Parent/Guardian, optional Counselor/Professional, and
+   external-dependency roles.
+4. Enable applicable modules such as athletic recruiting, testing, CSS Profile,
+   visits, interviews, or portfolios.
+5. Set effort-estimation assumptions, including any parent adjustment.
+6. Leave weekly thresholds unset until the complete baseline plan is reviewed.
+7. Enter the annual college budget and debt limit.
+8. Generate a preview of the applicable master roadmap and rolling 90-day plan.
+9. Review included and excluded modules, owners, fallback assignments, dates,
+   and task counts before applying the plan.
+10. Calculate total, average weekly, planning-stage, and peak-week effort by
+    role.
+11. Only then decide whether any tasks should move earlier, be reassigned,
     receive assistant/professional support, or be removed as low value.
+
+### Reconfigure Timeline, Roles, Or Modules
+
+1. Change a milestone, participating role, or enabled module.
+2. Preview affected task additions, removals, reassignments, dates,
+   dependencies, and effort totals.
+3. Preserve completed tasks, locked dates, manual assignments, notes, and
+   evidence.
+4. Confirm the proposed changes.
+5. Archive or skip no-longer-applicable tasks with a reason.
+6. Rebuild the master, rolling 90-day, weekly, owner, and effort views.
 
 ### Add Or Remove A College
 
@@ -663,29 +937,38 @@ a real application cycle.
 
 The feature is acceptable when:
 
-1. a user can generate an applicable 90-day plan for the selected colleges
-   without receiving obvious filler tasks;
-2. every active task has a stable ID, owner, status, effort, and completion
+1. a family starting more than one year early can generate an applicable master
+   roadmap and rolling 90-day plan without receiving premature submission
+   tasks;
+2. the current family can generate an accelerated plan through its October 31
+   working target without receiving irrelevant long-horizon work;
+3. every active task has a stable ID, owner, status, effort, and completion
    definition;
-3. conditional task groups can be omitted without breaking the plan;
-4. college-specific tasks are linked to the canonical college record;
-5. removing or renaming a college does not corrupt unrelated tasks or erase
+4. optional modules such as Athletic Recruiting are generated only when
+   enabled;
+5. required tasks receive valid fallback owners when an optional professional
+   role is absent;
+6. changing roles or modules previews the effect and preserves completed work,
+   locked dates, notes, and manual assignments;
+7. college-specific tasks are linked to the canonical college record;
+8. removing or renaming a college does not corrupt unrelated tasks or erase
    completed history;
-6. dependencies and blocked work are visible;
-7. the weekly view shows overdue, due-soon, blocked, and decision-needed work;
-8. workload totals use adjusted effort for parent tasks and report total,
-   average weekly, phase, and peak-week effort by role without imposing a
-   default cap;
-9. the weekly report contains all required sections and can be reviewed in 15
+9. dependencies and blocked work are visible;
+10. the rolling 90-day and weekly views show overdue, due-soon, blocked, and
+    decision-needed work;
+11. workload totals use adjusted effort for parent tasks and report total,
+    average weekly, planning-stage, and peak-week effort by role without
+    imposing a default cap;
+12. the weekly report contains all required sections and can be reviewed in 15
    minutes or less;
-10. existing tracker data is not duplicated into a second independently edited
+13. existing tracker data is not duplicated into a second independently edited
     source of truth;
-11. the system works with or without a counselor; and
-12. student-owned application and recruiting work remains assigned to the
+14. the system works with or without a counselor;
+15. student-owned application and recruiting work remains assigned to the
     student even when an assistant prepares research or a draft;
-13. high-value senior-year work is included while admissions-only profile
+16. high-value senior-year work is included while admissions-only profile
     building and indiscriminate small-scholarship work are excluded; and
-14. the plan makes separate application, merit/honors, financial-aid, and
+17. the plan makes separate application, merit/honors, financial-aid, and
     recruiting deadlines visible for each applicable college.
 
 ## Preservation And Safety Requirements
@@ -711,8 +994,9 @@ Initial success measures:
 
 - the parent can identify required decisions and actions in 15 minutes or less
   each week;
-- the family knows the calculated 90-day total, weekly average, and peak-week
-  effort for Student, Parent, Counselor/Professional, and Shared work;
+- the family knows the calculated selected-horizon total, rolling 90-day total,
+  weekly average, and peak-week effort for all configured roles;
+- the generated plan contains only applicable role and module work;
 - all deadlines within 21 days have a visible owner and next action;
 - no active college lacks affordability, academic-fit, and
   attend-without-track review;
@@ -727,13 +1011,13 @@ Initial success measures:
 
 ## Open Decisions For Review
 
-1. Should the canonical data live in one new `Tasks` sheet, and should `This
-   Week` be a separate generated sheet or a section of `Dashboard`?
+1. Within the integrated workbook, should `This Week` be a separate generated
+   sheet or a section of `Dashboard`?
 2. Should `Counselor/Professional` be one owner value or two distinct roles?
 3. Should users be allowed to add custom owner names while retaining the four
    standard owner categories?
-4. Should task dates be generated backward from each college's application
-   deadline, forward from the 90-day start date, or by a hybrid rule?
+4. Which task templates should use backward milestone offsets,
+   dependency-driven scheduling, suggested windows, or fixed external dates?
 5. Which task statuses and priority labels should appear in dropdowns?
 6. Should parent-adjusted effort use one configurable multiplier, per-task
    estimates, or both?
@@ -761,13 +1045,15 @@ After the requirements are corrected and approved:
 
 1. reconcile `project-docs/plans/backlog.md` with the new product direction;
 2. write and review the complete value-selected starter task catalog;
-3. instantiate it against a realistic college list and calculate total,
-   average weekly, phase, and peak-week effort by role;
-4. review the resulting work before choosing scope, delegation, or optional
+3. define horizon, module, role, fallback-owner, and scheduling metadata for
+   every template;
+4. instantiate it against a realistic college list and calculate total,
+   average weekly, planning-stage, and peak-week effort by role;
+5. review the resulting work before choosing scope, delegation, or optional
    weekly thresholds;
-5. decide the canonical sheet and dashboard presentation;
-6. produce an implementation plan with schema, ownership, migration, repair,
+6. decide the canonical sheet and dashboard presentation;
+7. produce an implementation plan with schema, ownership, migration, repair,
    and test details;
-7. prototype the weekly report and effort summary; and
-8. validate the design against a realistic rising-senior application scenario
-   before implementation.
+8. prototype the weekly report and effort summary; and
+9. validate both a more-than-one-year family and the current accelerated
+   rising-senior scenario before implementation.
