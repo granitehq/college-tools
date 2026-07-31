@@ -173,6 +173,48 @@ CollegeTools.TaskManagement = (function() {
   }
 
   /**
+   * Converts a spreadsheet Date into the same visible calendar date in the
+   * script time zone. A workbook and its Apps Script project may use different
+   * time zones, so JavaScript date getters alone can shift the day.
+   * @param {Sheet} sheet - Source sheet
+   * @param {*} value - Cell value
+   * @returns {*} Script-zone date or original value
+   */
+  function fromSpreadsheetDate_(sheet, value) {
+    if (!(value instanceof Date) || typeof Session === 'undefined' ||
+        !Utilities.formatDate || !Utilities.parseDate || !sheet.getParent) {
+      return value;
+    }
+    var spreadsheet = sheet.getParent();
+    if (!spreadsheet || !spreadsheet.getSpreadsheetTimeZone) return value;
+    var sheetTimeZone = spreadsheet.getSpreadsheetTimeZone();
+    var scriptTimeZone = Session.getScriptTimeZone();
+    var dateKey = Utilities.formatDate(value, sheetTimeZone, 'yyyy-MM-dd');
+    return Utilities.parseDate(dateKey, scriptTimeZone, 'yyyy-MM-dd');
+  }
+
+  /**
+   * Converts a logical script-zone date to noon in the spreadsheet time zone
+   * so the written cell displays the same calendar date.
+   * @param {Sheet} sheet - Destination sheet
+   * @param {*} value - Value to write
+   * @returns {*} Spreadsheet-zone date or original value
+   */
+  function toSpreadsheetDate_(sheet, value) {
+    if (!(value instanceof Date) || typeof Session === 'undefined' ||
+        !Utilities.formatDate || !Utilities.parseDate || !sheet.getParent) {
+      return value;
+    }
+    var spreadsheet = sheet.getParent();
+    if (!spreadsheet || !spreadsheet.getSpreadsheetTimeZone) return value;
+    var sheetTimeZone = spreadsheet.getSpreadsheetTimeZone();
+    var scriptTimeZone = Session.getScriptTimeZone();
+    var dateKey = Utilities.formatDate(value, scriptTimeZone, 'yyyy-MM-dd');
+    return Utilities.parseDate(
+      dateKey + ' 12:00', sheetTimeZone, 'yyyy-MM-dd HH:mm');
+  }
+
+  /**
    * Reads a header-keyed table.
    * @param {Sheet|null} sheet - Source sheet
    * @param {number=} headerRow - Header row
@@ -193,7 +235,7 @@ CollegeTools.TaskManagement = (function() {
       var hasValue = false;
       headers.forEach(function(header, index) {
         if (!header) return;
-        object[header] = row[index];
+        object[header] = fromSpreadsheetDate_(sheet, row[index]);
         if (row[index] !== '' && row[index] !== null) hasValue = true;
       });
       object._hasValue = hasValue;
@@ -219,7 +261,7 @@ CollegeTools.TaskManagement = (function() {
     var values = SETTINGS.map(function(setting) {
       var value = Object.prototype.hasOwnProperty.call(existing, setting[0]) ?
         existing[setting[0]] : setting[1];
-      return [setting[0], value, setting[2]];
+      return [setting[0], toSpreadsheetDate_(sheet, value), setting[2]];
     });
     if (sheet.getLastRow() > 1) {
       sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).clearContent();
@@ -554,7 +596,8 @@ CollegeTools.TaskManagement = (function() {
           var header = headerByField[field];
           var column = header && CollegeTools.Utils.colIndex(sheet, header);
           if (column && sheet.getRange(task._sourceRow, column).getValue() === '') {
-            sheet.getRange(task._sourceRow, column).setValue(taskValue_(task, field));
+            sheet.getRange(task._sourceRow, column)
+              .setValue(taskValue_(task, field, sheet));
           }
         });
       }
@@ -568,12 +611,14 @@ CollegeTools.TaskManagement = (function() {
    * Converts a task model value for spreadsheet output.
    * @param {Object} task - Task
    * @param {string} field - Field
+   * @param {Sheet=} sheet - Optional destination for calendar-date conversion
    * @returns {*} Sheet value
    */
-  function taskValue_(task, field) {
+  function taskValue_(task, field, sheet) {
     var value = task[field];
     if (field === 'dependencies') return (value || []).join(', ');
     if (BOOLEAN_FIELDS[field]) return yesNo_(value);
+    if (sheet && DATE_FIELDS[field]) return toSpreadsheetDate_(sheet, value);
     return value === null || value === undefined ? '' : value;
   }
 
@@ -611,7 +656,7 @@ CollegeTools.TaskManagement = (function() {
     });
     var values = tasks.map(function(task) {
       var row = TASK_FIELDS.map(function(field) {
-        return taskValue_(task, field[1]);
+        return taskValue_(task, field[1], sheet);
       });
       var extras = extrasById[task.taskId] || extrasByRow[task._sourceRow] ||
         extraHeaders.map(function() {
@@ -921,7 +966,8 @@ CollegeTools.TaskManagement = (function() {
     CollegeTools.Utils.setHeaders(sheet, headers);
     var rowForTask = function(task) {
       return [
-        task.taskId, task.dueDate || '', task.priority, task.status, task.owner,
+        task.taskId, toSpreadsheetDate_(sheet, task.dueDate) || '',
+        task.priority, task.status, task.owner,
         task.college, task.task, task.adjustedEffortMinutes,
         yesNo_(task.decisionNeeded), task.scheduleFlag,
       ];
