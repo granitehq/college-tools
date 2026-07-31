@@ -1,6 +1,6 @@
 # College Task Management Requirements Specification
 
-**Status:** Draft for review, revision 4
+**Status:** Draft for review, revision 5; all 14 product decisions resolved
 
 **Date:** 2026-07-30
 
@@ -1107,19 +1107,19 @@ Initial success measures:
 | 1 | Resolved | `This Week` is a separate generated tab that updates automatically where practical and includes a manual refresh path. |
 | 2 | Resolved | Use one standard `Counselor/Professional` category. A parent can delegate to named custom owners when the family has both a counselor and another consultant. |
 | 3 | Resolved | Allow custom owner names while retaining standard role categories for defaults and reporting. |
-| 4 | Delegated design | Assign the correct scheduling rule to each task while building the catalog: authoritative fixed dates first, then milestone offsets, dependency scheduling, or suggested windows as appropriate. |
+| 4 | Resolved | Assign the correct scheduling rule to each task while building the catalog: authoritative fixed dates first, then milestone offsets, dependency scheduling, or suggested windows as appropriate. |
 | 5 | Resolved | Use `Not Started`, `Ready`, `In Progress`, `Waiting`, `Blocked`, `Complete`, and `Skipped`; use `Critical`, `High`, `Normal`, and `Low` priorities. |
 | 6 | Resolved | Configure a parent effort multiplier and allow task-specific overrides. |
 | 7 | Resolved | Add a conditional `Recruiting Tracker`; store coach outreach, responses, follow-ups, questionnaires, and notes there. |
 | 8 | Resolved | Derive completion from reliable canonical tracker data and let users confirm or correct it manually. |
-| 9 | Delegated design | Generate individual recurring-task instances only within the rolling 90-day window so history is preserved without filling a multi-year roadmap. |
-| 10 | Needs final choice | Review the starter-catalog example below before approving the first catalog's breadth. |
-| 11 | Needs final choice | Review planned-week versus fixed-block examples below. |
+| 9 | Resolved | Generate individual recurring-task instances only within the rolling 90-day window so history is preserved without filling a multi-year roadmap. |
+| 10 | Resolved | Use the complete adaptive catalog: include core and high-value optional modules, while setup generates only the modules applicable to the family. |
+| 11 | Resolved | Require planned week and effort. Keep `Scheduled Block` optional and do not build calendar scheduling in the first release. |
 | 12 | Resolved | Do not add printable or exported reports in the first release. |
-| 13 | Needs final choice | Review threshold-storage examples below. Thresholds remain unset until the baseline plan is calculated. |
-| 14 | Rule resolved; dates pending | The earliest relevant deadline drives shared prerequisite work. Each task still uses its own most-specific milestone. FAFSA public availability is currently planned for October 1, 2026; actual state, college, merit, and application deadlines must be loaded before final scheduling. |
+| 13 | Resolved | Leave thresholds unset until the baseline plan is calculated, then allow optional role-level thresholds with individual-week overrides. Do not rely on a global family threshold alone. |
+| 14 | Resolved | The earliest relevant deadline drives shared prerequisite work. Each task still uses its own most-specific milestone. FAFSA public availability is currently planned for October 1, 2026; actual state, college, merit, and application deadlines must be loaded before final scheduling. |
 
-## Concrete Examples For Remaining Choices
+## Decision Examples And Rationale
 
 ### Decision 10: Starter Catalog Breadth
 
@@ -1153,8 +1153,8 @@ Two plausible first-release choices:
    Recruiting, Testing, CSS Profile, and Visits, with setup filtering out
    irrelevant modules.
 
-Recommendation: use the complete adaptive catalog because Athletic Recruiting
-is required for the current family and filtering prevents irrelevant work from
+Decision: use the complete adaptive catalog because Athletic Recruiting is
+required for the current family and filtering prevents irrelevant work from
 appearing for other families.
 
 ### Decision 11: Planned Week Versus Fixed Work Block
@@ -1189,7 +1189,7 @@ Limitations:
 - becomes stale when personal calendars change; and
 - is not a true calendar integration.
 
-Recommendation: require `Planned Week` and effort in the first release. Keep
+Decision: require `Planned Week` and effort in the first release. Keep
 `Scheduled Block` optional for families that want more precision; do not build
 a calendar scheduler yet.
 
@@ -1203,9 +1203,9 @@ Thresholds are planning warnings, not task caps.
 | Threshold by role | Parent 8 hours, Student 12 hours, Professional 4 hours | Makes ownership pressure visible but assumes fairly stable weeks |
 | Threshold by individual week | Parent normally 8 hours, but 3 hours during a travel week | Most realistic, but requires more setup |
 
-Recommendation: after the baseline plan is calculated, allow optional
-role-level thresholds with optional overrides for individual weeks. Do not use
-a global family threshold by itself.
+Decision: after the baseline plan is calculated, allow optional role-level
+thresholds with optional overrides for individual weeks. Do not use a global
+family threshold by itself.
 
 ### Decision 14: Earliest-Deadline Example
 
@@ -1230,7 +1230,7 @@ The schedule should behave as follows:
 - FAFSA completion schedules after public release but before the earliest
   applicable state or college priority-aid deadline.
 
-Therefore, no single date drives the entire project. The earliest applicable
+Decision: no single date drives the entire project. The earliest applicable
 deadline drives each shared critical path, while task-specific work retains its
 own anchor.
 
