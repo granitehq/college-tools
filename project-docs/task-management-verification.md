@@ -52,6 +52,10 @@ Final run on 2026-07-30 used commit `70fc66a` in two owner-only disposable
 Google Sheets bound to temporary Apps Script projects. Both returned structured
 JSON with `ok: true` and `failedChecks: []`.
 
+After recording the results, both disposable spreadsheets were moved to Google
+Drive trash, retiring their container-bound Apps Script projects. The
+production/template Apps Script project was never targeted.
+
 | Scenario | Tasks | Deadline evidence | Result |
 |---|---:|---|---|
 | Long horizon | 83 | Timeline, submission due date, and anchor all normalized to `2027-12-12` | Pass |
