@@ -231,7 +231,12 @@ class MockRange {
     this.sheet.filter = {
       range: this,
       getRange: () => this,
-      getColumnFilterCriteria: (column) => criteria[column] || null,
+      getColumnFilterCriteria: (column) => {
+        if (column < 1 || column > this.numCols) {
+          throw new Error('Those columns are out of bounds.');
+        }
+        return criteria[column] || null;
+      },
       setColumnFilterCriteria(column, value) {
         criteria[column] = value;
         return this;

@@ -336,8 +336,16 @@ CollegeTools.TaskPlanner = (function() {
     };
 
     if (template.scope === 'scholarship') {
-      date = toDate(data.deadline) || config.workingDeadline;
-      source = data.deadline ? 'Scholarship deadline' : source;
+      if (toDate(data.deadline)) {
+        date = toDate(data.deadline);
+        source = 'Scholarship deadline';
+      } else if (config.workingDeadline) {
+        date = config.workingDeadline;
+        source = 'Working first-application target';
+      } else {
+        date = firstDeadline;
+        source = 'Earliest relevant college deadline';
+      }
     } else if (template.scope === 'contact') {
       if (toDate(data.nextFollowUp)) {
         date = toDate(data.nextFollowUp);
@@ -1174,7 +1182,6 @@ CollegeTools.TaskPlanner = (function() {
   function buildViews(tasks, todayValue, rawConfig) {
     var today = toDate(todayValue) || toDate(new Date());
     var config = normalizeConfig(rawConfig);
-    var weekEnd = addDays(today, 7);
     var horizonEnd = addDays(today, 90);
     var dueSoonEnd = addDays(today, 21);
     var active = (tasks || []).filter(function(task) {
@@ -1191,17 +1198,76 @@ CollegeTools.TaskPlanner = (function() {
         (plannedWeek && plannedWeek <= horizonEnd);
     }).sort(compareTasks_);
     var currentWeek = startOfWeek(today);
+    var weeklyCategories = [
+      {
+        key: 'overdue',
+        test: function(task) {
+          var due = toDate(task.dueDate);
+          return !!due && due < today;
+        },
+      },
+      {
+        key: 'current-week',
+        test: function(task) {
+          var plannedWeek = toDate(task.plannedWeek);
+          return !!plannedWeek &&
+            dateKey(startOfWeek(plannedWeek)) === dateKey(currentWeek);
+        },
+      },
+      {
+        key: 'due-within-21-days',
+        test: function(task) {
+          var due = toDate(task.dueDate);
+          return !!due && due >= today && due <= dueSoonEnd;
+        },
+      },
+      {
+        key: 'blocked-or-waiting',
+        test: function(task) {
+          return task.status === 'Blocked' || task.status === 'Waiting' || !!task.blockedBy;
+        },
+      },
+      {
+        key: 'decision-needed',
+        test: function(task) {
+          return asBoolean(task.decisionNeeded, false);
+        },
+      },
+      {
+        key: 'manually-selected',
+        test: function(task) {
+          return asBoolean(task.manuallySelected, false);
+        },
+      },
+    ];
     var weeklyCandidates = incomplete.filter(function(task) {
-      var due = toDate(task.dueDate);
-      var plannedWeek = toDate(task.plannedWeek);
-      return task.status === 'Blocked' || task.status === 'Waiting' ||
-        (!!task.blockedBy && due && due <= dueSoonEnd) ||
-        asBoolean(task.decisionNeeded, false) || asBoolean(task.manuallySelected, false) ||
-        (plannedWeek && dateKey(startOfWeek(plannedWeek)) === dateKey(currentWeek)) ||
-        (due && due <= weekEnd) ||
-        (['Critical', 'High'].indexOf(task.priority) !== -1 && due && due <= dueSoonEnd);
+      return weeklyCategories.some(function(category) {
+        return category.test(task);
+      });
     }).sort(compareTasks_);
-    var thisWeek = weeklyCandidates.slice(0, 10);
+    var selectedTaskIds = {};
+    var thisWeek = [];
+    weeklyCategories.forEach(function(category) {
+      var representative = weeklyCandidates.filter(category.test)[0];
+      if (representative && !selectedTaskIds[representative.taskId] && thisWeek.length < 10) {
+        selectedTaskIds[representative.taskId] = true;
+        thisWeek.push(representative);
+      }
+    });
+    weeklyCandidates.forEach(function(task) {
+      if (!selectedTaskIds[task.taskId] && thisWeek.length < 10) {
+        selectedTaskIds[task.taskId] = true;
+        thisWeek.push(task);
+      }
+    });
+    thisWeek.sort(compareTasks_);
+    var thisWeekCategoryCounts = {};
+    weeklyCategories.forEach(function(category) {
+      thisWeekCategoryCounts[category.key] = {
+        eligible: weeklyCandidates.filter(category.test).length,
+        shown: thisWeek.filter(category.test).length,
+      };
+    });
     var effortByOwner = {};
     var effortByRole = {};
     var effortByRoleAndWeek = {};
@@ -1210,7 +1276,7 @@ CollegeTools.TaskPlanner = (function() {
     var effortByStage = {};
     var effortByModule = {};
     var totalEffortMinutes = 0;
-    active.forEach(function(task) {
+    incomplete.forEach(function(task) {
       var effort = Number(task.adjustedEffortMinutes) || 0;
       var owner = task.owner || task.ownerRole || 'Unassigned';
       var week = dateKey(toDate(task.plannedWeek)) || 'Unscheduled';
@@ -1260,6 +1326,9 @@ CollegeTools.TaskPlanner = (function() {
     });
     return {
       thisWeek: thisWeek,
+      thisWeekCandidateCount: weeklyCandidates.length,
+      thisWeekOmittedCount: Math.max(0, weeklyCandidates.length - thisWeek.length),
+      thisWeekCategoryCounts: thisWeekCategoryCounts,
       rolling90: rolling90,
       effortByOwner: effortByOwner,
       effortByRole: effortByRole,

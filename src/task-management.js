@@ -455,7 +455,10 @@ CollegeTools.TaskManagement = (function() {
     if (!filter || filterNeedsResize) {
       var criteria = {};
       if (filter && filter.getColumnFilterCriteria) {
-        for (var filterColumn = 1; filterColumn <= headers.length; filterColumn++) {
+        var existingFilterColumns = filterRange ? filterRange.getNumColumns() : 0;
+        for (var filterColumn = 1;
+          filterColumn <= Math.min(headers.length, existingFilterColumns);
+          filterColumn++) {
           criteria[filterColumn] = filter.getColumnFilterCriteria(filterColumn);
         }
       }
@@ -493,7 +496,7 @@ CollegeTools.TaskManagement = (function() {
       }
       task[field[1]] = value === undefined ? '' : value;
     });
-    if (!task.taskId && task.task) {
+    if (!task.taskId && row._hasValue) {
       task.taskId = 'MANUAL::' + Utilities.getUuid();
       task.generated = false;
       task._newManualId = true;
@@ -518,6 +521,7 @@ CollegeTools.TaskManagement = (function() {
         task.adjustedEffortMinutes = Number(task.effortOverrideMinutes);
       }
       task.effectiveDate = task.effectiveDate || task.dueDate || task.plannedWeek;
+      task._manualDefaults = true;
     }
     return task;
   }
@@ -545,7 +549,7 @@ CollegeTools.TaskManagement = (function() {
       'adjustedEffortMinutes', 'generated',
     ];
     tasks.forEach(function(task) {
-      if (task._newManualId && task._sourceRow) {
+      if ((task._newManualId || task._manualDefaults) && task._sourceRow) {
         manualDefaults.forEach(function(field) {
           var header = headerByField[field];
           var column = header && CollegeTools.Utils.colIndex(sheet, header);
@@ -555,6 +559,7 @@ CollegeTools.TaskManagement = (function() {
         });
       }
       delete task._newManualId;
+      delete task._manualDefaults;
     });
     return tasks;
   }
@@ -930,7 +935,15 @@ CollegeTools.TaskManagement = (function() {
     var row = Math.max(13, views.thisWeek.length + 4);
     sheet.getRange(row, 1).setValue('Weekly Report').setFontWeight('bold').setBackground('#d9ead3');
     row++;
+    var categoryCoverage = Object.keys(views.thisWeekCategoryCounts || {}).map(function(category) {
+      var counts = views.thisWeekCategoryCounts[category];
+      return category + ' ' + counts.shown + '/' + counts.eligible;
+    }).join('; ');
     var reportRows = [
+      ['Current actions shown / eligible',
+        views.thisWeek.length + ' / ' + views.thisWeekCandidateCount],
+      ['Current actions omitted', views.thisWeekOmittedCount],
+      ['Required category coverage', categoryCoverage],
       ['Active tasks', views.counts.active],
       ['Completed tasks', views.counts.complete],
       ['Completed this week', views.counts.completedThisWeek],
@@ -941,7 +954,7 @@ CollegeTools.TaskManagement = (function() {
       ['Applications submitted / tracked',
         views.counts.applicationsSubmitted + ' / ' + views.counts.applicationsTracked],
       ['Recruiting actions in rolling 90 days', views.counts.recruitingActions],
-      ['Selected-horizon baseline effort (hours)',
+      ['Remaining baseline effort (hours)',
         Math.round((views.totalEffortMinutes / 60) * 10) / 10],
       ['Rolling 90-day open effort (hours)',
         Math.round((views.rolling90EffortMinutes / 60) * 10) / 10],

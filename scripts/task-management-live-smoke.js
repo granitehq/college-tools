@@ -114,14 +114,29 @@ function runTaskManagementLiveSmoke(mode) {
   var statusColumn = column(tasksSheet, 'Status', 1);
   var notesColumn = column(tasksSheet, 'Notes', 1);
   var ownerLockedColumn = column(tasksSheet, 'Owner Locked', 1);
+  var manuallySelectedColumn = column(tasksSheet, 'Manually Selected', 1);
   var customTaskRow = tasksSheet.getLastRow() + 1;
-  tasksSheet.getRange(customTaskRow, taskColumn).setValue('Live family-defined task');
   tasksSheet.getRange(customTaskRow, workstreamColumn).setValue('Family Logistics');
   tasksSheet.getRange(customTaskRow, moduleColumn).setValue('Family Custom');
   tasksSheet.getRange(customTaskRow, ownerColumn).setValue('Grandparent');
   tasksSheet.getRange(customTaskRow, dueDateColumn).setValue(today);
   tasksSheet.getRange(customTaskRow, effortOverrideColumn).setValue(90);
   tasksSheet.getRange(customTaskRow, notesColumn).setValue('Live custom task note');
+  tasksSheet.getRange(customTaskRow, manuallySelectedColumn).setValue('Yes');
+  CollegeTools.TaskManagement.handleEdit({
+    range: ss.getSheetByName(names.FINANCIAL_AID).getRange(2, 1),
+  });
+  customTaskRow = 0;
+  for (var customRow = 2; customRow <= tasksSheet.getLastRow(); customRow++) {
+    if (tasksSheet.getRange(customRow, notesColumn).getValue() === 'Live custom task note') {
+      customTaskRow = customRow;
+      break;
+    }
+  }
+  var partialCustomTaskId = customTaskRow ?
+    tasksSheet.getRange(customTaskRow, taskIdColumn).getValue() : '';
+  if (!customTaskRow) throw new Error('Partially entered custom task was not preserved');
+  tasksSheet.getRange(customTaskRow, taskColumn).setValue('Live family-defined task');
   CollegeTools.TaskManagement.refreshTaskViews();
   var customTaskId = tasksSheet.getRange(customTaskRow, taskIdColumn).getValue();
   var preservedTaskId = tasksSheet.getRange(2, taskIdColumn).getValue();
@@ -186,6 +201,7 @@ function runTaskManagementLiveSmoke(mode) {
     stableCollegeIdOnRow3: !!colleges.getRange(3, column(colleges, 'College ID', 2)).getValue(),
     thisWeekGenerated: !!ss.getSheetByName(names.THIS_WEEK),
     customTaskStableAndVisible: /^MANUAL::/.test(customTaskId) && !!customTask &&
+      customTaskId === partialCustomTaskId &&
       customTask.module === 'Family Custom' &&
       customTask.notes === 'Live custom task note' &&
       thisWeekIds.indexOf(customTaskId) !== -1,

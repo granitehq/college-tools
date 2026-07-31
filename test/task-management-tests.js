@@ -305,6 +305,40 @@ suite.test('authoritative college dates outrank working targets and unrelated ac
     'The schedule should record the authoritative source it actually used');
 });
 
+suite.test('scholarship tasks fall back to the earliest real deadline with accurate provenance', () => {
+  const deadline = date(2026, 11, 1);
+  const config = baseConfig(null);
+  const context = {
+    colleges: [college('C1', 'Deadline University', deadline, {
+      aidDeadline: null,
+      meritDeadline: null,
+      transcriptDeadline: null,
+      teacherRecDeadline: null,
+      counselorRecDeadline: null,
+      testScoreDeadline: null,
+    })],
+    scholarships: [{
+      id: 'SCH1',
+      scholarshipId: 'SCH1',
+      scholarshipName: 'Deadline Pending Award',
+      deadline: null,
+    }],
+  };
+  const result = CollegeTools.TaskPlanner.generatePlan(config, context, date(2026, 7, 30));
+  const submission = taskByTemplate(result.tasks, 'SCH-06', 'SCH1');
+  const resultTask = taskByTemplate(result.tasks, 'SCH-07', 'SCH1');
+
+  suite.assert(result.ok, 'A real college deadline should make the plan schedulable');
+  [submission, resultTask].forEach((task) => {
+    suite.assert(task.calculatedDate && task.dueDate && task.plannedWeek,
+      `${task.taskId} should remain fully scheduled without a working target`);
+    suite.assertEqual(task.dateSource, 'Earliest relevant college deadline',
+      `${task.taskId} should name the deadline source it actually used`);
+  });
+  suite.assertEqual(submission.anchorDate.getTime(), deadline.getTime(),
+    'Scholarship submission should anchor to the earliest relevant real deadline');
+});
+
 suite.test('reconfiguration preserves completed/manual work, locks, notes, and stable identity', () => {
   const today = date(2026, 7, 30);
   const deadline = date(2026, 10, 28);
@@ -408,6 +442,39 @@ suite.test('dependencies calculate readiness and unblock after prerequisite comp
   reconciled = CollegeTools.TaskPlanner.reconcile(generated.tasks, reconciled).tasks;
   suite.assertEqual(taskByTemplate(reconciled, 'ESS-03').status, 'Ready',
     'Completing prerequisites should make the dependent task Ready');
+});
+
+suite.test('fixed deadlines are retained and flagged when a prerequisite is planned later', () => {
+  const deadline = date(2026, 10, 28);
+  const originalGetTemplates = CollegeTools.TaskCatalog.getTemplates;
+  try {
+    CollegeTools.TaskCatalog.getTemplates = () => originalGetTemplates().map((template) => {
+      if (template.templateId !== 'SUB-02') return template;
+      return Object.assign({}, template, {
+        offsetDays: 2,
+        offsetWindow: '2 days after anchor',
+      });
+    });
+    const result = CollegeTools.TaskPlanner.generatePlan(
+      baseConfig(deadline),
+      {colleges: [college('C1', 'Conflict University', deadline)]},
+      date(2026, 7, 30),
+    );
+    const review = taskByTemplate(result.tasks, 'SUB-02', 'C1');
+    const submission = taskByTemplate(result.tasks, 'SUB-03', 'C1');
+
+    suite.assert(review.dueDate > submission.dueDate,
+      'The test fixture should put the prerequisite after the fixed submission date');
+    suite.assertEqual(submission.dueDate.getTime(), deadline.getTime(),
+      'Dependency alignment must not move an authoritative fixed deadline');
+    suite.assertEqual(submission.priority, 'Critical',
+      'An impossible fixed-date dependency should become critical');
+    suite.assert(submission.scheduleFlag.includes(
+      'Dependency conflict: prerequisite is planned after fixed date'),
+    'The plan should expose the dependency conflict for manual resolution');
+  } finally {
+    CollegeTools.TaskCatalog.getTemplates = originalGetTemplates;
+  }
 });
 
 suite.test('reliable tracker evidence completes tasks while ambiguous evidence only suggests', () => {
@@ -539,6 +606,80 @@ suite.test('views cap current actions, report rolling work, and apply week-speci
     'Shared effort should be counted once per task, not duplicated across roles');
 });
 
+suite.test('This Week preserves every required category and reports truncation', () => {
+  const today = date(2026, 8, 3);
+  const tasks = [];
+  for (let i = 0; i < 11; i++) {
+    tasks.push({
+      taskId: `DATED-${i}`, task: `Dated task ${i}`, owner: 'Parent',
+      ownerRole: 'Parent/Guardian', status: 'Ready', dueDate: date(2026, 8, 4),
+      plannedWeek: today, adjustedEffortMinutes: 30, priority: 'Critical',
+    });
+  }
+  tasks.push({
+    taskId: 'BLOCKED-UNDATED', task: 'Undated blocker', owner: 'Student',
+    ownerRole: 'Student', status: 'Blocked', adjustedEffortMinutes: 30,
+    priority: 'Normal',
+  });
+  tasks.push({
+    taskId: 'DECISION-UNDATED', task: 'Undated decision', owner: 'Parent',
+    ownerRole: 'Parent/Guardian', status: 'Ready', decisionNeeded: true,
+    adjustedEffortMinutes: 30, priority: 'Normal',
+  });
+  tasks.push({
+    taskId: 'SELECTED-UNDATED', task: 'Family-selected action', owner: 'Shared',
+    ownerRole: 'Shared', status: 'Ready', manuallySelected: true,
+    adjustedEffortMinutes: 30, priority: 'Normal',
+  });
+
+  const views = CollegeTools.TaskPlanner.buildViews(tasks, today);
+  const shownIds = views.thisWeek.map((task) => task.taskId);
+
+  suite.assertEqual(views.thisWeek.length, 10, 'This Week should retain its action cap');
+  ['BLOCKED-UNDATED', 'DECISION-UNDATED', 'SELECTED-UNDATED'].forEach((taskId) => {
+    suite.assert(shownIds.includes(taskId),
+      `${taskId} should not be starved by higher-sorting dated tasks`);
+  });
+  suite.assertEqual(views.thisWeekCandidateCount, 14,
+    'The view should expose the complete eligible action count');
+  suite.assertEqual(views.thisWeekOmittedCount, 4,
+    'The view should explicitly report actions omitted by the cap');
+  ['blocked-or-waiting', 'decision-needed', 'manually-selected'].forEach((category) => {
+    suite.assert(views.thisWeekCategoryCounts[category].shown > 0,
+      `${category} should have visible category coverage`);
+  });
+});
+
+suite.test('completed tasks are excluded from remaining effort and capacity warnings', () => {
+  const today = date(2026, 8, 3);
+  const nextWeek = date(2026, 8, 10);
+  const tasks = [
+    {
+      taskId: 'OPEN', task: 'Remaining work', owner: 'Parent',
+      ownerRole: 'Parent/Guardian', status: 'Ready', plannedWeek: nextWeek,
+      dueDate: nextWeek, adjustedEffortMinutes: 60, priority: 'Normal',
+    },
+    {
+      taskId: 'DONE', task: 'Already completed work', owner: 'Parent',
+      ownerRole: 'Parent/Guardian', status: 'Complete', plannedWeek: nextWeek,
+      dueDate: nextWeek, adjustedEffortMinutes: 600, priority: 'Normal',
+    },
+  ];
+
+  const views = CollegeTools.TaskPlanner.buildViews(tasks, today, {
+    roleThresholds: {'Parent/Guardian': 2},
+  });
+
+  suite.assertEqual(views.totalEffortMinutes, 60,
+    'Remaining baseline effort should exclude completed work');
+  suite.assertEqual(views.effortByOwner.Parent, 60,
+    'Owner projections should include only incomplete work');
+  suite.assertEqual(views.nextWeekEffortMinutes, 60,
+    'Next-week effort should exclude completed work');
+  suite.assertEqual(views.capacityWarnings.length, 0,
+    'Completed work should not trigger a capacity warning');
+});
+
 suite.test('sheet setup and generation create conditional, hidden, canonical, and generated views', () => {
   const {colleges} = setupWorkbook({});
   const setup = CollegeTools.TaskManagement.setupTaskManagement();
@@ -554,6 +695,12 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   suite.assert(tasks.getFilter(), 'Tasks should provide a table filter');
   suite.assertEqual(tasks.getFilter().getRange().getNumRows(), tasks.getMaxRows(),
     'The task filter should cover the bounded task surface');
+  tasks.getFilter().remove();
+  tasks.getRange(1, 1, tasks.getMaxRows(), 5).createFilter();
+  CollegeTools.TaskManagement.setupTaskManagement();
+  suite.assertEqual(tasks.getFilter().getRange().getNumColumns(),
+    CollegeTools.Config.HEADERS.TASKS.length,
+  'Setup should safely expand a legacy narrow filter without reading out-of-range criteria');
   suite.assert(tasks.getRange(1, columnOf(tasks, 'Task ID')).getNote().includes('Stable identity'),
     'Task headers should explain preservation behavior');
   suite.assert(!mockSpreadsheet.getSheetByName(
@@ -650,6 +797,40 @@ suite.test('custom tasks receive stable IDs and participate in weekly and effort
     'Custom task notes should survive generation, setup, and repair');
   suite.assertEqual(afterRepair.module, 'Family Custom',
     'Custom categories should survive generation, setup, and repair');
+});
+
+suite.test('tracker edits preserve a partially entered custom task row before its Task is typed', () => {
+  setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  const tasks = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
+  const financialAid = mockSpreadsheet.getSheetByName(
+    CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  tasks.getRange(2, columnOf(tasks, 'Owner')).setValue('Parent');
+  tasks.getRange(2, columnOf(tasks, 'Notes')).setValue('Still composing this task');
+  tasks.getRange(2, columnOf(tasks, 'Effort Override (min)')).setValue(75);
+
+  CollegeTools.TaskManagement.handleEdit({range: financialAid.getRange(2, 1)});
+
+  const partialId = tasks.getRange(2, columnOf(tasks, 'Task ID')).getValue();
+  const partial = CollegeTools.TaskManagement.readTasks().find((task) =>
+    task.taskId === partialId);
+  suite.assert(/^MANUAL::/.test(partialId),
+    'A nonblank in-progress row should receive stable identity before Task is entered');
+  suite.assert(partial, 'Tracker synchronization should not delete the partial custom row');
+  suite.assertEqual(partial.owner, 'Parent', 'Partial owner data should survive tracker sync');
+  suite.assertEqual(partial.notes, 'Still composing this task',
+    'Partial notes should survive tracker sync');
+  suite.assertEqual(partial.effortOverrideMinutes, 75,
+    'Partial effort should survive tracker sync');
+
+  tasks.getRange(2, columnOf(tasks, 'Task')).setValue('Finish defining custom task');
+  CollegeTools.TaskManagement.refreshTaskViews();
+  const completedDefinition = CollegeTools.TaskManagement.readTasks().find((task) =>
+    task.taskId === partialId);
+  suite.assertEqual(completedDefinition.status, 'Ready',
+    'Completing the task definition should apply normal custom-task defaults');
+  suite.assertEqual(tasks.getRange(2, columnOf(tasks, 'Status')).getValue(), 'Ready',
+    'Custom defaults should be persisted even when the stable ID was assigned earlier');
 });
 
 suite.test('task context honors Colleges row-2 headers and row-3 data start', () => {
