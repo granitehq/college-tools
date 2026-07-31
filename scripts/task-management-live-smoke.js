@@ -20,7 +20,11 @@ function runTaskManagementLiveSmoke(mode) {
   var isAthlete = mode === 'athlete-90-day';
   var today = new Date();
   today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  var deadline = new Date(today.getTime() + (isAthlete ? 90 : 500) * 24 * 60 * 60 * 1000);
+  var deadline = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + (isAthlete ? 90 : 500),
+    12);
   [
     names.TASK_SETTINGS, names.TASKS, names.TASK_TEMPLATES, names.THIS_WEEK,
     names.RECRUITING_TRACKER,
