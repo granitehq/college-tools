@@ -273,6 +273,7 @@ suite.test('decision-phase tasks anchor to tracked decision, deposit, and housin
     baseConfig(deadline),
     {colleges: [college('C1', 'Decision University', deadline, {
       decisionDate, enrollmentDepositDeadline, housingDepositDue,
+      decisionResult: 'Accepted',
     })]},
     today,
   );
@@ -305,7 +306,12 @@ suite.test('decision-phase tasks fall back to a computed National Candidates Rep
   const deadline = date(2026, 11, 1);
   const result = CollegeTools.TaskPlanner.generatePlan(
     baseConfig(deadline),
-    {colleges: [college('C1', 'No Decision Data University', deadline)]},
+    // Admitted, but no deposit/housing dates tracked yet -- exactly the
+    // state that should fall back to the computed default instead of the
+    // college being excluded (DEC-06 requires an admitted decisionResult).
+    {colleges: [college('C1', 'Admitted, No Deposit Data University', deadline, {
+      decisionResult: 'Accepted',
+    })]},
     today,
   );
 
@@ -324,6 +330,44 @@ suite.test('decision-phase tasks fall back to a computed National Candidates Rep
     'DEC-06 should fall back to a computed default when no deposit deadline is tracked');
 });
 
+suite.test('Decision/Enrollment tasks only generate for colleges matching the outcome they apply to', () => {
+  const today = date(2026, 7, 30);
+  const deadline = date(2026, 11, 1);
+  const context = {
+    colleges: [
+      college('ED1', 'Early Decision University', deadline, {applicationType: 'ED'}),
+      college('RD1', 'Regular Decision University', deadline, {applicationType: 'RD'}),
+      college('NODATA', 'No Decision Data University', deadline),
+      college('ACC1', 'Accepted University', deadline, {decisionResult: 'Accepted'}),
+      college('WAIT1', 'Waitlisted University', deadline, {decisionResult: 'Waitlisted'}),
+      college('REJ1', 'Rejected University', deadline, {decisionResult: 'Rejected'}),
+    ],
+  };
+  const result = CollegeTools.TaskPlanner.generatePlan(baseConfig(deadline), context, today);
+
+  suite.assert(taskByTemplate(result.tasks, 'STR-09', 'ED1'),
+    'STR-09 should generate for an Early Decision college');
+  suite.assert(!taskByTemplate(result.tasks, 'STR-09', 'RD1'),
+    'STR-09 should not generate for a Regular Decision college');
+
+  suite.assert(taskByTemplate(result.tasks, 'DEC-01', 'NODATA'),
+    'DEC-01 (record the decision) should generate for every college regardless of outcome');
+
+  ['DEC-02', 'DEC-03', 'DEC-05', 'DEC-06', 'DEC-07'].forEach((templateId) => {
+    suite.assert(!taskByTemplate(result.tasks, templateId, 'NODATA'),
+      `${templateId} should not generate for a college with no decision data`);
+    suite.assert(!taskByTemplate(result.tasks, templateId, 'REJ1'),
+      `${templateId} should not generate for a rejected college`);
+    suite.assert(taskByTemplate(result.tasks, templateId, 'ACC1'),
+      `${templateId} should generate for an admitted college`);
+  });
+
+  suite.assert(taskByTemplate(result.tasks, 'DEC-04', 'WAIT1'),
+    'DEC-04 (waitlist response) should generate for a waitlisted college');
+  suite.assert(!taskByTemplate(result.tasks, 'DEC-04', 'ACC1'),
+    'DEC-04 should not generate for an already-admitted (non-waitlisted) college');
+});
+
 suite.test('parent effort multiplier of 0 is honored instead of falling back to the default', () => {
   const today = date(2026, 7, 30);
   const deadline = date(2026, 11, 1);
@@ -339,6 +383,42 @@ suite.test('parent effort multiplier of 0 is honored instead of falling back to 
 
   suite.assertEqual(parentTask.adjustedEffortMinutes, 0,
     'An explicit 0 multiplier should zero out parent-owned effort, not fall back to 1x');
+});
+
+suite.test('generatePlan reports missing_deadline when no working or college deadline exists', () => {
+  const today = date(2026, 7, 30);
+  const result = CollegeTools.TaskPlanner.generatePlan(baseConfig(null), {colleges: []}, today);
+
+  suite.assertEqual(result.ok, false,
+    'A brand-new workbook with no deadline configured should fail, not throw or silently generate');
+  suite.assertEqual(result.code, 'missing_deadline',
+    'The failure should report the missing_deadline code');
+  suite.assert(result.errors && result.errors.length > 0 &&
+    result.errors[0].toLowerCase().includes('deadline'),
+  'The failure should explain that a deadline is needed');
+  suite.assertEqual(result.tasks.length, 0, 'No tasks should be generated on failure');
+});
+
+suite.test('generatePlan reports invalid_catalog when catalog validation fails', () => {
+  const today = date(2026, 7, 30);
+  const deadline = date(2026, 11, 1);
+  const originalValidate = CollegeTools.TaskCatalog.validate;
+  CollegeTools.TaskCatalog.validate = function() {
+    return {ok: false, count: 0, errors: ['Simulated catalog corruption for test coverage']};
+  };
+  try {
+    const result = CollegeTools.TaskPlanner.generatePlan(baseConfig(deadline), {colleges: []}, today);
+
+    suite.assertEqual(result.ok, false,
+      'A broken catalog should fail generation, not throw or silently generate');
+    suite.assertEqual(result.code, 'invalid_catalog',
+      'The failure should report the invalid_catalog code');
+    suite.assertEqual(result.errors[0], 'Simulated catalog corruption for test coverage',
+      'The failure should surface the validator errors');
+    suite.assertEqual(result.tasks.length, 0, 'No tasks should be generated on failure');
+  } finally {
+    CollegeTools.TaskCatalog.validate = originalValidate;
+  }
 });
 
 suite.test('AP/IB score sending anchors to the fixed June 20 free-send deadline', () => {
@@ -807,6 +887,39 @@ suite.test('This Week preserves every required category and reports truncation',
   });
 });
 
+suite.test('a task satisfying two required categories does not starve a distinct task in the second category', () => {
+  const today = date(2026, 8, 3);
+  const tasks = [];
+  for (let i = 0; i < 9; i++) {
+    tasks.push({
+      taskId: `DATED-${i}`, task: `Dated task ${i}`, owner: 'Parent',
+      ownerRole: 'Parent/Guardian', status: 'Ready', dueDate: date(2026, 8, 4),
+      plannedWeek: today, adjustedEffortMinutes: 30, priority: 'Critical',
+    });
+  }
+  // Sorts before DECISION-ONLY among undated tasks (tie-broken by taskId),
+  // and satisfies both the 'blocked-or-waiting' and 'decision-needed'
+  // categories at once.
+  tasks.push({
+    taskId: 'BLOCKED-DECISION', task: 'Blocked and awaiting a decision', owner: 'Student',
+    ownerRole: 'Student', status: 'Blocked', decisionNeeded: true,
+    adjustedEffortMinutes: 30, priority: 'Normal',
+  });
+  tasks.push({
+    taskId: 'DECISION-ONLY', task: 'A distinct decision-needed task', owner: 'Parent',
+    ownerRole: 'Parent/Guardian', status: 'Ready', decisionNeeded: true,
+    adjustedEffortMinutes: 30, priority: 'Normal',
+  });
+
+  const views = CollegeTools.TaskPlanner.buildViews(tasks, today);
+  const shownIds = views.thisWeek.map((task) => task.taskId);
+
+  suite.assert(shownIds.includes('BLOCKED-DECISION'),
+    'The dual-category task should still be guaranteed a slot');
+  suite.assert(shownIds.includes('DECISION-ONLY'),
+    'A distinct decision-needed task should not be starved because another task already claimed that category');
+});
+
 suite.test('completed tasks are excluded from remaining effort and capacity warnings', () => {
   const today = date(2026, 8, 3);
   const nextWeek = date(2026, 8, 10);
@@ -835,6 +948,40 @@ suite.test('completed tasks are excluded from remaining effort and capacity warn
     'Next-week effort should exclude completed work');
   suite.assertEqual(views.capacityWarnings.length, 0,
     'Completed work should not trigger a capacity warning');
+});
+
+suite.test('previewTaskPlan makes no sheet writes to Colleges or Tasks', () => {
+  const {colleges} = setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  const nameCol = columnOf(colleges, 'College Name', 2);
+  const idCol = columnOf(colleges, 'College ID', 2);
+  colleges.getRange(3, nameCol).setValue('Untouched University');
+  suite.assertEqual(colleges.getRange(3, idCol).getValue(), '',
+    'Precondition: new college has no ID yet');
+
+  const tasks = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
+  tasks.getRange(2, columnOf(tasks, 'Task')).setValue('Draft custom task, not yet finished');
+  const taskIdCol = columnOf(tasks, 'Task ID');
+  suite.assertEqual(tasks.getRange(2, taskIdCol).getValue(), '',
+    'Precondition: custom row has no Task ID yet');
+
+  setSetting('Working First Application Deadline', date(2026, 10, 28));
+  setSetting('Planning Start Date', date(2026, 7, 30));
+
+  const preview = CollegeTools.TaskManagement.previewTaskPlan();
+
+  suite.assert(preview.ok, 'Preview should still succeed');
+  suite.assertEqual(colleges.getRange(3, idCol).getValue(), '',
+    'Preview should not assign a College ID to a new college row');
+  suite.assertEqual(tasks.getRange(2, taskIdCol).getValue(), '',
+    'Preview should not stamp a Task ID onto a partially entered custom row');
+
+  const generated = CollegeTools.TaskManagement.generateTaskPlan();
+  suite.assert(generated.ok, 'Generate should still succeed after a preview');
+  suite.assert(colleges.getRange(3, idCol).getValue() !== '',
+    'Generate (unlike preview) should assign the College ID');
+  suite.assert(tasks.getRange(2, taskIdCol).getValue() !== '',
+    'Generate (unlike preview) should stamp the custom row Task ID');
 });
 
 suite.test('sheet setup and generation create conditional, hidden, canonical, and generated views', () => {
@@ -910,6 +1057,44 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Preview after generation should not archive unchanged work');
   suite.assertEqual(unchangedPreview.preview.update, 0,
     'An unchanged workbook should produce an idempotent no-update preview');
+});
+
+suite.test('rewriting the Tasks sheet never clears rows before their replacement values are written', () => {
+  setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  setSetting('Working First Application Deadline', date(2026, 10, 28));
+  setSetting('Planning Start Date', date(2026, 7, 30));
+
+  // First generation populates the Tasks sheet with real rows to overwrite.
+  const first = CollegeTools.TaskManagement.generateTaskPlan();
+  suite.assert(first.ok && first.taskCount > 0,
+    'First generation should populate the Tasks sheet so there is data to overwrite');
+
+  const tasks = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
+  let clearCallsOnDataRange = 0;
+  const originalGetRange = tasks.getRange.bind(tasks);
+  tasks.getRange = function(row, col, numRows, numCols) {
+    const range = originalGetRange(row, col, numRows, numCols);
+    if (row === 2 && numRows > 1) {
+      const originalClear = range.clearContent.bind(range);
+      range.clearContent = function() {
+        clearCallsOnDataRange++;
+        return originalClear();
+      };
+    }
+    return range;
+  };
+
+  // Second generation rewrites the same rows. It should overwrite them
+  // directly rather than clearing the data block before writing new
+  // values -- clearing first is the data-loss window: a mid-write
+  // exception between clear and setValues would leave the sheet empty.
+  const second = CollegeTools.TaskManagement.generateTaskPlan();
+
+  tasks.getRange = originalGetRange;
+  suite.assert(second.ok && second.taskCount > 0, 'Second generation should also succeed');
+  suite.assertEqual(clearCallsOnDataRange, 0,
+    'Rewriting existing task rows should overwrite them directly, never clear then write');
 });
 
 suite.test('custom tasks receive stable IDs and participate in weekly and effort views', () => {

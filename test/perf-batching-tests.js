@@ -14,6 +14,7 @@ const {createHarness, TestSuite} = require('./support');
 const harness = createHarness([
   'config.js', 'utils.js', 'schema.js', 'formulas.js',
   'formatting.js', 'trackers.js', 'colleges.js', 'dashboard.js',
+  'task-catalog.js', 'task-planner.js', 'task-management.js',
 ]);
 const {CollegeTools, mockSpreadsheet, setupWorkbook, getCollegeColumn} = harness;
 const suite = new TestSuite();
@@ -179,6 +180,35 @@ suite.test('dashboard stat sections keep exact rows and formulas without per-cel
   suite.assertEqual(label(38), 'Potential Amount (Pending):', 'stat @38');
   suite.assert(String(dash.getRange(7, 2).getFormula()).charAt(0) === '=', 'stat B-cell is a formula');
   suite.assertEqual(dash.callCounts.setFormula, 0, 'no per-cell setFormula on dashboard');
+});
+
+/* ---- item 6: readTasks manual-default backfill batching ---- */
+
+suite.test('readTasks batches the manual-task default backfill instead of per-cell writes', () => {
+  setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  const tasks = sheet(C.SHEET_NAMES.TASKS);
+  tasks.getRange(2, col(tasks, 'Task')).setValue('Track a custom family task');
+  tasks.getRange(3, col(tasks, 'Task')).setValue('Track a second custom family task');
+
+  tasks.resetCallCounts();
+  const result = CollegeTools.TaskManagement.readTasks();
+
+  suite.assertEqual(tasks.callCounts.setValue, 0,
+    'Manual-default backfill should not issue per-cell setValue calls');
+  suite.assert(tasks.callCounts.setValues <= 2,
+    'Manual-default backfill should batch each row into a single setValues call (got ' +
+      tasks.callCounts.setValues + ')');
+  const custom1 = result.find((task) => task.task === 'Track a custom family task');
+  const custom2 = result.find((task) => task.task === 'Track a second custom family task');
+  suite.assert(custom1 && /^MANUAL::/.test(custom1.taskId),
+    'First custom row should get a stable manual ID');
+  suite.assert(custom2 && /^MANUAL::/.test(custom2.taskId),
+    'Second custom row should get a stable manual ID');
+  suite.assertEqual(tasks.getRange(2, col(tasks, 'Status')).getValue(), 'Ready',
+    'Backfilled defaults should still be persisted to the sheet');
+  suite.assertEqual(tasks.getRange(3, col(tasks, 'Owner')).getValue(), 'Unassigned',
+    'Backfilled defaults should still be persisted for every affected row');
 });
 
 process.exit(suite.summary() ? 0 : 1);

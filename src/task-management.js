@@ -413,17 +413,33 @@ CollegeTools.TaskManagement = (function() {
   }
 
   /**
+   * Grows the task table (never shrinks) so a subsequent direct write has
+   * enough rows to target before any old rows are cleared. Splitting this
+   * from the shrink half of sizeTaskSheet_ lets callers grow-then-write-
+   * then-shrink instead of resize-then-write, so a write never targets a
+   * range the sheet doesn't have yet.
+   * @param {Sheet} sheet - Tasks sheet
+   * @param {number} taskCount - Number of populated task rows
+   */
+  function growTaskSheetIfNeeded_(sheet, taskCount) {
+    var desiredRows = Math.max(TASK_MIN_ROWS, Number(taskCount || 0) + 1 + TASK_ROW_BUFFER);
+    var currentRows = sheet.getMaxRows();
+    if (currentRows < desiredRows && sheet.insertRowsAfter) {
+      sheet.insertRowsAfter(currentRows, desiredRows - currentRows);
+    }
+  }
+
+  /**
    * Keeps the canonical task table large enough for generated/manual work
    * without leaving the default thousand-row validation/formatting surface.
    * @param {Sheet} sheet - Tasks sheet
    * @param {number} taskCount - Number of populated task rows
    */
   function sizeTaskSheet_(sheet, taskCount) {
+    growTaskSheetIfNeeded_(sheet, taskCount);
     var desiredRows = Math.max(TASK_MIN_ROWS, Number(taskCount || 0) + 1 + TASK_ROW_BUFFER);
     var currentRows = sheet.getMaxRows();
-    if (currentRows < desiredRows && sheet.insertRowsAfter) {
-      sheet.insertRowsAfter(currentRows, desiredRows - currentRows);
-    } else if (currentRows > desiredRows) {
+    if (currentRows > desiredRows) {
       sheet.deleteRows(desiredRows + 1, currentRows - desiredRows);
     }
   }
@@ -571,18 +587,15 @@ CollegeTools.TaskManagement = (function() {
   /**
    * Reads canonical task rows.
    * @param {Spreadsheet=} spreadsheet - Workbook
+   * @param {boolean=} readOnly - Skip persisting manual-default backfills (for Preview)
    * @returns {Array<Object>} Tasks
    */
-  function readTasks(spreadsheet) {
+  function readTasks(spreadsheet, readOnly) {
     spreadsheet = spreadsheet || SpreadsheetApp.getActive();
     var sheet = spreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
     if (!sheet) return [];
     var tasks = readTable_(sheet).map(rowToTask_).filter(function(task) {
       return !!task.taskId || !!task.task;
-    });
-    var headerByField = {};
-    TASK_FIELDS.forEach(function(field) {
-      headerByField[field[1]] = field[0];
     });
     var manualDefaults = [
       'taskId', 'workstream', 'stage', 'module', 'scopeType', 'scopeId',
@@ -590,20 +603,48 @@ CollegeTools.TaskManagement = (function() {
       'offsetWindow', 'owner', 'ownerRole', 'effectiveDate', 'priority', 'status',
       'adjustedEffortMinutes', 'generated',
     ];
-    tasks.forEach(function(task) {
-      if ((task._newManualId || task._manualDefaults) && task._sourceRow) {
-        manualDefaults.forEach(function(field) {
-          var header = headerByField[field];
-          var column = header && CollegeTools.Utils.colIndex(sheet, header);
-          if (column && sheet.getRange(task._sourceRow, column).getValue() === '') {
-            sheet.getRange(task._sourceRow, column)
-              .setValue(taskValue_(task, field, sheet));
-          }
-        });
-      }
-      delete task._newManualId;
-      delete task._manualDefaults;
+    var needsBackfill = !readOnly && tasks.some(function(task) {
+      return (task._newManualId || task._manualDefaults) && task._sourceRow;
     });
+    if (needsBackfill) {
+      // Resolve the header-to-column map once (a single header read) and
+      // batch each affected row into one read + one write, instead of a
+      // per-field colIndex() (which itself re-reads the header row) plus a
+      // per-cell getValue()/setValue() -- this is the hot path for every
+      // edit to Tasks or any of the five wired tracker sheets.
+      var lastColumn = Math.max(1, sheet.getLastColumn());
+      var headerValues = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+      var columnByHeader = {};
+      headerValues.forEach(function(header, index) {
+        var trimmed = (header || '').toString().trim();
+        if (trimmed && columnByHeader[trimmed] === undefined) columnByHeader[trimmed] = index + 1;
+      });
+      var headerByField = {};
+      TASK_FIELDS.forEach(function(field) {
+        headerByField[field[1]] = field[0];
+      });
+      tasks.forEach(function(task) {
+        if ((task._newManualId || task._manualDefaults) && task._sourceRow) {
+          var rowValues = sheet.getRange(task._sourceRow, 1, 1, lastColumn).getValues()[0];
+          var changed = false;
+          manualDefaults.forEach(function(field) {
+            var column = columnByHeader[headerByField[field]];
+            if (column && rowValues[column - 1] === '') {
+              rowValues[column - 1] = taskValue_(task, field, sheet);
+              changed = true;
+            }
+          });
+          if (changed) sheet.getRange(task._sourceRow, 1, 1, lastColumn).setValues([rowValues]);
+        }
+        delete task._newManualId;
+        delete task._manualDefaults;
+      });
+    } else {
+      tasks.forEach(function(task) {
+        delete task._newManualId;
+        delete task._manualDefaults;
+      });
+    }
     return tasks;
   }
 
@@ -673,11 +714,20 @@ CollegeTools.TaskManagement = (function() {
       return fullRow;
     });
     var oldLastRow = sheet.getLastRow();
-    if (oldLastRow > 1) {
-      sheet.getRange(2, 1, oldLastRow - 1, headers.length).clearContent();
+    var oldDataRows = oldLastRow > 1 ? oldLastRow - 1 : 0;
+    // Grow (never shrink) before writing so the write always has enough
+    // rows to target, then overwrite the shared row range directly instead
+    // of clearing it first, then clear only the now-stale tail and shrink.
+    // This way a mid-write exception (transient service error, quota) can
+    // never leave the sheet with its Tasks content cleared and never
+    // repopulated -- the old rows stay intact until their replacement is
+    // written.
+    growTaskSheetIfNeeded_(sheet, tasks.length);
+    if (values.length) sheet.getRange(2, 1, values.length, headers.length).setValues(values);
+    if (oldDataRows > values.length) {
+      sheet.getRange(2 + values.length, 1, oldDataRows - values.length, headers.length).clearContent();
     }
     sizeTaskSheet_(sheet, tasks.length);
-    if (values.length) sheet.getRange(2, 1, values.length, headers.length).setValues(values);
     applyTaskValidations_(sheet, CollegeTools.TaskPlanner.normalizeConfig(readConfig(spreadsheet)));
     formatTasksSheet_(sheet);
     return {ok: true, count: values.length};
@@ -777,21 +827,24 @@ CollegeTools.TaskManagement = (function() {
   /**
    * Reads all canonical tracker context required by the planner.
    * @param {Spreadsheet=} spreadsheet - Workbook
+   * @param {boolean=} readOnly - Skip ID-assignment/column-merge writes (for Preview)
    * @returns {Object} Planner context
    */
-  function buildContextFromWorkbook(spreadsheet) {
+  function buildContextFromWorkbook(spreadsheet, readOnly) {
     spreadsheet = spreadsheet || SpreadsheetApp.getActive();
     var names = CollegeTools.Config.SHEET_NAMES;
     var collegesSheet = spreadsheet.getSheetByName(names.COLLEGES);
-    if (collegesSheet) CollegeTools.Utils.ensureHiddenLastColumn(collegesSheet, 'College ID', 2);
-    ensureRowIds_(collegesSheet, 'College ID', 'College Name', 2, 'COL-');
     var scholarshipSheet = spreadsheet.getSheetByName(names.SCHOLARSHIP_TRACKER);
-    if (scholarshipSheet) {
-      CollegeTools.Utils.ensureHiddenLastColumn(scholarshipSheet, 'Scholarship ID', 1);
-    }
-    ensureRowIds_(scholarshipSheet, 'Scholarship ID', 'Scholarship Name', 1, 'SCH-');
     var recruitingSheet = spreadsheet.getSheetByName(names.RECRUITING_TRACKER);
-    ensureRowIds_(recruitingSheet, 'Recruiting Contact ID', 'College Name', 1, 'RC-');
+    if (!readOnly) {
+      if (collegesSheet) CollegeTools.Utils.ensureHiddenLastColumn(collegesSheet, 'College ID', 2);
+      ensureRowIds_(collegesSheet, 'College ID', 'College Name', 2, 'COL-');
+      if (scholarshipSheet) {
+        CollegeTools.Utils.ensureHiddenLastColumn(scholarshipSheet, 'Scholarship ID', 1);
+      }
+      ensureRowIds_(scholarshipSheet, 'Scholarship ID', 'Scholarship Name', 1, 'SCH-');
+      ensureRowIds_(recruitingSheet, 'Recruiting Contact ID', 'College Name', 1, 'RC-');
+    }
 
     var timeline = collegeLookup_(readTable_(spreadsheet.getSheetByName(names.APPLICATION_TIMELINE)));
     var status = collegeLookup_(readTable_(spreadsheet.getSheetByName(names.STATUS_TRACKER)));
@@ -1130,10 +1183,10 @@ CollegeTools.TaskManagement = (function() {
     var spreadsheet = SpreadsheetApp.getActive();
     setupSettingsSheet_(spreadsheet);
     var config = readConfig(spreadsheet);
-    var context = buildContextFromWorkbook(spreadsheet);
+    var context = buildContextFromWorkbook(spreadsheet, true);
     var generated = CollegeTools.TaskPlanner.generatePlan(config, context);
     if (!generated.ok) return generated;
-    var reconciled = CollegeTools.TaskPlanner.reconcile(generated.tasks, readTasks(spreadsheet));
+    var reconciled = CollegeTools.TaskPlanner.reconcile(generated.tasks, readTasks(spreadsheet, true));
     return {
       ok: true,
       code: 'task_plan_preview',

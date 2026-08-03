@@ -253,6 +253,36 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Returns whether a college's admission decision is recorded as an offer.
+   * @param {Object} college - College
+   * @returns {boolean} Whether the college is an admitted college
+   */
+  function collegeAdmitted_(college) {
+    return (college.decisionResult || '').toString().trim().toLowerCase() === 'accepted';
+  }
+
+  /**
+   * Per-templateId applicability filters for the 'college' scope. Most
+   * college-scoped templates apply to every college; a few Decision/
+   * Enrollment and strategy templates only make sense once a specific
+   * application round or admission outcome is on record.
+   */
+  var COLLEGE_SCOPE_FILTERS = {
+    'STR-09': function(college) {
+      var round = (college.applicationType || '').toString().trim().toUpperCase();
+      return round === 'ED' || round === 'ED2' || round === 'REA';
+    },
+    'DEC-02': collegeAdmitted_,
+    'DEC-03': collegeAdmitted_,
+    'DEC-05': collegeAdmitted_,
+    'DEC-06': collegeAdmitted_,
+    'DEC-07': collegeAdmitted_,
+    'DEC-04': function(college) {
+      return (college.decisionResult || '').toString().trim().toLowerCase() === 'waitlisted';
+    },
+  };
+
+  /**
    * Returns relevant scope instances for a template.
    * @param {Object} template - Template
    * @param {Object} context - Planning context
@@ -265,6 +295,7 @@ CollegeTools.TaskPlanner = (function() {
     switch (template.scope) {
       case 'college':
         source = context.colleges || [];
+        filter = COLLEGE_SCOPE_FILTERS[template.templateId] || null;
         break;
       case 'scholarship':
         source = context.scholarships || [];
@@ -353,6 +384,65 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Returns the templateId prefix used to key COLLEGE_DEADLINE_RESOLVERS
+   * (e.g. 'AID-06' -> 'AID-').
+   * @param {string} id - Template ID
+   * @returns {string} Prefix including the trailing dash
+   */
+  function templateIdPrefix_(id) {
+    var dash = id.indexOf('-');
+    return dash === -1 ? id : id.slice(0, dash + 1);
+  }
+
+  /**
+   * Per-templateId/prefix deadline resolvers for the 'college' scope
+   * fallback branch of deadlineFor_. Each resolver receives
+   * (college, config) and returns {date, source} or null when it has no
+   * opinion, in which case deadlineFor_ falls back to collegeFallback().
+   * Exact templateId entries take precedence over prefix entries.
+   */
+  var COLLEGE_DEADLINE_RESOLVERS = {
+    'AID-': function(college) {
+      if (!toDate(college.aidDeadline)) return null;
+      return {date: toDate(college.aidDeadline), source: 'College aid-priority deadline'};
+    },
+    'SCH-': function(college) {
+      var date = earliest([college.meritDeadline, college.honorsDeadline]);
+      return date ? {date: date, source: 'Merit or honors deadline'} : null;
+    },
+    'TST-06': function(college) {
+      if (!toDate(college.testScoreDeadline)) return null;
+      return {date: toDate(college.testScoreDeadline), source: 'Test-score deadline'};
+    },
+    'REC-07': function(college) {
+      var date = earliest([
+        college.transcriptDeadline, college.teacherRecDeadline, college.counselorRecDeadline,
+      ]);
+      return date ? {date: date, source: 'Earliest school-document deadline'} : null;
+    },
+    'TST-07': function(college, config) {
+      return {date: apScoreSendingDefault_(config), source: 'AP/IB score-sending deadline (June 20)'};
+    },
+    'DEC-': function(college, config, id) {
+      if (id === 'DEC-05' || id === 'DEC-06') {
+        if (toDate(college.enrollmentDepositDeadline)) {
+          return {date: toDate(college.enrollmentDepositDeadline), source: 'Enrollment deposit deadline'};
+        }
+      } else if (id === 'DEC-07') {
+        if (toDate(college.housingDepositDue)) {
+          return {date: toDate(college.housingDepositDue), source: 'Housing deposit due date'};
+        }
+        if (toDate(college.enrollmentDepositDeadline)) {
+          return {date: toDate(college.enrollmentDepositDeadline), source: 'Enrollment deposit deadline'};
+        }
+      } else if (toDate(college.decisionDate)) {
+        return {date: toDate(college.decisionDate), source: 'Decision release date'};
+      }
+      return {date: nationalReplyDateDefault_(config), source: 'National Candidates Reply Date default (May 1)'};
+    },
+  };
+
+  /**
    * Resolves the base deadline and provenance for a task.
    * @param {Object} template - Template
    * @param {Object} scope - Scope
@@ -438,49 +528,12 @@ CollegeTools.TaskPlanner = (function() {
         source = promptFallback.source;
       }
     } else if (college) {
-      if (id.indexOf('AID-') === 0) {
-        if (toDate(college.aidDeadline)) {
-          date = toDate(college.aidDeadline);
-          source = 'College aid-priority deadline';
-        }
-      } else if (id.indexOf('SCH-') === 0) {
-        date = earliest([college.meritDeadline, college.honorsDeadline]);
-        if (date) source = 'Merit or honors deadline';
-      } else if (id === 'TST-06') {
-        if (toDate(college.testScoreDeadline)) {
-          date = toDate(college.testScoreDeadline);
-          source = 'Test-score deadline';
-        }
-      } else if (id === 'REC-07') {
-        date = earliest([
-          college.transcriptDeadline, college.teacherRecDeadline, college.counselorRecDeadline,
-        ]);
-        if (date) source = 'Earliest school-document deadline';
-      } else if (id === 'TST-07') {
-        date = apScoreSendingDefault_(config);
-        source = 'AP/IB score-sending deadline (June 20)';
-      } else if (id.indexOf('DEC-') === 0) {
-        if (id === 'DEC-05' || id === 'DEC-06') {
-          if (toDate(college.enrollmentDepositDeadline)) {
-            date = toDate(college.enrollmentDepositDeadline);
-            source = 'Enrollment deposit deadline';
-          }
-        } else if (id === 'DEC-07') {
-          if (toDate(college.housingDepositDue)) {
-            date = toDate(college.housingDepositDue);
-            source = 'Housing deposit due date';
-          } else if (toDate(college.enrollmentDepositDeadline)) {
-            date = toDate(college.enrollmentDepositDeadline);
-            source = 'Enrollment deposit deadline';
-          }
-        } else if (toDate(college.decisionDate)) {
-          date = toDate(college.decisionDate);
-          source = 'Decision release date';
-        }
-        if (!date) {
-          date = nationalReplyDateDefault_(config);
-          source = 'National Candidates Reply Date default (May 1)';
-        }
+      var resolver = COLLEGE_DEADLINE_RESOLVERS[id] ||
+        COLLEGE_DEADLINE_RESOLVERS[templateIdPrefix_(id)];
+      var resolved = resolver ? resolver(college, config, id) : null;
+      if (resolved) {
+        date = resolved.date;
+        source = resolved.source;
       }
       if (!date) {
         var fallback = collegeFallback();
@@ -1113,6 +1166,134 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Per-templateId completion-evidence resolvers, each receiving
+   * (task, context, college, data) and returning {reliable, source, date=}
+   * or null when it has no opinion. Grouped per ID so multi-step fallback
+   * chains (e.g. SUB-04's strong-then-weak signal, ATH-07's two data
+   * sources) stay together instead of being split across a flat if-chain.
+   */
+  var COMPLETION_EVIDENCE_RESOLVERS = {
+    'AID-06': function(task, context) {
+      if (context.fafsaSubmittedDate || context.fafsaSubmitted) {
+        return {reliable: true, source: 'Financial Aid Tracker: FAFSA Submitted', date: context.fafsaSubmittedDate};
+      }
+      return null;
+    },
+    'AID-10': function(task, context) {
+      if (context.cssProfileSubmitted) {
+        return {
+          reliable: true, source: 'Financial Aid Tracker: CSS Profile Submitted',
+          date: context.cssProfileSubmittedDate,
+        };
+      }
+      return null;
+    },
+    'SCH-06': function(task, context, college, data) {
+      if (data && data.submittedDate) {
+        return {reliable: true, source: 'Scholarship Tracker: Application Submitted Date', date: data.submittedDate};
+      }
+      return null;
+    },
+    'SCH-07': function(task, context, college, data) {
+      if (data && data.awardStatus) {
+        return {reliable: true, source: 'Scholarship Tracker: Award Status', date: data.decisionDate};
+      }
+      return null;
+    },
+    'TST-06': function(task, context, college) {
+      if (college && asBoolean(college.testScoresSent, false)) {
+        return {reliable: true, source: 'Application Status Tracker: Test Scores Sent'};
+      }
+      return null;
+    },
+    'REC-07': function(task, context, college) {
+      if (college && asBoolean(college.transcriptSent, false) &&
+          asBoolean(college.recommendationsComplete, false)) {
+        return {reliable: true, source: 'Application Status Tracker: transcript and recommendations complete'};
+      }
+      return null;
+    },
+    'ESS-10': function(task, context, college) {
+      if (college && asBoolean(college.essaysComplete, false)) {
+        return {reliable: true, source: 'Application Status Tracker: Essays Complete'};
+      }
+      return null;
+    },
+    'VIS-04': function(task, context, college, data) {
+      if (data && data.visitDate) {
+        return {reliable: true, source: 'Campus Visit Tracker: Visit Date', date: data.visitDate};
+      }
+      return null;
+    },
+    'PRT-03': function(task, context, college) {
+      if (college && college.portfolioSubmittedDate) {
+        return {
+          reliable: true, source: 'Application Status Tracker: Portfolio Submitted',
+          date: college.portfolioSubmittedDate,
+        };
+      }
+      return null;
+    },
+    'SUB-03': function(task, context, college) {
+      if (college && (college.submittedDate || /submitted/i.test(college.applicationStatus || ''))) {
+        return {reliable: true, source: 'Application Status Tracker: application submitted', date: college.submittedDate};
+      }
+      return null;
+    },
+    'SUB-04': function(task, context, college) {
+      if (college && college.portal &&
+          (college.submittedDate || /submitted/i.test(college.applicationStatus || ''))) {
+        return {reliable: true, source: 'Application Status Tracker: portal and submitted status'};
+      }
+      if (college && college.portal) {
+        return {reliable: false, source: 'Portal is present, but receipt still needs confirmation'};
+      }
+      return null;
+    },
+    'SUB-05': function(task, context, college) {
+      if (college && asBoolean(college.documentsComplete, false)) {
+        return {reliable: true, source: 'Application Status Tracker: Documents Complete'};
+      }
+      return null;
+    },
+    'ATH-07': function(task, context, college, data) {
+      if (data && data.questionnaireDate) {
+        return {reliable: true, source: 'Recruiting Tracker: Questionnaire Submitted', date: data.questionnaireDate};
+      }
+      if (task.collegeId) {
+        var questionnaireContact = null;
+        (context.contacts || []).forEach(function(contact) {
+          if (!questionnaireContact &&
+              String(contact.collegeId || '') === String(task.collegeId) &&
+              contact.questionnaireDate) {
+            questionnaireContact = contact;
+          }
+        });
+        if (questionnaireContact) {
+          return {
+            reliable: true,
+            source: 'Recruiting Tracker: Questionnaire Submitted',
+            date: questionnaireContact.questionnaireDate,
+          };
+        }
+      }
+      return null;
+    },
+    'ATH-08': function(task, context, college, data) {
+      if (data && data.initialOutreachDate) {
+        return {reliable: true, source: 'Recruiting Tracker: Initial Outreach Date', date: data.initialOutreachDate};
+      }
+      return null;
+    },
+    'ATH-09': function(task, context, college, data) {
+      if (data && data.response) {
+        return {reliable: true, source: 'Recruiting Tracker: Response/Interest', date: data.lastContact};
+      }
+      return null;
+    },
+  };
+
+  /**
    * Finds reliable or suggestive completion evidence for one task.
    * @param {Object} task - Task
    * @param {Object} context - Context with tracker-derived fields
@@ -1135,76 +1316,8 @@ CollegeTools.TaskPlanner = (function() {
         if (String(item.id || item.visitId) === String(task.scopeId)) data = item;
       });
     }
-
-    if (id === 'AID-06' && (context.fafsaSubmittedDate || context.fafsaSubmitted)) {
-      return {reliable: true, source: 'Financial Aid Tracker: FAFSA Submitted', date: context.fafsaSubmittedDate};
-    }
-    if (id === 'AID-10' && context.cssProfileSubmitted) {
-      return {reliable: true, source: 'Financial Aid Tracker: CSS Profile Submitted', date: context.cssProfileSubmittedDate};
-    }
-    if (id === 'SCH-06' && data && data.submittedDate) {
-      return {reliable: true, source: 'Scholarship Tracker: Application Submitted Date', date: data.submittedDate};
-    }
-    if (id === 'SCH-07' && data && data.awardStatus) {
-      return {reliable: true, source: 'Scholarship Tracker: Award Status', date: data.decisionDate};
-    }
-    if (id === 'TST-06' && college && asBoolean(college.testScoresSent, false)) {
-      return {reliable: true, source: 'Application Status Tracker: Test Scores Sent'};
-    }
-    if (id === 'REC-07' && college &&
-        asBoolean(college.transcriptSent, false) && asBoolean(college.recommendationsComplete, false)) {
-      return {reliable: true, source: 'Application Status Tracker: transcript and recommendations complete'};
-    }
-    if (id === 'ESS-10' && college && asBoolean(college.essaysComplete, false)) {
-      return {reliable: true, source: 'Application Status Tracker: Essays Complete'};
-    }
-    if (id === 'VIS-04' && data && data.visitDate) {
-      return {reliable: true, source: 'Campus Visit Tracker: Visit Date', date: data.visitDate};
-    }
-    if (id === 'PRT-03' && college && college.portfolioSubmittedDate) {
-      return {reliable: true, source: 'Application Status Tracker: Portfolio Submitted', date: college.portfolioSubmittedDate};
-    }
-    if (id === 'SUB-03' && college && (college.submittedDate ||
-        /submitted/i.test(college.applicationStatus || ''))) {
-      return {reliable: true, source: 'Application Status Tracker: application submitted', date: college.submittedDate};
-    }
-    if (id === 'SUB-04' && college && college.portal &&
-        (college.submittedDate || /submitted/i.test(college.applicationStatus || ''))) {
-      return {reliable: true, source: 'Application Status Tracker: portal and submitted status'};
-    }
-    if (id === 'SUB-05' && college && asBoolean(college.documentsComplete, false)) {
-      return {reliable: true, source: 'Application Status Tracker: Documents Complete'};
-    }
-    if (id === 'ATH-07' && data && data.questionnaireDate) {
-      return {reliable: true, source: 'Recruiting Tracker: Questionnaire Submitted', date: data.questionnaireDate};
-    }
-    if (id === 'ATH-07' && task.collegeId) {
-      var questionnaireContact = null;
-      (context.contacts || []).forEach(function(contact) {
-        if (!questionnaireContact &&
-            String(contact.collegeId || '') === String(task.collegeId) &&
-            contact.questionnaireDate) {
-          questionnaireContact = contact;
-        }
-      });
-      if (questionnaireContact) {
-        return {
-          reliable: true,
-          source: 'Recruiting Tracker: Questionnaire Submitted',
-          date: questionnaireContact.questionnaireDate,
-        };
-      }
-    }
-    if (id === 'ATH-08' && data && data.initialOutreachDate) {
-      return {reliable: true, source: 'Recruiting Tracker: Initial Outreach Date', date: data.initialOutreachDate};
-    }
-    if (id === 'ATH-09' && data && data.response) {
-      return {reliable: true, source: 'Recruiting Tracker: Response/Interest', date: data.lastContact};
-    }
-    if (id === 'SUB-04' && college && college.portal) {
-      return {reliable: false, source: 'Portal is present, but receipt still needs confirmation'};
-    }
-    return null;
+    var resolver = COMPLETION_EVIDENCE_RESOLVERS[id];
+    return resolver ? resolver(task, context, college, data) : null;
   }
 
   /**
@@ -1319,8 +1432,14 @@ CollegeTools.TaskPlanner = (function() {
     var selectedTaskIds = {};
     var thisWeek = [];
     weeklyCategories.forEach(function(category) {
-      var representative = weeklyCandidates.filter(category.test)[0];
-      if (representative && !selectedTaskIds[representative.taskId] && thisWeek.length < 10) {
+      // Skip tasks a prior category already claimed so one task satisfying
+      // two required categories (e.g. Blocked + decision-needed) doesn't
+      // leave a distinct second-category task unguaranteed and pushed past
+      // the cap below.
+      var representative = weeklyCandidates.filter(function(task) {
+        return category.test(task) && !selectedTaskIds[task.taskId];
+      })[0];
+      if (representative && thisWeek.length < 10) {
         selectedTaskIds[representative.taskId] = true;
         thisWeek.push(representative);
       }
