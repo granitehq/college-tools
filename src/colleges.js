@@ -253,10 +253,13 @@ CollegeTools.Colleges = (function() {
     var debug = 'Debugging Fill Operation\n';
     debug += 'Row: ' + row + ', College: "' + collegeName + '"\n';
 
-    // Check API key
+    // Check API key without calling Scorecard's private alerting key reader.
     try {
-      var apiKey = CollegeTools.Scorecard.getApiKey();
-      debug += 'API Key: ' + (apiKey ? 'Present' : 'MISSING') + '\n';
+      if (CollegeTools.Scorecard.isApiKeyConfigured) {
+        debug += 'API Key: ' + (CollegeTools.Scorecard.isApiKeyConfigured() ? 'Present' : 'MISSING') + '\n';
+      } else {
+        debug += 'API Key: Unknown (status check unavailable)\n';
+      }
     } catch (e) {
       debug += 'API Key Error: ' + e.toString() + '\n';
     }
