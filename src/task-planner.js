@@ -155,6 +155,18 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Resolves the parent effort multiplier, distinguishing an unset value
+   * from an explicit 0 (which JavaScript's `|| 1` would otherwise discard).
+   * @param {*} raw - Raw sheet value
+   * @returns {number} Multiplier, clamped to a minimum of 0
+   */
+  function parentEffortMultiplier_(raw) {
+    if (raw === '' || raw === undefined || raw === null) return 1;
+    var multiplier = Number(raw);
+    return isNaN(multiplier) ? 1 : Math.max(0, multiplier);
+  }
+
+  /**
    * Applies stable defaults without inventing student or deadline values.
    * @param {Object=} config - Raw configuration
    * @returns {Object} Normalized configuration
@@ -172,7 +184,7 @@ CollegeTools.TaskPlanner = (function() {
       currentGrade: config.currentGrade || '',
       applicationCycle: config.applicationCycle || '',
       counselorAvailable: asBoolean(config.counselorAvailable, false),
-      parentEffortMultiplier: Math.max(0.1, Number(config.parentEffortMultiplier) || 1),
+      parentEffortMultiplier: parentEffortMultiplier_(config.parentEffortMultiplier),
       roleNames: {
         'Student': roleNames.Student || 'Student',
         'Parent/Guardian': roleNames['Parent/Guardian'] || 'Parent/Guardian',

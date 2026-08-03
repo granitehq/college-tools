@@ -21,13 +21,16 @@ suite.test('schema declares row conventions for Colleges and tracker sheets', ()
   const scholarshipTracker = CollegeTools.Schema.getSheet('SCHOLARSHIP_TRACKER');
   const tasks = CollegeTools.Schema.getSheet('TASKS');
   const taskSettings = CollegeTools.Schema.getSheet('TASK_SETTINGS');
+  const taskTemplates = CollegeTools.Schema.getSheet('TASK_TEMPLATES');
+  const thisWeek = CollegeTools.Schema.getSheet('THIS_WEEK');
+  const recruitingTracker = CollegeTools.Schema.getSheet('RECRUITING_TRACKER');
 
   suite.assertEqual(colleges.headerRow, 2, 'Colleges headers should stay on row 2');
   suite.assertEqual(colleges.dataStartRow, 3, 'Colleges data should start on row 3');
 
   [
     financialAid, campusVisit, applicationTimeline, statusTracker, scholarshipTracker,
-    tasks, taskSettings,
+    tasks, taskSettings, taskTemplates, thisWeek, recruitingTracker,
   ]
     .forEach((sheet) => {
       suite.assertEqual(sheet.headerRow, 1, `${sheet.sheetName} headers should stay on row 1`);

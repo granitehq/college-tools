@@ -324,6 +324,23 @@ suite.test('decision-phase tasks fall back to a computed National Candidates Rep
     'DEC-06 should fall back to a computed default when no deposit deadline is tracked');
 });
 
+suite.test('parent effort multiplier of 0 is honored instead of falling back to the default', () => {
+  const today = date(2026, 7, 30);
+  const deadline = date(2026, 11, 1);
+  const config = baseConfig(deadline);
+  config.parentEffortMultiplier = 0;
+  const result = CollegeTools.TaskPlanner.generatePlan(
+    config,
+    {colleges: [college('C1', 'Zero Multiplier University', deadline)]},
+    today,
+  );
+
+  const parentTask = taskByTemplate(result.tasks, 'AID-01');
+
+  suite.assertEqual(parentTask.adjustedEffortMinutes, 0,
+    'An explicit 0 multiplier should zero out parent-owned effort, not fall back to 1x');
+});
+
 suite.test('AP/IB score sending anchors to the fixed June 20 free-send deadline', () => {
   const today = date(2026, 7, 30);
   const deadline = date(2026, 11, 1);
