@@ -126,6 +126,28 @@ class MockRange {
     return this;
   }
 
+  copyTo(destination, copyPasteType) {
+    for (let r = 0; r < this.numRows; r++) {
+      for (let c = 0; c < this.numCols; c++) {
+        const sourceRow = this.row + r;
+        const sourceCol = this.col + c;
+        const destinationRow = destination.row + r;
+        const destinationCol = destination.col + c;
+        if (copyPasteType === 'PASTE_FORMULA') {
+          this.sheet.setCellFormula(destinationRow, destinationCol,
+            this.sheet.getCellFormula(sourceRow, sourceCol));
+        } else if (copyPasteType === 'PASTE_FORMAT') {
+          this.sheet.setCellFormat(destinationRow, destinationCol,
+            this.sheet.getCellFormat(sourceRow, sourceCol));
+        } else if (copyPasteType === 'PASTE_DATA_VALIDATION') {
+          this.sheet.setCellValidation(destinationRow, destinationCol,
+            this.sheet.getCellValidation(sourceRow, sourceCol));
+        }
+      }
+    }
+    return this;
+  }
+
   clearContent() {
     this._forEachCell((row, col) => {
       this.sheet.setCellValue(row, col, '');
@@ -423,7 +445,31 @@ class MockSheet {
     this.hiddenColumns = hidden;
     return this;
   }
-  deleteRows() { return this; }
+  insertRowsAfter(afterPosition, howMany) {
+    if (afterPosition > this.maxRows) throw new Error('Cannot insert after the sheet grid');
+    this.maxRows += howMany;
+    return this;
+  }
+  deleteRows(startRow, howMany) {
+    const endRow = startRow + howMany - 1;
+    const shiftMap = (source) => {
+      const shifted = {};
+      Object.keys(source).forEach((key) => {
+        const [row, col] = key.split(',').map((part) => parseInt(part, 10));
+        if (row >= startRow && row <= endRow) return;
+        const nextRow = row > endRow ? row - howMany : row;
+        shifted[this._key(nextRow, col)] = source[key];
+      });
+      return shifted;
+    };
+    this.values = shiftMap(this.values);
+    this.formulas = shiftMap(this.formulas);
+    this.validations = shiftMap(this.validations);
+    this.formats = shiftMap(this.formats || {});
+    this.notes = shiftMap(this.notes || {});
+    this.maxRows -= howMany;
+    return this;
+  }
   setConditionalFormatRules() { return this; }
   getConditionalFormatRules() { return []; }
   clearConditionalFormatRules() { return this; }
@@ -561,6 +607,11 @@ function createHarness(moduleFiles) {
     getUi: () => mockUi,
     newDataValidation: () => createValidationBuilder(),
     newConditionalFormatRule: () => createFormatRuleBuilder(),
+    CopyPasteType: {
+      PASTE_FORMULA: 'PASTE_FORMULA',
+      PASTE_FORMAT: 'PASTE_FORMAT',
+      PASTE_DATA_VALIDATION: 'PASTE_DATA_VALIDATION',
+    },
   };
 
   let uuidCounter = 0;

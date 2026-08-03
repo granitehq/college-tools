@@ -566,7 +566,7 @@ CollegeTools.Scorecard = (function() {
     }
 
     var uniqueNames = [];
-    var seen = {};
+    var seen = Object.create(null);
     collegeNames.forEach(function(name) {
       if (!seen[name]) {
         seen[name] = true;
@@ -582,7 +582,7 @@ CollegeTools.Scorecard = (function() {
     };
     var requestOptions = requestOptions_();
     var chunkSize = CollegeTools.Config.API_CONFIG.BATCH_FETCH_SIZE || 20;
-    var resultByName = {};
+    var resultByName = Object.create(null);
     var retryNames = [];
     var fallbackNames = [];
     var fuzzyNames = [];
