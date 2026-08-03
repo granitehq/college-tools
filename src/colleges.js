@@ -253,10 +253,13 @@ CollegeTools.Colleges = (function() {
     var debug = 'Debugging Fill Operation\n';
     debug += 'Row: ' + row + ', College: "' + collegeName + '"\n';
 
-    // Check API key
+    // Check API key without calling Scorecard's private alerting key reader.
     try {
-      var apiKey = CollegeTools.Scorecard.getApiKey();
-      debug += 'API Key: ' + (apiKey ? 'Present' : 'MISSING') + '\n';
+      if (CollegeTools.Scorecard.isApiKeyConfigured) {
+        debug += 'API Key: ' + (CollegeTools.Scorecard.isApiKeyConfigured() ? 'Present' : 'MISSING') + '\n';
+      } else {
+        debug += 'API Key: Unknown (status check unavailable)\n';
+      }
     } catch (e) {
       debug += 'API Key Error: ' + e.toString() + '\n';
     }
@@ -641,7 +644,7 @@ CollegeTools.Colleges = (function() {
     var workItems = [];
     list.forEach(function(row) {
       var context = rowContext[row];
-      var name = (context.block.values[context.index][0] || '').toString().trim();
+      var name = CollegeTools.Utils.sanitizeCollegeName(context.block.values[context.index][0]);
       if (name) workItems.push({row: row, name: name});
     });
     var timingBucket = workItems.length <= 5 ? '1-5' :

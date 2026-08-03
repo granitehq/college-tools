@@ -25,6 +25,32 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Expands a tracker that was trimmed to the default 100 rows when a user
+   * adds more Colleges rows later. New rows inherit formulas, formatting,
+   * and validation from the prior final row without copying entered values.
+   * @param {Sheet} sh - Tracker sheet
+   * @param {number} requiredRow - Highest row the caller needs to write
+   * @private
+   */
+  function ensureTrackerRowCapacity_(sh, requiredRow) {
+    if (!sh || requiredRow <= sh.getMaxRows()) return;
+
+    var priorLastRow = sh.getMaxRows();
+    var rowsToAdd = requiredRow - priorLastRow;
+    var lastCol = sh.getLastColumn();
+    sh.insertRowsAfter(priorLastRow, rowsToAdd);
+
+    if (priorLastRow < 2 || lastCol < 1) return;
+    var templateRow = sh.getRange(priorLastRow, 1, 1, lastCol);
+    for (var row = priorLastRow + 1; row <= requiredRow; row++) {
+      var destination = sh.getRange(row, 1, 1, lastCol);
+      templateRow.copyTo(destination, SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+      templateRow.copyTo(destination, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+      templateRow.copyTo(destination, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+    }
+  }
+
+  /**
    * Auto-appends the College ID column to an older tracker sheet that predates
    * stable college identity, mirroring Colleges.ensureCollegesIdColumn_.
    * @param {Sheet} sh - Tracker sheet
@@ -54,6 +80,8 @@ CollegeTools.Trackers = (function() {
     var trackerRow = getTrackerRowForCollegeRow_(sourceRow);
     var nameCol = CollegeTools.Utils.colIndex(sh, 'College Name');
     if (!nameCol) return;
+
+    ensureTrackerRowCapacity_(sh, trackerRow);
 
     sh.getRange(trackerRow, nameCol).setValue(collegeName || '');
 
@@ -252,6 +280,7 @@ CollegeTools.Trackers = (function() {
     for (var k = 0; k < assignments.length; k++) {
       if (assignments[k].trackerRow > lastWriteRow) lastWriteRow = assignments[k].trackerRow;
     }
+    ensureTrackerRowCapacity_(sh, lastWriteRow);
     var numRows = lastWriteRow - firstRow + 1;
 
     // Base the write on the block captured in the single read, copied so the

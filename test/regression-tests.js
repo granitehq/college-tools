@@ -100,6 +100,30 @@ suite.test('fillCollegeRow writes the Colleges row with a batched row update', (
     'Fill should write the Colleges row with setValues');
 });
 
+suite.test('debugFillCollegeRow checks API key status through the public Scorecard API', () => {
+  const {colleges} = setupWorkbook({includeCampusSetting: true});
+  const originalIsConfigured = CollegeTools.Scorecard.isApiKeyConfigured;
+  CollegeTools.Scorecard.isApiKeyConfigured = () => true;
+
+  try {
+    colleges.getRange(3, 1).setValue('Pacific');
+    CollegeTools.Colleges.debugFillCollegeRow();
+
+    const alert = harness.mockUi.alerts[harness.mockUi.alerts.length - 1];
+    suite.assertEqual(alert.title, 'Debug Complete', 'Debug fill should complete');
+    suite.assert(alert.message.includes('API Key: Present'),
+      'Debug output should report API key presence');
+    suite.assert(!alert.message.includes('API Key Error'),
+      'Debug output should not call a missing private Scorecard.getApiKey function');
+  } finally {
+    if (originalIsConfigured) {
+      CollegeTools.Scorecard.isApiKeyConfigured = originalIsConfigured;
+    } else {
+      delete CollegeTools.Scorecard.isApiKeyConfigured;
+    }
+  }
+});
+
 suite.test('syncCollegeToTrackers aligns tracker rows by Colleges row number', () => {
   setupWorkbook();
 
