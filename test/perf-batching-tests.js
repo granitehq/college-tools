@@ -110,6 +110,46 @@ suite.test('batch row sync uses at most one block write per tracker', () => {
   });
 });
 
+suite.test('tracker sync expands beyond the 100-row optimized grid', () => {
+  const {colleges} = setupWorkbook({});
+  CollegeTools.Utils.trimAllSheets({suppressAlert: true});
+  colleges.insertRowsAfter(100, 3);
+
+  const trackers = [
+    sheet(C.SHEET_NAMES.FINANCIAL_AID),
+    sheet(C.SHEET_NAMES.CAMPUS_VISIT),
+    sheet(C.SHEET_NAMES.APPLICATION_TIMELINE),
+    sheet(C.SHEET_NAMES.STATUS_TRACKER),
+  ];
+  trackers.forEach((tracker) => {
+    suite.assertEqual(tracker.getMaxRows(), 100, 'Optimization should keep a 100-row default');
+  });
+
+  const fa = trackers[0];
+  const formulaCol = col(fa, 'Net Price After Aid');
+  const validationCol = col(fa, 'FAFSA Submitted (Y/N)');
+  fa.getRange(100, formulaCol).setFormula('=ROW()');
+  fa.getRange(100, validationCol).setDataValidation({expanded: true});
+
+  CollegeTools.Trackers.syncCollegeToTrackers({
+    sourceRow: 103,
+    name: 'Beyond One Hundred University',
+    id: 'beyond-100',
+    coa: 42000,
+  });
+
+  trackers.forEach((tracker) => {
+    suite.assertEqual(tracker.getMaxRows(), 102,
+      `${tracker.getName()} should expand to the mapped tracker row`);
+    suite.assertEqual(tracker.getRange(102, col(tracker, 'College Name')).getValue(),
+      'Beyond One Hundred University', `${tracker.getName()} should sync the added college`);
+  });
+  suite.assertEqual(fa.getRange(102, formulaCol).getFormula(), '=ROW()',
+    'Expanded tracker rows should inherit structural formulas');
+  suite.assert(fa.getRange(102, validationCol).getDataValidation().expanded,
+    'Expanded tracker rows should inherit validation');
+});
+
 /* ---- item 3: batched formats + validations ---- */
 
 suite.test('enhanceFormatsDropdowns batches validations, applies dropdowns, clears stray rules', () => {
