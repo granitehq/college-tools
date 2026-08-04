@@ -273,7 +273,7 @@ suite.test('decision-phase tasks anchor to tracked decision, deposit, and housin
     baseConfig(deadline),
     {colleges: [college('C1', 'Decision University', deadline, {
       decisionDate, enrollmentDepositDeadline, housingDepositDue,
-      decisionResult: 'Accepted',
+      decisionResult: 'Accepted', enrollmentChoice: 'Enroll',
     })]},
     today,
   );
@@ -308,9 +308,9 @@ suite.test('decision-phase tasks fall back to a computed National Candidates Rep
     baseConfig(deadline),
     // Admitted, but no deposit/housing dates tracked yet -- exactly the
     // state that should fall back to the computed default instead of the
-    // college being excluded (DEC-06 requires an admitted decisionResult).
+    // college being excluded (DEC-06 requires an explicit enrollment choice).
     {colleges: [college('C1', 'Admitted, No Deposit Data University', deadline, {
-      decisionResult: 'Accepted',
+      decisionResult: 'Accepted', enrollmentChoice: 'Enroll',
     })]},
     today,
   );
@@ -338,7 +338,15 @@ suite.test('Decision/Enrollment tasks only generate for colleges matching the ou
       college('ED1', 'Early Decision University', deadline, {applicationType: 'ED'}),
       college('RD1', 'Regular Decision University', deadline, {applicationType: 'RD'}),
       college('NODATA', 'No Decision Data University', deadline),
-      college('ACC1', 'Accepted University', deadline, {decisionResult: 'Accepted'}),
+      college('ENROLL', 'Enrolling University', deadline, {
+        decisionResult: 'Accepted', enrollmentChoice: 'Enroll',
+      }),
+      college('DECLINE', 'Declined Offer University', deadline, {
+        decisionResult: 'Accepted', enrollmentChoice: 'Decline',
+      }),
+      college('UNDECIDED', 'Undecided Offer University', deadline, {
+        decisionResult: 'Accepted', enrollmentChoice: 'Undecided',
+      }),
       college('WAIT1', 'Waitlisted University', deadline, {decisionResult: 'Waitlisted'}),
       college('REJ1', 'Rejected University', deadline, {decisionResult: 'Rejected'}),
     ],
@@ -353,19 +361,46 @@ suite.test('Decision/Enrollment tasks only generate for colleges matching the ou
   suite.assert(taskByTemplate(result.tasks, 'DEC-01', 'NODATA'),
     'DEC-01 (record the decision) should generate for every college regardless of outcome');
 
-  ['DEC-02', 'DEC-03', 'DEC-05', 'DEC-06', 'DEC-07'].forEach((templateId) => {
+  ['DEC-02', 'DEC-03', 'DEC-05'].forEach((templateId) => {
     suite.assert(!taskByTemplate(result.tasks, templateId, 'NODATA'),
       `${templateId} should not generate for a college with no decision data`);
     suite.assert(!taskByTemplate(result.tasks, templateId, 'REJ1'),
       `${templateId} should not generate for a rejected college`);
-    suite.assert(taskByTemplate(result.tasks, templateId, 'ACC1'),
-      `${templateId} should generate for an admitted college`);
+    ['ENROLL', 'DECLINE', 'UNDECIDED'].forEach((scopeId) => {
+      suite.assert(taskByTemplate(result.tasks, templateId, scopeId),
+        `${templateId} should generate for every admitted college (${scopeId})`);
+    });
+  });
+  ['DEC-06', 'DEC-07'].forEach((templateId) => {
+    suite.assert(taskByTemplate(result.tasks, templateId, 'ENROLL'),
+      `${templateId} should generate for the explicitly enrolling college`);
+    suite.assert(!taskByTemplate(result.tasks, templateId, 'DECLINE'),
+      `${templateId} should not generate for a declined offer`);
+    suite.assert(!taskByTemplate(result.tasks, templateId, 'UNDECIDED'),
+      `${templateId} should not generate until enrollment is chosen`);
   });
 
   suite.assert(taskByTemplate(result.tasks, 'DEC-04', 'WAIT1'),
     'DEC-04 (waitlist response) should generate for a waitlisted college');
-  suite.assert(!taskByTemplate(result.tasks, 'DEC-04', 'ACC1'),
+  suite.assert(!taskByTemplate(result.tasks, 'DEC-04', 'ENROLL'),
     'DEC-04 should not generate for an already-admitted (non-waitlisted) college');
+});
+
+suite.test('an explicit enrollment choice completes the admitted-college decision task', () => {
+  const deadline = date(2026, 11, 1);
+  const context = {colleges: [college('C1', 'Chosen University', deadline, {
+    decisionResult: 'Accepted', enrollmentChoice: 'Enroll',
+  })]};
+  const generated = CollegeTools.TaskPlanner.generatePlan(
+    baseConfig(deadline), context, date(2026, 7, 30));
+  const applied = CollegeTools.TaskPlanner.applyEvidence(
+    generated.tasks, context, date(2027, 4, 15));
+
+  const comparison = taskByTemplate(applied.tasks, 'DEC-05', 'C1');
+  suite.assertEqual(comparison.status, 'Complete',
+    'DEC-05 should complete once the family records Enroll or Decline');
+  suite.assert(comparison.evidenceSource.includes('Enrollment Choice'),
+    'DEC-05 should retain attributable completion evidence');
 });
 
 suite.test('parent effort multiplier of 0 is honored instead of falling back to the default', () => {
@@ -950,7 +985,7 @@ suite.test('completed tasks are excluded from remaining effort and capacity warn
     'Completed work should not trigger a capacity warning');
 });
 
-suite.test('previewTaskPlan makes no sheet writes to Colleges or Tasks', () => {
+suite.test('previewTaskPlan makes no workbook mutations and includes rows without stored IDs', () => {
   const {colleges} = setupWorkbook({});
   CollegeTools.TaskManagement.setupTaskManagement();
   const nameCol = columnOf(colleges, 'College Name', 2);
@@ -967,14 +1002,58 @@ suite.test('previewTaskPlan makes no sheet writes to Colleges or Tasks', () => {
 
   setSetting('Working First Application Deadline', date(2026, 10, 28));
   setSetting('Planning Start Date', date(2026, 7, 30));
+  setSetting('Athletic Recruiting Enabled', 'Yes');
+
+  const scholarships = mockSpreadsheet.getSheetByName(
+    CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
+  scholarships.getRange(2, columnOf(scholarships, 'Scholarship Name'))
+    .setValue('Unstamped Scholarship');
+  const scholarshipIdCol = columnOf(scholarships, 'Scholarship ID');
+
+  const recruiting = mockSpreadsheet.insertSheet(
+    CollegeTools.Config.SHEET_NAMES.RECRUITING_TRACKER);
+  recruiting.getRange(1, 1, 1, CollegeTools.Config.HEADERS.RECRUITING_TRACKER.length)
+    .setValues([CollegeTools.Config.HEADERS.RECRUITING_TRACKER]);
+  recruiting.getRange(2, columnOf(recruiting, 'College Name')).setValue('Untouched University');
+  recruiting.getRange(2, columnOf(recruiting, 'Coach/Contact Name')).setValue('Coach Readonly');
+  const contactIdCol = columnOf(recruiting, 'Recruiting Contact ID');
+
+  mockSpreadsheet.resetMutationCount();
+  const firstContext = CollegeTools.TaskManagement.buildContextFromWorkbook(
+    mockSpreadsheet, true);
+  const secondContext = CollegeTools.TaskManagement.buildContextFromWorkbook(
+    mockSpreadsheet, true);
+  const firstManualId = CollegeTools.TaskManagement.readTasks(mockSpreadsheet, true)[0].taskId;
+  const secondManualId = CollegeTools.TaskManagement.readTasks(mockSpreadsheet, true)[0].taskId;
 
   const preview = CollegeTools.TaskManagement.previewTaskPlan();
+  const repeatedPreview = CollegeTools.TaskManagement.previewTaskPlan();
 
   suite.assert(preview.ok, 'Preview should still succeed');
+  suite.assertEqual(JSON.stringify(preview), JSON.stringify(repeatedPreview),
+    'Repeated previews should return the same result');
+  suite.assertEqual(firstContext.colleges.length, 1,
+    'A new college without a persisted ID should participate in Preview');
+  suite.assert(firstContext.colleges[0].id.indexOf('PREVIEW:COLLEGE:ROW:3') === 0,
+    'The new college should receive a deterministic in-memory preview ID');
+  suite.assertEqual(firstContext.colleges[0].id, secondContext.colleges[0].id,
+    'Preview-only college identity should be stable across reads');
+  suite.assert(firstContext.scholarships[0].id.indexOf('PREVIEW:SCHOLARSHIP:ROW:2') === 0,
+    'An unstamped scholarship should participate with an in-memory ID');
+  suite.assert(firstContext.contacts[0].id.indexOf('PREVIEW:CONTACT:ROW:2') === 0,
+    'An unstamped recruiting contact should participate with an in-memory ID');
+  suite.assertEqual(firstManualId, secondManualId,
+    'An unstamped manual task should keep deterministic identity across previews');
   suite.assertEqual(colleges.getRange(3, idCol).getValue(), '',
     'Preview should not assign a College ID to a new college row');
+  suite.assertEqual(scholarships.getRange(2, scholarshipIdCol).getValue(), '',
+    'Preview should not assign a Scholarship ID');
+  suite.assertEqual(recruiting.getRange(2, contactIdCol).getValue(), '',
+    'Preview should not assign a Recruiting Contact ID');
   suite.assertEqual(tasks.getRange(2, taskIdCol).getValue(), '',
     'Preview should not stamp a Task ID onto a partially entered custom row');
+  suite.assertEqual(mockSpreadsheet.mutationCount, 0,
+    'Preview and its read helpers should make zero mutations anywhere in the workbook');
 
   const generated = CollegeTools.TaskManagement.generateTaskPlan();
   suite.assert(generated.ok, 'Generate should still succeed after a preview');
@@ -982,6 +1061,47 @@ suite.test('previewTaskPlan makes no sheet writes to Colleges or Tasks', () => {
     'Generate (unlike preview) should assign the College ID');
   suite.assert(tasks.getRange(2, taskIdCol).getValue() !== '',
     'Generate (unlike preview) should stamp the custom row Task ID');
+  const generatedCatalogTasks = CollegeTools.TaskManagement.readTasks()
+    .filter((task) => task.generated);
+  suite.assertEqual(preview.generatedCount, generatedCatalogTasks.length,
+    'Preview and Generate should produce the same number of catalog task instances');
+});
+
+suite.test('previewTaskPlan reports setup required without creating Task Settings', () => {
+  setupWorkbook({});
+  const settingsName = CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS;
+  const settings = mockSpreadsheet.getSheetByName(settingsName);
+  delete mockSpreadsheet.sheets[settingsName];
+  mockSpreadsheet.sheetOrder = mockSpreadsheet.sheetOrder.filter((sheet) => sheet !== settings);
+  mockSpreadsheet.resetMutationCount();
+
+  const preview = CollegeTools.TaskManagement.previewTaskPlan();
+
+  suite.assertEqual(preview.ok, false, 'Preview should fail cleanly before task setup');
+  suite.assertEqual(preview.code, 'task_management_not_setup',
+    'The result should direct the user to run Task Management Setup');
+  suite.assertEqual(mockSpreadsheet.getSheetByName(settingsName), null,
+    'Preview should not create the missing Task Settings sheet');
+  suite.assertEqual(mockSpreadsheet.mutationCount, 0,
+    'A setup-required Preview result should still make no workbook mutations');
+});
+
+suite.test('previewTaskPlan reports setup required without repairing malformed Task Settings', () => {
+  setupWorkbook({});
+  const settings = mockSpreadsheet.getSheetByName(
+    CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS);
+  settings.getRange(1, 1, 1, 3).setValues([['Wrong Setting Header', 'Value', 'Guidance']]);
+  mockSpreadsheet.resetMutationCount();
+
+  const preview = CollegeTools.TaskManagement.previewTaskPlan();
+
+  suite.assertEqual(preview.ok, false, 'Preview should reject malformed settings cleanly');
+  suite.assertEqual(preview.code, 'task_management_not_setup',
+    'Malformed settings should direct the user to Setup');
+  suite.assertEqual(settings.getRange(1, 1).getValue(), 'Wrong Setting Header',
+    'Preview should not repair a malformed header');
+  suite.assertEqual(mockSpreadsheet.mutationCount, 0,
+    'Malformed-settings handling should make no workbook mutations');
 });
 
 suite.test('sheet setup and generation create conditional, hidden, canonical, and generated views', () => {
@@ -1026,6 +1146,7 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   status.getRange(2, columnOf(status, 'College Name')).setValue('Sheet University');
   status.getRange(2, columnOf(status, 'Application Status')).setValue('Decision Received');
   status.getRange(2, columnOf(status, 'Decision/Result')).setValue('Accepted');
+  status.getRange(2, columnOf(status, 'Enrollment Choice')).setValue('Enroll');
 
   const generated = CollegeTools.TaskManagement.generateTaskPlan();
   const recruiting = mockSpreadsheet.getSheetByName(
@@ -1041,6 +1162,8 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   suite.assert(recruiting, 'Recruiting Tracker should be created when enabled');
   suite.assert(generatedTasks.some((task) => task.templateId === 'ATH-01'),
     'Enabled recruiting tasks should be written to canonical Tasks');
+  suite.assert(generatedTasks.some((task) => task.templateId === 'DEC-06'),
+    'The tracker enrollment choice should reach the planner context');
   suite.assertEqual(thisWeek.getRange(1, 1).getValue(), 'Task ID',
     'This Week should be generated from Tasks with its own tab');
   const weeklyText = thisWeek.getRange(1, 1, thisWeek.getLastRow(), 2)

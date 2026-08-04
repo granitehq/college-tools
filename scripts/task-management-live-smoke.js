@@ -32,6 +32,10 @@ function runTaskManagementLiveSmoke(mode) {
     var existing = ss.getSheetByName(name);
     if (existing) ss.deleteSheet(existing);
   });
+  var preSetupPreview = CollegeTools.TaskManagement.previewTaskPlan();
+  var preSetupStayedReadOnly = !preSetupPreview.ok &&
+    preSetupPreview.code === 'task_management_not_setup' &&
+    !ss.getSheetByName(names.TASK_SETTINGS);
 
   /**
    * Rebuilds one base sheet for the disposable scenario.
@@ -76,11 +80,35 @@ function runTaskManagementLiveSmoke(mode) {
     throw new Error('Missing task setting: ' + label);
   }
 
+  /**
+   * Captures observable workbook state around Preview. The sentinel setting
+   * below makes the former clear-and-rewrite behavior visible even when all
+   * canonical setting values would otherwise be rewritten identically.
+   * @returns {string} Stable JSON workbook snapshot
+   */
+  function workbookSnapshot() {
+    return JSON.stringify(ss.getSheets().map(function(sheet) {
+      var rowCount = Math.max(1, sheet.getLastRow());
+      var columnCount = Math.max(1, sheet.getLastColumn());
+      var range = sheet.getRange(1, 1, rowCount, columnCount);
+      return {
+        name: sheet.getName(),
+        id: sheet.getSheetId(),
+        maxRows: sheet.getMaxRows(),
+        maxColumns: sheet.getMaxColumns(),
+        values: range.getValues(),
+        formulas: range.getFormulas(),
+        notes: range.getNotes(),
+        numberFormats: range.getNumberFormats(),
+      };
+    }));
+  }
+
   var colleges = resetSheet(names.COLLEGES, headers.COLLEGES, 2);
   resetSheet(names.FINANCIAL_AID, headers.FINANCIAL_AID, 1);
   resetSheet(names.CAMPUS_VISIT, headers.CAMPUS_VISIT, 1);
   var timeline = resetSheet(names.APPLICATION_TIMELINE, headers.APPLICATION_TIMELINE, 1);
-  resetSheet(names.STATUS_TRACKER, headers.STATUS_TRACKER, 1);
+  var status = resetSheet(names.STATUS_TRACKER, headers.STATUS_TRACKER, 1);
   resetSheet(names.SCHOLARSHIP_TRACKER, headers.SCHOLARSHIP_TRACKER, 1);
 
   var collegeName = isAthlete ? 'Live Athlete University' : 'Live Long Horizon University';
@@ -97,6 +125,17 @@ function runTaskManagementLiveSmoke(mode) {
   timeline.getRange(2, column(timeline, 'Supplemental Prompts / Topics', 1))
     .setValue(isAthlete ?
       'Why this college?||Describe your community' : 'Why this college?');
+  status.getRange(2, column(status, 'College Name', 1)).setValue(collegeName);
+  status.getRange(2, column(status, 'Decision/Result', 1)).setValue('Accepted');
+  status.getRange(2, column(status, 'Enrollment Choice', 1)).setValue('Enroll');
+
+  var declinedCollegeName = 'Live Declined Offer University';
+  colleges.getRange(4, column(colleges, 'College Name', 2)).setValue(declinedCollegeName);
+  timeline.getRange(3, column(timeline, 'College Name', 1)).setValue(declinedCollegeName);
+  timeline.getRange(3, column(timeline, 'Application Deadline', 1)).setValue(deadline);
+  status.getRange(3, column(status, 'College Name', 1)).setValue(declinedCollegeName);
+  status.getRange(3, column(status, 'Decision/Result', 1)).setValue('Accepted');
+  status.getRange(3, column(status, 'Enrollment Choice', 1)).setValue('Decline');
 
   var setup = CollegeTools.TaskManagement.setupTaskManagement();
   setSetting('Planning Start Date', today);
@@ -104,7 +143,21 @@ function runTaskManagementLiveSmoke(mode) {
   setSetting('Expected Graduation Year', deadline.getFullYear() + 1);
   setSetting('Athletic Recruiting Enabled', isAthlete ? 'Yes' : 'No');
   setSetting('Parent Effort Multiplier', 2);
+  var settings = ss.getSheetByName(names.TASK_SETTINGS);
+  var previewSentinelRow = settings.getLastRow() + 1;
+  settings.getRange(previewSentinelRow, 1, 1, 3)
+    .setValues([['Live Preview Sentinel', 'preserve', 'Preview must not clear this row']]);
+  var collegeIdColumn = column(colleges, 'College ID', 2);
+  var beforePreview = workbookSnapshot();
+  var preview = CollegeTools.TaskManagement.previewTaskPlan();
+  var repeatedPreview = CollegeTools.TaskManagement.previewTaskPlan();
+  var afterPreview = workbookSnapshot();
+  var previewStayedReadOnly = beforePreview === afterPreview &&
+    colleges.getRange(3, collegeIdColumn).getValue() === '' &&
+    colleges.getRange(4, collegeIdColumn).getValue() === '' &&
+    settings.getRange(previewSentinelRow, 2).getValue() === 'preserve';
   var generated = CollegeTools.TaskManagement.generateTaskPlan();
+  var initialGeneratedTaskCount = generated.taskCount;
 
   if (isAthlete) {
     var recruiting = ss.getSheetByName(names.RECRUITING_TRACKER);
@@ -166,6 +219,7 @@ function runTaskManagementLiveSmoke(mode) {
 
   var tasks = CollegeTools.TaskManagement.readTasks();
   var activeCollegeId = colleges.getRange(3, column(colleges, 'College ID', 2)).getValue();
+  var declinedCollegeId = colleges.getRange(4, column(colleges, 'College ID', 2)).getValue();
   var taskIds = {};
   var duplicateIds = [];
   var preserved = null;
@@ -195,6 +249,13 @@ function runTaskManagementLiveSmoke(mode) {
   var supplementalDrafts = tasks.filter(function(task) {
     return task.templateId === 'ESS-08' && !task.archivedReason;
   });
+  var enrollingTasks = tasks.filter(function(task) {
+    return (task.templateId === 'DEC-06' || task.templateId === 'DEC-07') &&
+      !task.archivedReason;
+  });
+  var admittedComparisonTasks = tasks.filter(function(task) {
+    return task.templateId === 'DEC-05' && !task.archivedReason;
+  });
   var plannedWeeks = {};
   var currentWeekKey = CollegeTools.TaskPlanner.dateKey(
     CollegeTools.TaskPlanner.startOfWeek(today));
@@ -211,12 +272,24 @@ function runTaskManagementLiveSmoke(mode) {
       return rowValue[0];
     });
   var checks = {
+    previewRequiresSetupWithoutMutation: preSetupStayedReadOnly,
+    previewMakesNoObservableWorkbookChanges: preview.ok && previewStayedReadOnly &&
+      JSON.stringify(preview) === JSON.stringify(repeatedPreview),
+    previewGenerateTaskCountParity: preview.generatedCount === initialGeneratedTaskCount,
     setupValidatedFullCatalog: setup.templateCount === CollegeTools.TaskCatalog.validate().count,
     generatedTasks: generated.ok && regenerated.ok && tasks.length > 0,
     uniqueTaskIds: duplicateIds.length === 0,
     collegesHeaderOnRow2: colleges.getRange(2, 1).getValue() === 'College Name',
     collegesDataOnRow3: colleges.getRange(3, 1).getValue() === collegeName,
     stableCollegeIdOnRow3: !!colleges.getRange(3, column(colleges, 'College ID', 2)).getValue(),
+    enrollmentTasksOnlyForChosenCollege: enrollingTasks.length === 2 &&
+      enrollingTasks.every(function(task) {
+        return task.collegeId === activeCollegeId;
+      }) && admittedComparisonTasks.some(function(task) {
+        return task.collegeId === activeCollegeId;
+      }) && admittedComparisonTasks.some(function(task) {
+        return task.collegeId === declinedCollegeId;
+      }),
     thisWeekGenerated: !!ss.getSheetByName(names.THIS_WEEK),
     customTaskStableAndVisible: /^MANUAL::/.test(customTaskId) && !!customTask &&
       customTaskId === partialCustomTaskId &&

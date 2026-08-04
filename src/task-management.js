@@ -246,6 +246,51 @@ CollegeTools.TaskManagement = (function() {
   }
 
   /**
+   * Returns a deterministic identity for a populated row during Preview.
+   * The value is never written and is deliberately based on source position,
+   * not a possibly duplicated or editable display name.
+   * @param {string} type - Scope type
+   * @param {Object} row - Header-keyed row with _sourceRow
+   * @returns {string} Preview-only ID
+   */
+  function previewRowId_(type, row) {
+    return 'PREVIEW:' + type + ':ROW:' + row._sourceRow;
+  }
+
+  /**
+   * Builds the setting map without creating, repairing, or formatting a sheet.
+   * @param {Sheet|null} sheet - Existing Task Settings sheet
+   * @returns {Object} Setting values overlaid on configured defaults
+   */
+  function readSettings_(sheet) {
+    var settings = {};
+    SETTINGS.forEach(function(setting) {
+      settings[setting[0]] = setting[1];
+    });
+    readTable_(sheet).forEach(function(row) {
+      settings[(row.Setting || '').toString()] = row.Value;
+    });
+    return settings;
+  }
+
+  /**
+   * Checks required headers without repairing the sheet.
+   * @param {Sheet|null} sheet - Existing sheet
+   * @param {Array<string>} requiredHeaders - Required labels
+   * @returns {boolean} Whether every header is present
+   */
+  function hasHeaders_(sheet, requiredHeaders) {
+    if (!sheet || sheet.getLastColumn() < 1) return false;
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+      .map(function(header) {
+        return (header || '').toString().trim();
+      });
+    return requiredHeaders.every(function(header) {
+      return headers.indexOf(header) !== -1;
+    });
+  }
+
+  /**
    * Creates and preserves the Task Settings sheet.
    * @param {Spreadsheet} spreadsheet - Workbook
    * @returns {Sheet} Settings sheet
@@ -254,13 +299,9 @@ CollegeTools.TaskManagement = (function() {
     var sheet = CollegeTools.Utils.ensureSheet(
       spreadsheet, CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS);
     ensureSheetShape_(sheet, CollegeTools.Config.HEADERS.TASK_SETTINGS);
-    var existing = {};
-    readTable_(sheet).forEach(function(row) {
-      existing[(row.Setting || '').toString()] = row.Value;
-    });
+    var existing = readSettings_(sheet);
     var values = SETTINGS.map(function(setting) {
-      var value = Object.prototype.hasOwnProperty.call(existing, setting[0]) ?
-        existing[setting[0]] : setting[1];
+      var value = existing[setting[0]];
       return [setting[0], toSpreadsheetDate_(sheet, value), setting[2]];
     });
     if (sheet.getLastRow() > 1) {
@@ -293,10 +334,7 @@ CollegeTools.TaskManagement = (function() {
   function readConfig(spreadsheet) {
     spreadsheet = spreadsheet || SpreadsheetApp.getActive();
     var sheet = spreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS);
-    var settings = {};
-    readTable_(sheet).forEach(function(row) {
-      settings[(row.Setting || '').toString()] = row.Value;
-    });
+    var settings = readSettings_(sheet);
     var customOwners = (settings['Custom Owners (comma separated)'] || '').toString()
       .split(',').map(function(value) {
         return value.trim();
@@ -535,9 +573,10 @@ CollegeTools.TaskManagement = (function() {
   /**
    * Converts a Tasks row object to the planner model.
    * @param {Object} row - Header-keyed row
+   * @param {boolean=} readOnly - Use deterministic in-memory identity for Preview
    * @returns {Object} Task
    */
-  function rowToTask_(row) {
+  function rowToTask_(row, readOnly) {
     var task = {_sourceRow: row._sourceRow};
     TASK_FIELDS.forEach(function(field) {
       var value = row[field[0]];
@@ -555,7 +594,8 @@ CollegeTools.TaskManagement = (function() {
       task[field[1]] = value === undefined ? '' : value;
     });
     if (!task.taskId && row._hasValue) {
-      task.taskId = 'MANUAL::' + Utilities.getUuid();
+      task.taskId = readOnly ?
+        'MANUAL::' + previewRowId_('TASK', row) : 'MANUAL::' + Utilities.getUuid();
       task.generated = false;
       task._newManualId = true;
     }
@@ -594,7 +634,9 @@ CollegeTools.TaskManagement = (function() {
     spreadsheet = spreadsheet || SpreadsheetApp.getActive();
     var sheet = spreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
     if (!sheet) return [];
-    var tasks = readTable_(sheet).map(rowToTask_).filter(function(task) {
+    var tasks = readTable_(sheet).map(function(row) {
+      return rowToTask_(row, readOnly);
+    }).filter(function(task) {
       return !!task.taskId || !!task.task;
     });
     var manualDefaults = [
@@ -853,7 +895,7 @@ CollegeTools.TaskManagement = (function() {
     var visits = collegeLookup_(visitRows);
     var colleges = readTable_(collegesSheet, 2).map(function(row) {
       var name = (row['College Name'] || '').toString().trim();
-      var id = row['College ID'];
+      var id = row['College ID'] || (readOnly ? previewRowId_('COLLEGE', row) : '');
       if (!name || !id) return null;
       var timelineRow = trackerRow_(timeline, id, name);
       var statusRow = trackerRow_(status, id, name);
@@ -889,6 +931,7 @@ CollegeTools.TaskManagement = (function() {
         applicationStatus: statusRow['Application Status'],
         decisionDate: timelineRow['Decision Release Date'],
         decisionResult: statusRow['Decision/Result'],
+        enrollmentChoice: statusRow['Enrollment Choice'],
         enrollmentDepositDeadline: timelineRow['Enrollment Deposit Deadline'],
         housingDepositDue: timelineRow['Housing Deposit Due'],
         portal: statusRow['App Portal'],
@@ -908,9 +951,11 @@ CollegeTools.TaskManagement = (function() {
     });
 
     var scholarships = readTable_(scholarshipSheet).map(function(row) {
+      var id = row['Scholarship ID'] ||
+        (readOnly ? previewRowId_('SCHOLARSHIP', row) : '');
       return {
-        id: row['Scholarship ID'],
-        scholarshipId: row['Scholarship ID'],
+        id: id,
+        scholarshipId: id,
         scholarshipName: row['Scholarship Name'],
         label: row['Scholarship Name'],
         deadline: row.Deadline,
@@ -923,9 +968,11 @@ CollegeTools.TaskManagement = (function() {
     });
 
     var contacts = readTable_(recruitingSheet).map(function(row) {
+      var id = row['Recruiting Contact ID'] ||
+        (readOnly ? previewRowId_('CONTACT', row) : '');
       return {
-        id: row['Recruiting Contact ID'],
-        contactId: row['Recruiting Contact ID'],
+        id: id,
+        contactId: id,
         collegeId: row['College ID'],
         collegeName: row['College Name'],
         label: row['College Name'] + (row['Coach/Contact Name'] ? ' — ' + row['Coach/Contact Name'] : ''),
@@ -1176,12 +1223,20 @@ CollegeTools.TaskManagement = (function() {
   }
 
   /**
-   * Calculates a reconfiguration preview without changing Tasks.
+   * Calculates a reconfiguration preview without changing the workbook.
    * @returns {Object} Preview result
    */
   function previewTaskPlan() {
     var spreadsheet = SpreadsheetApp.getActive();
-    setupSettingsSheet_(spreadsheet);
+    var settingsSheet = spreadsheet.getSheetByName(
+      CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS);
+    if (!hasHeaders_(settingsSheet, CollegeTools.Config.HEADERS.TASK_SETTINGS)) {
+      return {
+        ok: false,
+        code: 'task_management_not_setup',
+        errors: ['Run Task Management Setup before previewing the task plan.'],
+      };
+    }
     var config = readConfig(spreadsheet);
     var context = buildContextFromWorkbook(spreadsheet, true);
     var generated = CollegeTools.TaskPlanner.generatePlan(config, context);

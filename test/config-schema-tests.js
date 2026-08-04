@@ -91,7 +91,7 @@ suite.test('formula-dependent fields remain present', () => {
       suite.assert(finAidHeaders.includes(header), `${header} should remain in Financial Aid`);
     });
 
-  ['Documents Complete', 'Decision/Result', 'Application Status']
+  ['Documents Complete', 'Decision/Result', 'Enrollment Choice', 'Application Status']
     .forEach((header) => {
       suite.assert(statusHeaders.includes(header), `${header} should remain in Status Tracker`);
     });

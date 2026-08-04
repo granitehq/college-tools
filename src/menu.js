@@ -148,7 +148,7 @@ function previewTaskPlan() {
       'Effort changes: ' + (preview.effortChanges || 0) + '\n' +
       'Archive: ' + (preview.archive || 0) + '\n' +
       'Completed tasks preserved: ' + (preview.preserveComplete || 0) + '\n\n' +
-      'No task rows were changed.',
+      'No workbook changes were made.',
     SpreadsheetApp.getUi().ButtonSet.OK,
   );
   return result;

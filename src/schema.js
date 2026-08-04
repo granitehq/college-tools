@@ -202,11 +202,12 @@ CollegeTools.Schema = (function() {
       columns: keyMap(CollegeTools.Config.HEADERS.STATUS_TRACKER, [
         ['COLLEGE_NAME', 'College Name'],
         ['DECISION_RESULT', 'Decision/Result'],
+        ['ENROLLMENT_CHOICE', 'Enrollment Choice'],
         ['DOCUMENTS_COMPLETE', 'Documents Complete'],
         ['COLLEGE_ID', 'College ID'],
       ]),
       apiColumns: {},
-      userColumns: {},
+      userColumns: setFromKeys(['DECISION_RESULT', 'ENROLLMENT_CHOICE']),
       formulaColumns: setFromKeys(['DOCUMENTS_COMPLETE']),
       systemColumns: setFromKeys(['COLLEGE_ID']),
       linkedColumns: setFromKeys(['COLLEGE_NAME', 'COLLEGE_ID']),

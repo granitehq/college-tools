@@ -96,7 +96,7 @@ suite.test('task-management menu exposes setup, safe preview, generation, refres
   ].forEach((label) => {
     suite.assert(menuSource.includes(label), `Task menu should include ${label}`);
   });
-  suite.assert(menuSource.includes('No task rows were changed.'),
+  suite.assert(menuSource.includes('No workbook changes were made.'),
     'Preview adapter should explicitly confirm that preview is non-mutating');
   suite.assert(menuSource.includes('CollegeTools.TaskManagement.handleEdit'),
     'The edit trigger should keep generated task views current where safe');

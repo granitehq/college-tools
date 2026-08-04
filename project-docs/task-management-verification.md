@@ -9,6 +9,14 @@
 The implementation, automated acceptance scenarios, and both live copied-sheet
 scenarios are complete. Production/template Apps Script was not touched.
 
+**Update (2026-08-03):** review fixes now make Preview structurally read-only,
+including for rows that do not yet have persisted IDs, and add an explicit
+`Enrollment Choice` to Application Status Tracker. `DEC-06` and `DEC-07` now
+apply only to a college marked `Enroll`; admitted-college comparison work still
+applies to every accepted college. The expanded local harness passes, but these
+changes still require the copied-sheet smoke rerun described below before merge
+or deployment.
+
 **Update (2026-07-30, later same day):** the catalog's 100-template cap was
 removed and a 9-template Decision And Enrollment phase (`DEC-01`..`DEC-07`,
 `STR-09`, `TST-07`) was added to close a post-acceptance coverage gap
@@ -34,8 +42,8 @@ preservation evidence.
 | 3 | Accelerated 90-day athlete plan through earliest deadline | Athlete scenario: authoritative precedence, adaptive multi-week distribution, fixed deadlines, FAFSA sequencing | Automated and live pass |
 | 4 | Stable identity, owner, schedule, effort, deliverable, completion rule | Catalog validation plus explicit applicability/rule/anchor/offset/calculated/effective task assertions | Automated pass |
 | 5 | Professional-role fallback | No-professional athlete scenario | Automated pass |
-| 6 | Preview and safe regeneration preserve completed/manual work | Reconfiguration, partial/custom-task ID/view/repair, rename, formula/custom-column, and idempotence scenarios | Automated and live pass |
-| 7 | Existing trackers remain canonical; evidence is attributable | Application, aid, scholarship, visit, and recruiting evidence plus manual-correction scenarios | Automated pass |
+| 6 | Preview is workbook-read-only; safe regeneration preserves completed/manual work | Whole-workbook mutation instrumentation, deterministic preview identities, reconfiguration, custom-task ID/view/repair, rename, formula/custom-column, and idempotence scenarios | Expanded automated pass; prior live pass predates latest fix |
+| 7 | Existing trackers remain canonical; enrollment applicability and evidence are attributable | Enrollment Choice matrix/migration, application, aid, scholarship, visit, and recruiting evidence plus manual-correction scenarios | Automated pass |
 | 8 | Generated `This Week` with manual refresh fallback | Category-coverage/truncation, sheet integration, and menu-wiring scenarios | Automated and live pass |
 | 9 | Unconstrained baseline effort before optional capacity warnings | Remaining-effort, multiplier, threshold, and week-override scenarios | Automated pass |
 | 10 | Setup, refresh, repair, sort, module, and college changes preserve data | Partial custom-row sync, workbook repair, task preservation, rename, sort, and disable-module scenarios | Automated and live pass |
@@ -47,8 +55,8 @@ use row 1 headers and row 2 data.
 
 ## Automated Commands
 
-Last full local run on 2026-07-30: all commands passed, including all 25
-task-management scenarios and the repository-wide test suite.
+The current local gate includes 41 task-management scenarios. Run all commands
+below from the feature worktree before recording a new live result.
 
 ```bash
 npm run test:tasks

@@ -262,6 +262,18 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Returns whether the family explicitly chose this admitted college.
+   * Acceptance alone is not enrollment: families may compare or decline
+   * several offers before choosing one.
+   * @param {Object} college - College
+   * @returns {boolean} Whether this is an enrolling college
+   */
+  function collegeChosenToEnroll_(college) {
+    return collegeAdmitted_(college) &&
+      (college.enrollmentChoice || '').toString().trim().toLowerCase() === 'enroll';
+  }
+
+  /**
    * Per-templateId applicability filters for the 'college' scope. Most
    * college-scoped templates apply to every college; a few Decision/
    * Enrollment and strategy templates only make sense once a specific
@@ -275,8 +287,8 @@ CollegeTools.TaskPlanner = (function() {
     'DEC-02': collegeAdmitted_,
     'DEC-03': collegeAdmitted_,
     'DEC-05': collegeAdmitted_,
-    'DEC-06': collegeAdmitted_,
-    'DEC-07': collegeAdmitted_,
+    'DEC-06': collegeChosenToEnroll_,
+    'DEC-07': collegeChosenToEnroll_,
     'DEC-04': function(college) {
       return (college.decisionResult || '').toString().trim().toLowerCase() === 'waitlisted';
     },
@@ -1087,7 +1099,11 @@ CollegeTools.TaskPlanner = (function() {
       byId[task.taskId] = task;
     });
     tasks.forEach(function(task) {
-      if (COMPLETE_STATUSES[task.status] || task.status === 'In Progress' ||
+      if (COMPLETE_STATUSES[task.status]) {
+        task.blockedBy = '';
+        return;
+      }
+      if (task.status === 'In Progress' ||
           task.status === 'Waiting' || task.status === 'Blocked') return;
       var incomplete = (task.dependencies || []).filter(function(dependencyId) {
         var dependency = byId[dependencyId];
@@ -1256,6 +1272,13 @@ CollegeTools.TaskPlanner = (function() {
       }
       return null;
     },
+    'DEC-05': function(task, context, college) {
+      var choice = college && (college.enrollmentChoice || '').toString().trim().toLowerCase();
+      if (choice === 'enroll' || choice === 'decline') {
+        return {reliable: true, source: 'Application Status Tracker: Enrollment Choice'};
+      }
+      return null;
+    },
     'ATH-07': function(task, context, college, data) {
       if (data && data.questionnaireDate) {
         return {reliable: true, source: 'Recruiting Tracker: Questionnaire Submitted', date: data.questionnaireDate};
@@ -1353,6 +1376,11 @@ CollegeTools.TaskPlanner = (function() {
       completed++;
       return copy;
     });
+    // Evidence can complete a prerequisite (for example, recording an
+    // enrollment choice completes DEC-05). Recalculate readiness before the
+    // result is persisted so a following Preview is idempotent and downstream
+    // work becomes actionable immediately.
+    updateDependencyState_(updated);
     return {tasks: updated, completed: completed, suggestions: suggestions};
   }
 

@@ -91,6 +91,10 @@ suite.test('schema maps stable column keys to current Config headers', () => {
     '4-Year Projected Cost', 'Financial Aid projected cost key should resolve');
   suite.assertEqual(CollegeTools.Schema.header('STATUS_TRACKER', 'DOCUMENTS_COMPLETE'),
     'Documents Complete', 'Status tracker documents key should resolve');
+  suite.assertEqual(CollegeTools.Schema.header('STATUS_TRACKER', 'ENROLLMENT_CHOICE'),
+    'Enrollment Choice', 'Status tracker enrollment choice key should resolve');
+  suite.assert(CollegeTools.Schema.isUserColumn('STATUS_TRACKER', 'ENROLLMENT_CHOICE'),
+    'Enrollment Choice should be explicitly user-owned');
 });
 
 suite.test('schema declares ownership boundaries for preservation-sensitive columns', () => {

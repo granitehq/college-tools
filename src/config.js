@@ -153,7 +153,8 @@ CollegeTools.Config = (function() {
     STATUS_TRACKER: [
       'College Name', 'Application Status', 'Decision Plan', 'App Portal', 'Submitted Date',
       'Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete', 'Interview (Y/N)',
-      'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Portfolio Required (Y/N)',
+      'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Enrollment Choice',
+      'Portfolio Required (Y/N)',
       'Portfolio Submitted (Date)', 'Documents Complete', 'Notes', 'College ID',
     ],
 

@@ -345,7 +345,8 @@ Covers the post-acceptance phase that ends when a family submits an
 application: comparing awards, deciding on waitlists, choosing where to
 enroll, and paying the deposit. Anchors to `Decision Release Date`,
 `Enrollment Deposit Deadline`, and `Housing Deposit Due` on Application
-Timeline, and to `Decision/Result` on the Application Status tracker; falls
+Timeline, and to `Decision/Result` plus the explicit `Enrollment Choice`
+(`Undecided`, `Enroll`, or `Decline`) on the Application Status tracker; falls
 back to a computed National Candidates Reply Date (May 1 of the decision year)
 when a college-specific date is not yet tracked.
 

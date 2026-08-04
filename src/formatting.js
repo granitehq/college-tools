@@ -309,6 +309,7 @@ CollegeTools.Formatting = (function() {
       ['Application Status', ['Not Started', 'In Progress', 'Submitted', 'Under Review', 'Decision Received', 'Other']],
       ['Decision Plan', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']],
       ['Decision/Result', ['Pending', 'Accepted', 'Deferred', 'Waitlisted', 'Rejected', 'Other']],
+      ['Enrollment Choice', ['Undecided', 'Enroll', 'Decline']],
     ],
   };
   STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER] = {
