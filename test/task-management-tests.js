@@ -716,6 +716,28 @@ suite.test('dependencies calculate readiness and unblock after prerequisite comp
     'Completing prerequisites should make the dependent task Ready');
 });
 
+suite.test('a manually promoted Ready status survives an unrelated evidence sync despite an incomplete dependency', () => {
+  // Simulates syncTaskCompletion firing on an edit to an unrelated tracker
+  // sheet: applyEvidence recalculates dependency readiness for every task,
+  // not just the one tied to the edited tracker. A task the family
+  // deliberately promoted to Ready (e.g. to start early) despite an
+  // incomplete prerequisite must not be silently reverted by that sweep.
+  const taskB = {
+    taskId: 'B', task: 'Prerequisite', owner: 'Student', ownerRole: 'Student',
+    status: 'Not Started', dependencies: [], adjustedEffortMinutes: 30, priority: 'Normal',
+  };
+  const taskA = {
+    taskId: 'A', task: 'Dependent, manually started early', owner: 'Student', ownerRole: 'Student',
+    status: 'Ready', dependencies: ['B'], adjustedEffortMinutes: 30, priority: 'Normal',
+  };
+
+  const result = CollegeTools.TaskPlanner.applyEvidence([taskA, taskB], {}, date(2026, 7, 30));
+  const afterA = result.tasks.find((task) => task.taskId === 'A');
+
+  suite.assertEqual(afterA.status, 'Ready',
+    'A manual Ready override should not be reverted by an unrelated evidence sync');
+});
+
 suite.test('fixed deadlines are retained and flagged when a prerequisite is planned later', () => {
   const deadline = date(2026, 10, 28);
   const originalGetTemplates = CollegeTools.TaskCatalog.getTemplates;

@@ -1110,7 +1110,18 @@ CollegeTools.TaskPlanner = (function() {
         return dependency && !COMPLETE_STATUSES[dependency.status];
       });
       task.blockedBy = incomplete.join(', ');
-      task.status = incomplete.length ? 'Not Started' : 'Ready';
+      // One-directional: a completed dependency can advance Not Started ->
+      // Ready, but an incomplete dependency never reverts an already-Ready
+      // task back to Not Started. Without this, a family who manually
+      // promoted a task to Ready despite a pending prerequisite would have
+      // that choice silently undone by the next unrelated evidence sync
+      // (applyEvidence recalculates this for every task on every tracker
+      // edit, not just on an explicit regenerate).
+      if (!incomplete.length) {
+        task.status = 'Ready';
+      } else if (task.status !== 'Ready') {
+        task.status = 'Not Started';
+      }
     });
   }
 
