@@ -1,6 +1,6 @@
 /**
  * Dashboard creation and management
- * @version 2.7.0
+ * @version 3.0.1
  * @author College Tools
  * @description Creates and manages the Dashboard sheet with key metrics and visualizations
  */

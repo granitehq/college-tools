@@ -1,6 +1,6 @@
 /**
  * Admission Fit calculator
- * @version 2.7.0
+ * @version 3.0.1
  * @author College Tools
  * @description Categorizes each college as Reach/Match/Likely from student stats vs school profile
  */
