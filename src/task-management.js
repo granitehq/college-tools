@@ -285,6 +285,18 @@ CollegeTools.TaskManagement = (function() {
     sheet.setColumnWidth(1, 260);
     sheet.setColumnWidth(2, 180);
     sheet.setColumnWidth(3, 520);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 3)
+      .setBackground('#1f4e78').setFontColor('#ffffff').setFontWeight('bold');
+    sheet.getRange(2, 1, values.length, 3).setWrap(true).setVerticalAlignment('top');
+    sheet.getRange(2, 2, values.length, 1).setBackground('#fff8e1');
+    sheet.getRange(2, 1, 6, 1).setBackground('#d9eaf7').setFontWeight('bold');
+    sheet.getRange(8, 1, 6, 1).setBackground('#d9ead3').setFontWeight('bold');
+    sheet.getRange(14, 1, 7, 1).setBackground('#fce5cd').setFontWeight('bold');
+    sheet.getRange(21, 1, 6, 1).setBackground('#e4d7f5').setFontWeight('bold');
+    sheet.getRange(1, 2).setNote(
+      'Yellow cells are editable. Start with planning dates and family names, enable only relevant modules, ' +
+      'then use Preview Task Plan Changes before generating.');
 
     var yesNoRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(['Yes', 'No'], true).setAllowInvalid(false).build();
@@ -363,7 +375,8 @@ CollegeTools.TaskManagement = (function() {
     var sheet = CollegeTools.Utils.ensureSheet(
       spreadsheet, CollegeTools.Config.SHEET_NAMES.TASK_TEMPLATES);
     sheet.clear();
-    CollegeTools.Utils.setHeaders(sheet, CollegeTools.Config.HEADERS.TASK_TEMPLATES);
+    var headers = CollegeTools.Config.HEADERS.TASK_TEMPLATES;
+    CollegeTools.Utils.setHeaders(sheet, headers);
     var rows = CollegeTools.TaskCatalog.getTemplates().map(function(template) {
       return [
         template.templateId, template.workstream, template.stage, template.module,
@@ -374,6 +387,20 @@ CollegeTools.TaskManagement = (function() {
       ];
     });
     sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, headers.length, 120);
+    [['Task', 360], ['Applicability', 280], ['Anchor', 200], ['Offset / Window', 180],
+      ['Dependencies', 190], ['Deliverable', 280], ['Resource Links', 220]]
+      .forEach(function(spec) {
+        sheet.setColumnWidth(headers.indexOf(spec[0]) + 1, spec[1]);
+      });
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#5f6368').setFontColor('#ffffff').setFontWeight('bold').setWrap(true);
+    ['Task', 'Applicability', 'Anchor', 'Offset / Window', 'Dependencies',
+      'Deliverable', 'Resource Links'].forEach(function(header) {
+      var column = headers.indexOf(header) + 1;
+      sheet.getRange(2, column, rows.length, 1).setWrap(true).setVerticalAlignment('top');
+    });
     if (sheet.hideSheet) sheet.hideSheet();
     return {ok: true, count: rows.length};
   }
@@ -471,13 +498,17 @@ CollegeTools.TaskManagement = (function() {
     sheet.getRange(1, 1, 1, headers.length)
       .setBackground('#1f4e78').setFontColor('#ffffff').setFontWeight('bold')
       .setWrap(true);
+    sheet.setColumnWidths(1, headers.length, 120);
 
     [
-      ['Task', 320], ['Owner', 150], ['College', 180], ['Deliverable', 260],
+      ['Workstream', 180], ['Stage', 150], ['Module', 170],
+      ['Task', 360], ['Owner', 150], ['College', 180], ['Deliverable', 260],
       ['Applicability Rule', 220], ['Schedule Anchor', 220],
       ['Offset / Window', 160],
+      ['Schedule Flag', 260], ['Priority Override', 130], ['Status', 110],
       ['Dependencies', 200], ['Blocked By', 200], ['Resource Links', 220],
-      ['Evidence Source', 220], ['Notes', 280],
+      ['Evidence Source', 220], ['Notes', 280], ['Adjusted Effort (min)', 140],
+      ['Effort Override (min)', 140],
     ].forEach(function(spec) {
       if (column[spec[0]]) sheet.setColumnWidth(column[spec[0]], spec[1]);
     });
@@ -494,6 +525,19 @@ CollegeTools.TaskManagement = (function() {
       }
     });
 
+    [
+      'Task ID', 'Template ID', 'Scope Type', 'Scope ID', 'College ID',
+      'Applicability Rule', 'Schedule Rule', 'Schedule Anchor', 'Anchor Date',
+      'Offset / Window', 'Owner Role', 'Calculated Date', 'Effective Date',
+      'Date Source', 'Normal Effort (min)', 'Manually Selected', 'Generated',
+      'Archived Reason',
+    ].forEach(function(header) {
+      if (column[header] &&
+          (!sheet.isColumnHiddenByUser || !sheet.isColumnHiddenByUser(column[header]))) {
+        sheet.hideColumns(column[header]);
+      }
+    });
+
     if (column['Task ID']) {
       sheet.getRange(1, column['Task ID']).setNote(
         'Stable identity used to preserve this row through sorting and regeneration. ' +
@@ -501,8 +545,8 @@ CollegeTools.TaskManagement = (function() {
     }
     if (column.Task) {
       sheet.getRange(1, column.Task).setNote(
-        'Add a custom task on any blank row. Workstream, Stage, Module, Owner, dates, ' +
-        'effort, and notes may use family-defined values.');
+        'Generated tasks appear after Task Settings → Preview → Generate / Regenerate Task Plan. ' +
+        'You may also add a custom task on any blank row; family-defined values are preserved.');
     }
     if (column['Owner Locked']) {
       sheet.getRange(1, column['Owner Locked']).setNote(
@@ -1076,22 +1120,42 @@ CollegeTools.TaskManagement = (function() {
     sheet.clear();
     var headers = CollegeTools.Config.HEADERS.THIS_WEEK;
     CollegeTools.Utils.setHeaders(sheet, headers);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#1f4e78').setFontColor('#ffffff').setFontWeight('bold')
+      .setWrap(true).setVerticalAlignment('middle');
+    [360, 110, 110, 90, 140, 180, 145, 120, 220, 260]
+      .forEach(function(width, index) {
+        sheet.setColumnWidth(index + 1, width);
+      });
+    var dueColumn = headers.indexOf('Due Date') + 1;
+    var taskDateRanges = [];
+    var rememberTaskRows = function(startRow, taskCount) {
+      if (taskCount > 0) taskDateRanges.push({startRow: startRow, count: taskCount});
+    };
+    var styleSection = function(sectionRow, background) {
+      sheet.getRange(sectionRow, 1, 1, headers.length)
+        .setFontWeight('bold').setBackground(background);
+    };
     var rowForTask = function(task) {
       return [
-        task.taskId, toSpreadsheetDate_(sheet, task.dueDate) || '',
-        task.priority, task.status, task.owner,
-        task.college, task.task, task.adjustedEffortMinutes,
-        yesNo_(task.decisionNeeded), task.scheduleFlag,
+        task.task, toSpreadsheetDate_(sheet, task.dueDate) || '',
+        task.status, task.priority, task.owner,
+        task.college, task.adjustedEffortMinutes,
+        yesNo_(task.decisionNeeded), task.scheduleFlag, task.taskId,
       ];
     };
     if (views.thisWeek.length) {
       sheet.getRange(2, 1, views.thisWeek.length, headers.length)
         .setValues(views.thisWeek.map(rowForTask));
+      rememberTaskRows(2, views.thisWeek.length);
     } else {
-      sheet.getRange(2, 1).setValue('No current actions. Refresh after generating or updating tasks.');
+      sheet.getRange(2, 1)
+        .setValue('No current actions yet. Configure Task Settings, then generate the task plan.')
+        .setFontStyle('italic').setFontColor('#666666');
     }
     var row = Math.max(13, views.thisWeek.length + 4);
-    sheet.getRange(row, 1).setValue('Weekly Report').setFontWeight('bold').setBackground('#d9ead3');
+    sheet.getRange(row, 1).setValue('Weekly Report');
+    styleSection(row, '#d9ead3');
     row++;
     var categoryCoverage = Object.keys(views.thisWeekCategoryCounts || {}).map(function(category) {
       var counts = views.thisWeekCategoryCounts[category];
@@ -1135,16 +1199,32 @@ CollegeTools.TaskManagement = (function() {
       ['Peak-week effort (hours)', Math.round((views.peakWeekMinutes / 60) * 10) / 10],
       ['Capacity warnings', views.capacityWarnings.length],
     ];
-    sheet.getRange(row, 1, reportRows.length, 2).setValues(reportRows);
+    var reportStartRow = row;
+    sheet.getRange(reportStartRow, 1, reportRows.length, 2).setValues(reportRows);
+    sheet.getRange(reportStartRow, 1, reportRows.length, 1).setFontWeight('bold').setWrap(true);
+    reportRows.forEach(function(report, index) {
+      if (typeof report[1] !== 'number') return;
+      var format = /\(hours\)$/.test(report[0]) ? '0.0' : '0';
+      sheet.getRange(reportStartRow + index, 2).setNumberFormat(format);
+    });
     row += reportRows.length + 2;
     var writeEffortBreakdown = function(title, values) {
-      sheet.getRange(row, 1).setValue(title).setFontWeight('bold').setBackground('#cfe2f3');
+      sheet.getRange(row, 1).setValue(title);
+      styleSection(row, '#cfe2f3');
       row++;
       var rows = Object.keys(values).sort().map(function(label) {
         return [label, Math.round((values[label] / 60) * 10) / 10];
       });
-      if (rows.length) sheet.getRange(row, 1, rows.length, 2).setValues(rows);
-      row += rows.length + 2;
+      if (rows.length) {
+        sheet.getRange(row, 1, rows.length, 2).setValues(rows);
+        sheet.getRange(row, 2, rows.length, 1).setNumberFormat('0.0');
+        row += rows.length;
+      } else {
+        sheet.getRange(row, 1).setValue('No task effort to summarize yet.')
+          .setFontStyle('italic').setFontColor('#666666');
+        row++;
+      }
+      row += 2;
     };
     writeEffortBreakdown('Effort By Owner', views.effortByOwner);
     writeEffortBreakdown('Effort By Role', views.effortByRole);
@@ -1152,8 +1232,8 @@ CollegeTools.TaskManagement = (function() {
     writeEffortBreakdown('Effort By Module / Custom Category', views.effortByModule);
     writeEffortBreakdown('Effort By College', views.effortByCollege);
     if (views.capacityWarnings.length) {
-      sheet.getRange(row, 1).setValue('Capacity Warnings')
-        .setFontWeight('bold').setBackground('#f4cccc');
+      sheet.getRange(row, 1).setValue('Capacity Warnings');
+      styleSection(row, '#f4cccc');
       row++;
       var warningRows = views.capacityWarnings.map(function(warning) {
         return [
@@ -1165,22 +1245,31 @@ CollegeTools.TaskManagement = (function() {
       sheet.getRange(row, 1, warningRows.length, 2).setValues(warningRows);
       row += warningRows.length + 2;
     }
-    sheet.getRange(row, 1).setValue('Rolling 90 Days').setFontWeight('bold').setBackground('#fce5cd');
+    sheet.getRange(row, 1).setValue('Rolling 90 Days');
+    styleSection(row, '#fce5cd');
     row++;
     sheet.getRange(row, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     row++;
     if (views.rolling90.length) {
       sheet.getRange(row, 1, views.rolling90.length, headers.length)
         .setValues(views.rolling90.map(rowForTask));
+      rememberTaskRows(row, views.rolling90.length);
+      row += views.rolling90.length;
+    } else {
+      sheet.getRange(row, 1).setValue('No open tasks due in the next 90 days.')
+        .setFontStyle('italic').setFontColor('#666666');
+      row++;
     }
-    row += views.rolling90.length + 2;
+    row += 2;
     var writeTaskList = function(title, tasks) {
-      sheet.getRange(row, 1).setValue(title).setFontWeight('bold').setBackground('#d9d2e9');
+      sheet.getRange(row, 1).setValue(title);
+      styleSection(row, '#d9d2e9');
       row++;
       sheet.getRange(row, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
       row++;
       if (tasks.length) {
         sheet.getRange(row, 1, tasks.length, headers.length).setValues(tasks.map(rowForTask));
+        rememberTaskRows(row, tasks.length);
         row += tasks.length;
       } else {
         sheet.getRange(row, 1).setValue('No matching open tasks.');
@@ -1190,8 +1279,20 @@ CollegeTools.TaskManagement = (function() {
     };
     writeTaskList('Owner View — open tasks sorted by owner', views.ownerView);
     writeTaskList('College View — open college-linked tasks', views.collegeView);
-    var dueColumn = headers.indexOf('Due Date') + 1;
-    sheet.getRange(2, dueColumn, Math.max(1, sheet.getLastRow() - 1), 1).setNumberFormat('yyyy-mm-dd');
+    taskDateRanges.forEach(function(taskRange) {
+      sheet.getRange(taskRange.startRow, dueColumn, taskRange.count, 1)
+        .setNumberFormat('yyyy-mm-dd');
+    });
+    var bodyRows = Math.max(1, sheet.getLastRow() - 1);
+    sheet.getRange(2, 1, bodyRows, 1).setWrap(true).setVerticalAlignment('top');
+    sheet.getRange(2, headers.indexOf('Task') + 1, bodyRows, 1)
+      .setWrap(true).setVerticalAlignment('top');
+    sheet.getRange(2, headers.indexOf('Schedule Flag') + 1, bodyRows, 1)
+      .setWrap(true).setVerticalAlignment('top');
+    var taskIdColumn = headers.indexOf('Task ID') + 1;
+    if (!sheet.isColumnHiddenByUser || !sheet.isColumnHiddenByUser(taskIdColumn)) {
+      sheet.hideColumns(taskIdColumn);
+    }
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1).setNote('Generated from Tasks; edit the canonical Tasks sheet instead.');
     return {ok: true, currentActions: views.thisWeek.length, rolling90: views.rolling90.length};

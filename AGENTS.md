@@ -250,6 +250,9 @@ manual testing in a copied Google Sheet.
   canonical geographic field.
 - A newly created `Travel Planner` sheet is inserted immediately after
   `Scholarship Tracker`.
+- Complete Setup and Repair enforce the workflow-first known-tab order in
+  `CollegeTools.Config.SHEET_ORDER`; preserve custom tabs and keep generated
+  `Task Templates` hidden.
 - `project-docs/backlog.md` is the consolidated roadmap/backlog. Older planning
   and review docs are archived under `project-docs/archive/`.
 - `README.md`, `project-docs/version-management.md`, and release docs describe

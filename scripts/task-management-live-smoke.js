@@ -267,7 +267,8 @@ function runTaskManagementLiveSmoke(mode) {
   });
   var thisWeek = ss.getSheetByName(names.THIS_WEEK);
   var thisWeekIds = thisWeek.getRange(
-    2, 1, Math.min(10, Math.max(1, thisWeek.getLastRow() - 1)), 1).getValues()
+    2, column(thisWeek, 'Task ID', 1),
+    Math.min(10, Math.max(1, thisWeek.getLastRow() - 1)), 1).getValues()
     .map(function(rowValue) {
       return rowValue[0];
     });

@@ -416,12 +416,30 @@ class MockSheet {
     this.values = {};
     this.formulas = {};
     this.validations = {};
+    this.formats = {};
+    this.notes = {};
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     return this;
   }
 
-  setColumnWidth() { this._recordMutation(); return this; }
-  setColumnWidths() { this._recordMutation(); return this; }
+  setColumnWidth(column, width) {
+    this._recordMutation();
+    this.columnWidths = this.columnWidths || {};
+    this.columnWidths[column] = width;
+    return this;
+  }
+  setColumnWidths(startColumn, numColumns, width) {
+    this._recordMutation();
+    this.columnWidths = this.columnWidths || {};
+    for (let column = startColumn; column < startColumn + numColumns; column++) {
+      this.columnWidths[column] = width;
+    }
+    return this;
+  }
+  getColumnWidth(column) {
+    this.columnWidths = this.columnWidths || {};
+    return this.columnWidths[column] || 100;
+  }
   setFrozenRows() { this._recordMutation(); return this; }
   getFilter() { return this.filter; }
   autoResizeColumn() { this._recordMutation(); return this; }
@@ -594,7 +612,15 @@ class MockSpreadsheet {
     this.activeSheetName = sheet.getName();
   }
 
-  moveActiveSheet() { this.mutationCount++; }
+  moveActiveSheet(position) {
+    this.mutationCount++;
+    const activeSheet = this.getActiveSheet();
+    const currentIndex = this.sheetOrder.indexOf(activeSheet);
+    if (currentIndex === -1) return;
+    this.sheetOrder.splice(currentIndex, 1);
+    const targetIndex = Math.max(0, Math.min(this.sheetOrder.length, position - 1));
+    this.sheetOrder.splice(targetIndex, 0, activeSheet);
+  }
   setNamedRange(name, range) {
     this.mutationCount++;
     this.namedRanges[name] = {row: range.row, col: range.col};

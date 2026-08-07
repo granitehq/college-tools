@@ -31,6 +31,7 @@ suite.test('complete setup and repair use stable registry step order', () => {
       'travel-planner',
       'trim-sheets',
       'registration',
+      'sheet-order',
     ].join(','),
     'Complete Setup should use the expected registry order');
 
@@ -43,6 +44,7 @@ suite.test('complete setup and repair use stable registry step order', () => {
       'timeline-formatting',
       'task-management',
       'dashboard-refresh',
+      'sheet-order',
     ].join(','),
     'Repair Entire Workbook should use the expected registry order');
 });
