@@ -6,8 +6,20 @@
 
 ## Verification Status
 
-The implementation, automated acceptance scenarios, and both live copied-sheet
-scenarios are complete. Production/template Apps Script was not touched.
+The implementation, automated acceptance scenarios, and the original two live
+copied-sheet scenarios are complete. The clasp-bound template has since received
+the v3.0.1 release candidate; public template promotion remains blocked on the
+follow-up presentation fixes and copied-sheet verification below.
+
+**Update (2026-08-07):** the first post-release copied-template review exposed
+live-only presentation defects: `This Week` applied its Due Date format to
+numeric report cells, task/report columns were cramped, and sheet creation order
+did not reflect the user workflow. The local fix branch now applies a canonical
+workflow-first tab order, keeps Lookup after Weights, renders `This Week` with
+task-first columns and correctly scoped number formats, hides advanced `Tasks`
+metadata by default, and adds concrete Task Settings examples. The full local
+gate passes, but these presentation fixes still require a new clasp push and
+fresh copied-sheet screenshots before public promotion.
 
 **Update (2026-08-03):** review fixes now make Preview structurally read-only,
 including for rows that do not yet have persisted IDs, and add an explicit

@@ -1235,6 +1235,8 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   suite.assertEqual(setup.templateCount, CollegeTools.TaskCatalog.validate().count,
     'Setup should render every catalog template');
   suite.assert(templates.isSheetHidden(), 'Template sheet should be system-hidden');
+  suite.assertEqual(templates.getColumnWidth(columnOf(templates, 'Task')), 360,
+    'Hidden templates should remain readable when intentionally unhidden');
   suite.assertEqual(tasks.getLastRow(), 1, 'Blank template should not preload family tasks');
   suite.assertEqual(tasks.getMaxRows(), 200,
     'Tasks should use a bounded working surface instead of the default thousand rows');
@@ -1253,10 +1255,35 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Priority Override should explain how it affects calculated priority');
   suite.assert(tasks.getRange(1, columnOf(tasks, 'Evidence Source')).getNote().includes('tracker'),
     'Evidence Source should explain its tracker-derived provenance');
+  const settings = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS);
   suite.assertEqual(
-    mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS).getLastRow(),
+    settings.getLastRow(),
     CollegeTools.Config.TASK_MANAGEMENT_SETTINGS.length + 1,
     'Task Settings should render the centrally configured setting definitions');
+  const settingsValues = settings.getRange(2, 1, settings.getLastRow() - 1, 3).getValues();
+  const deadlineGuidance = settingsValues.find((row) =>
+    row[0] === 'Working First Application Deadline')[2];
+  suite.assert(deadlineGuidance.includes('Example:'),
+    'Task Settings guidance should include concrete entry examples');
+  suite.assert(settings.getRange(1, 2).getNote().includes('editable'),
+    'The Value header should identify the user-editable settings column');
+  [
+    'Task ID', 'Template ID', 'Scope Type', 'Scope ID', 'College ID',
+    'Applicability Rule', 'Schedule Rule', 'Schedule Anchor', 'Anchor Date',
+    'Offset / Window', 'Owner Role', 'Calculated Date', 'Effective Date',
+    'Date Source', 'Normal Effort (min)', 'Manually Selected', 'Generated',
+    'Archived Reason',
+  ].forEach((header) => {
+    suite.assert(tasks.isColumnHiddenByUser(columnOf(tasks, header)),
+      `${header} should be hidden as advanced task metadata`);
+  });
+  [
+    'Task', 'Owner', 'Owner Locked', 'Due Date', 'Date Locked',
+    'Priority Override', 'Status', 'Effort Override (min)', 'Notes',
+  ].forEach((header) => {
+    suite.assert(!tasks.isColumnHiddenByUser(columnOf(tasks, header)),
+      `${header} should remain visible as a day-to-day task control`);
+  });
   suite.assert(!mockSpreadsheet.getSheetByName(
     CollegeTools.Config.SHEET_NAMES.RECRUITING_TRACKER),
   'Recruiting Tracker should not exist while recruiting is disabled');
@@ -1293,8 +1320,10 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Enabled recruiting tasks should be written to canonical Tasks');
   suite.assert(generatedTasks.some((task) => task.templateId === 'DEC-06'),
     'The tracker enrollment choice should reach the planner context');
-  suite.assertEqual(thisWeek.getRange(1, 1).getValue(), 'Task ID',
-    'This Week should be generated from Tasks with its own tab');
+  suite.assertEqual(thisWeek.getRange(1, 1).getValue(), 'Task',
+    'This Week should lead with the user-facing action instead of an internal ID');
+  suite.assert(thisWeek.isColumnHiddenByUser(columnOf(thisWeek, 'Task ID')),
+    'This Week should retain its stable ID internally without showing it by default');
   const weeklyText = thisWeek.getRange(1, 1, thisWeek.getLastRow(), 2)
     .getValues().flat().join(' | ');
   suite.assert(weeklyText.includes('Decision Received: 1'),
@@ -1309,6 +1338,12 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Generated views should include a read-only task list by college');
   suite.assert(weeklyText.includes('Planning horizon'),
     'Generated views should show the active planning horizon');
+  suite.assertEqual(thisWeek.getColumnWidth(1), 360,
+    'This Week should give task descriptions and report labels enough horizontal space');
+  suite.assertEqual(thisWeek.getColumnWidth(columnOf(thisWeek, 'Task')), 360,
+    'This Week should provide a readable task-description column');
+  suite.assertEqual(thisWeek.getRange(2, columnOf(thisWeek, 'Due Date')).getNumberFormats()[0][0],
+    'yyyy-mm-dd', 'Task due dates should use the canonical calendar-date format');
 
   const unchangedPreview = CollegeTools.TaskManagement.previewTaskPlan();
   suite.assertEqual(unchangedPreview.preview.add, 0,
@@ -1317,6 +1352,27 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Preview after generation should not archive unchanged work');
   suite.assertEqual(unchangedPreview.preview.update, 0,
     'An unchanged workbook should produce an idempotent no-update preview');
+});
+
+suite.test('empty This Week report keeps numeric metrics numeric and explains empty sections', () => {
+  setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  const thisWeek = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.THIS_WEEK);
+  const values = thisWeek.getRange(1, 1, thisWeek.getLastRow(), 2).getValues();
+  const rowFor = (label) => values.findIndex((row) => row[0] === label) + 1;
+  const averageRow = rowFor('Average scheduled week (hours)');
+  const warningRow = rowFor('Capacity warnings');
+  const text = values.flat().join(' | ');
+
+  suite.assert(averageRow > 0 && warningRow > 0, 'Weekly report metrics should be present');
+  suite.assertEqual(thisWeek.getRange(averageRow, 2).getNumberFormats()[0][0], '0.0',
+    'Effort metrics must not inherit the Due Date format');
+  suite.assertEqual(thisWeek.getRange(warningRow, 2).getNumberFormats()[0][0], '0',
+    'Count metrics should render as ordinary integers');
+  suite.assert(text.includes('No task effort to summarize yet.'),
+    'Empty effort breakdowns should explain why no rows are shown');
+  suite.assert(text.includes('No open tasks due in the next 90 days.'),
+    'An empty rolling view should provide an actionable empty state');
 });
 
 suite.test('rewriting the Tasks sheet never clears rows before their replacement values are written', () => {

@@ -44,6 +44,30 @@ CollegeTools.Config = (function() {
     RECRUITING_TRACKER: 'Recruiting Tracker',
   };
 
+  // Workflow-first tab order applied after Complete Setup and Repair. Sheets
+  // that are absent are skipped; unknown/custom sheets are preserved after the
+  // canonical group. Internal hidden sheets remain hidden.
+  var SHEET_ORDER = [
+    SHEET_NAMES.INSTRUCTIONS,
+    SHEET_NAMES.THIS_WEEK,
+    SHEET_NAMES.COLLEGES,
+    SHEET_NAMES.TASKS,
+    SHEET_NAMES.DASHBOARD,
+    SHEET_NAMES.APPLICATION_TIMELINE,
+    SHEET_NAMES.STATUS_TRACKER,
+    SHEET_NAMES.FINANCIAL_AID,
+    SHEET_NAMES.SCHOLARSHIP_TRACKER,
+    SHEET_NAMES.TRAVEL_PLANNER,
+    SHEET_NAMES.CAMPUS_VISIT,
+    SHEET_NAMES.RECRUITING_TRACKER,
+    SHEET_NAMES.PERSONAL_PROFILE,
+    SHEET_NAMES.TASK_SETTINGS,
+    SHEET_NAMES.WEIGHTS,
+    SHEET_NAMES.LOOKUP,
+    SHEET_NAMES.API_KEY,
+    SHEET_NAMES.TASK_TEMPLATES,
+  ];
+
   // API configuration
   var API_CONFIG = {
     BASE_URL: 'https://api.data.gov/ed/collegescorecard/v1/schools',
@@ -201,8 +225,8 @@ CollegeTools.Config = (function() {
     ],
 
     THIS_WEEK: [
-      'Task ID', 'Due Date', 'Priority', 'Status', 'Owner', 'College', 'Task',
-      'Adjusted Effort (min)', 'Decision Needed', 'Schedule Flag',
+      'Task', 'Due Date', 'Status', 'Priority', 'Owner', 'College',
+      'Adjusted Effort (min)', 'Decision Needed', 'Schedule Flag', 'Task ID',
     ],
 
     RECRUITING_TRACKER: [
@@ -218,31 +242,41 @@ CollegeTools.Config = (function() {
   // data but does not own role/module defaults; keeping them here makes the
   // configuration contract reusable and testable outside the sheet service.
   var TASK_MANAGEMENT_SETTINGS = [
-    ['Planning Start Date', '', 'Date the family starts using the plan'],
-    ['Working First Application Deadline', '', 'Fallback until school-specific dates are entered'],
-    ['FAFSA Availability Date', '', 'Use the official date for the application cycle'],
-    ['Current Grade', '', 'For example: 11 or 12'],
-    ['Expected Graduation Year', '', 'Four-digit high-school graduation year'],
-    ['Application Cycle', '', 'Optional label such as 2026-27'],
-    ['Student Owner Name', '', 'Optional name replacing the Student role label'],
-    ['Parent/Guardian Owner Name', '', 'Optional name replacing the Parent/Guardian role label'],
-    ['Counselor/Professional Owner Name', '', 'One combined standard role; use custom owners if needed'],
-    ['Counselor/Professional Participating', 'No', 'Yes reassigns professional-owned work to this role'],
-    ['Custom Owners (comma separated)', '', 'Optional additional people such as School Counselor, Consultant'],
-    ['Parent Effort Multiplier', 1, 'Applied to parent-owned baseline effort; override individual tasks as needed'],
-    ['Testing Enabled', 'No', 'Generate testing tasks only when applicable'],
-    ['Athletic Recruiting Enabled', 'No', 'Generate recruiting tasks and create Recruiting Tracker'],
-    ['CSS Profile Enabled', 'No', 'Generate CSS Profile tasks only when applicable'],
-    ['Visits Enabled', 'No', 'Generate selected visit/event tasks'],
-    ['Interviews Enabled', 'No', 'Generate interview tasks only when applicable'],
-    ['Portfolio/Audition Enabled', 'No', 'Generate portfolio/audition tasks only when applicable'],
-    ['Professional Support Enabled', 'No', 'Records available support separately from accountable ownership'],
-    ['Student Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
-    ['Parent Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
-    ['Shared Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
-    ['Student Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
-    ['Parent Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
-    ['Shared Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+    ['Planning Start Date', '', 'Recommended. Example: 2026-08-15. First day the family will use this plan.'],
+    ['Working First Application Deadline', '',
+      'Recommended fallback. Example: 2026-11-01. College-specific Timeline dates take precedence.'],
+    ['FAFSA Availability Date', '',
+      'Optional until officially announced. Example: 2026-10-01 for the applicable aid cycle.'],
+    ['Current Grade', '', 'Recommended. Example: 11 or 12. Helps explain the planning horizon.'],
+    ['Expected Graduation Year', '', 'Recommended. Example: 2027. Enter the four-digit high-school graduation year.'],
+    ['Application Cycle', '', 'Optional display label. Example: 2026-27.'],
+    ['Student Owner Name', '', 'Optional. Example: Avery. Replaces the generic Student owner label.'],
+    ['Parent/Guardian Owner Name', '',
+      'Optional. Example: Jordan. Replaces the generic Parent/Guardian owner label.'],
+    ['Counselor/Professional Owner Name', '',
+      'Optional. Example: Ms. Rivera. Used when professional participation is Yes.'],
+    ['Counselor/Professional Participating', 'No',
+      'Choose Yes only when this person will actively own assigned work; otherwise tasks fall back safely.'],
+    ['Custom Owners (comma separated)', '',
+      'Optional. Example: School Counselor, Essay Coach, Grandparent.'],
+    ['Parent Effort Multiplier', 1,
+      'Example: 1 = baseline, 1.5 = 50% more time, 0.75 = 25% less. Task overrides still win.'],
+    ['Testing Enabled', 'No', 'Choose Yes to add SAT/ACT planning, registration, preparation, and score tasks.'],
+    ['Athletic Recruiting Enabled', 'No',
+      'Choose Yes to add recruiting tasks and create the Recruiting Tracker.'],
+    ['CSS Profile Enabled', 'No', 'Choose Yes only if at least one prospective college requires CSS Profile.'],
+    ['Visits Enabled', 'No', 'Choose Yes to generate campus-visit and event planning tasks.'],
+    ['Interviews Enabled', 'No', 'Choose Yes when interviews are expected or offered.'],
+    ['Portfolio/Audition Enabled', 'No', 'Choose Yes for programs requiring a portfolio or audition.'],
+    ['Professional Support Enabled', 'No',
+      'Choose Yes to record available professional support without changing accountable ownership.'],
+    ['Student Weekly Threshold (hours)', '',
+      'Optional warning threshold after reviewing the baseline. Example: 6. Does not delete or compress tasks.'],
+    ['Parent Weekly Threshold (hours)', '', 'Optional warning threshold. Example: 3 hours per week.'],
+    ['Shared Weekly Threshold (hours)', '', 'Optional warning threshold. Example: 2 hours per week.'],
+    ['Student Week Overrides', '', 'Optional. Example: 2026-09-07=2; 2026-12-21=0'],
+    ['Parent Week Overrides', '', 'Optional. Example: 2026-09-07=1; 2026-12-21=0'],
+    ['Shared Week Overrides', '', 'Optional. Example: 2026-09-07=1; 2026-12-21=0'],
   ];
 
   // Default scoring weights
@@ -264,6 +298,7 @@ CollegeTools.Config = (function() {
     VERSION: VERSION,
     REGISTRATION_CONFIG: REGISTRATION_CONFIG,
     SHEET_NAMES: SHEET_NAMES,
+    SHEET_ORDER: SHEET_ORDER,
     API_CONFIG: API_CONFIG,
     API_FIELDS: API_FIELDS,
     HEADERS: HEADERS,
