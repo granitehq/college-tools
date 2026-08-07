@@ -141,6 +141,65 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Computes the final planning fallback when the family has not entered any
+   * authoritative, round-default, or working deadline.
+   * @param {Object} config - Normalized configuration
+   * @param {Date} today - Planning date
+   * @returns {Date} Suggested November 1 first-application window
+   */
+  function suggestedDeadline_(config, today) {
+    var fallYear = applicationFallYear_(config);
+    if (!fallYear) {
+      var start = config.planningStartDate || today;
+      fallYear = start.getFullYear();
+      if (new Date(fallYear, 10, 1) < today) fallYear++;
+    }
+    return new Date(fallYear, 10, 1);
+  }
+
+  /**
+   * Classifies days remaining using the requirements-defined horizon buckets.
+   * The full roadmap remains intact; this describes what the family should
+   * emphasize in the current phase.
+   * @param {Date} today - Planning date
+   * @param {Date} deadline - First planning deadline
+   * @returns {Object} Horizon key, label, and emphasis
+   */
+  function planningHorizon_(today, deadline) {
+    var days = Math.max(0, Math.ceil((deadline.getTime() - today.getTime()) / DAY_MS));
+    if (days > 365) {
+      return {
+        key: 'more-than-one-year',
+        label: 'More than one year',
+        emphasis: 'Exploration, courses/testing, meaningful activities, early affordability, and recruiting preparation',
+        prefixes: ['STR-', 'PRO-', 'COL-', 'TST-', 'ATH-', 'VIS-', 'AID-'],
+      };
+    }
+    if (days > 183) {
+      return {
+        key: 'six-to-twelve-months',
+        label: 'Six to twelve months',
+        emphasis: 'Research, visits, testing completion, resume/activity inventory, and recommendation preparation',
+        prefixes: ['COL-', 'VIS-', 'TST-', 'PRO-', 'REC-'],
+      };
+    }
+    if (days > 90) {
+      return {
+        key: 'three-to-six-months',
+        label: 'Three to six months',
+        emphasis: 'Final list, Common App, essays, recommendations, financial documents, and active recruiting',
+        prefixes: ['COL-', 'APP-', 'ESS-', 'REC-', 'AID-', 'SCH-', 'ATH-'],
+      };
+    }
+    return {
+      key: 'ninety-days-or-less',
+      label: 'Ninety days or less',
+      emphasis: 'Applications, affordability verification, essays, recruiting, aid deadlines, audit, and submission',
+      prefixes: ['APP-', 'ESS-', 'SUB-', 'AID-', 'SCH-', 'ATH-', 'REC-'],
+    };
+  }
+
+  /**
    * Coerces user-facing yes/no values.
    * @param {*} value - Input
    * @param {boolean} fallback - Default
@@ -396,6 +455,25 @@ CollegeTools.TaskPlanner = (function() {
   }
 
   /**
+   * Labels a shared fallback deadline without overstating its authority.
+   * @param {Date|null} deadline - Selected fallback date
+   * @param {Object} config - Normalized config
+   * @param {string} earliestLabel - Label for a tracker/round-derived date
+   * @returns {string} Date provenance
+   */
+  function fallbackDeadlineSource_(deadline, config, earliestLabel) {
+    if (config.suggestedDeadline && deadline &&
+        config.suggestedDeadline.getTime() === deadline.getTime()) {
+      return 'Suggested first-application window; confirm manually';
+    }
+    if (config.workingDeadline && deadline &&
+        config.workingDeadline.getTime() === deadline.getTime()) {
+      return 'Working first-application target';
+    }
+    return earliestLabel;
+  }
+
+  /**
    * Returns the templateId prefix used to key COLLEGE_DEADLINE_RESOLVERS
    * (e.g. 'AID-06' -> 'AID-').
    * @param {string} id - Template ID
@@ -468,7 +546,7 @@ CollegeTools.TaskPlanner = (function() {
     var college = scope.collegeId ? findCollege_(context, scope.collegeId) : null;
     var id = template.templateId;
     var date = null;
-    var source = 'Working first-application target';
+    var source = fallbackDeadlineSource_(firstDeadline, config, 'Earliest relevant deadline');
     var roundDefault = college ? applicationRoundDeadline_(college, config) : null;
     var collegeFallback = function() {
       if (college && toDate(college.applicationDeadline)) {
@@ -480,7 +558,8 @@ CollegeTools.TaskPlanner = (function() {
           source: 'Application-round default; confirm manually',
         };
       }
-      return {date: config.workingDeadline, source: source};
+      var fallbackDate = config.workingDeadline || config.suggestedDeadline;
+      return {date: fallbackDate, source: fallbackDeadlineSource_(fallbackDate, config, source)};
     };
 
     if (template.scope === 'scholarship') {
@@ -492,7 +571,8 @@ CollegeTools.TaskPlanner = (function() {
         source = 'Working first-application target';
       } else {
         date = firstDeadline;
-        source = 'Earliest relevant college deadline';
+        source = fallbackDeadlineSource_(
+          firstDeadline, config, 'Earliest relevant college deadline');
       }
     } else if (template.scope === 'contact') {
       if (toDate(data.nextFollowUp)) {
@@ -561,7 +641,7 @@ CollegeTools.TaskPlanner = (function() {
       if (date) source = 'Earliest aid-priority deadline';
       if (!date) {
         date = firstDeadline || config.workingDeadline;
-        source = firstDeadline ? 'Earliest relevant deadline' : source;
+        source = fallbackDeadlineSource_(date, config, 'Earliest relevant deadline');
       }
     } else if (id.indexOf('SCH-') === 0) {
       var scholarshipDates = [];
@@ -575,14 +655,49 @@ CollegeTools.TaskPlanner = (function() {
       if (date) source = 'Earliest merit, honors, or scholarship deadline';
       if (!date) {
         date = firstDeadline || config.workingDeadline;
-        source = firstDeadline ? 'Earliest relevant deadline' : source;
+        source = fallbackDeadlineSource_(date, config, 'Earliest relevant deadline');
       }
     } else {
       date = firstDeadline || config.workingDeadline;
-      source = firstDeadline ? 'Earliest relevant deadline' : source;
+      source = fallbackDeadlineSource_(date, config, 'Earliest relevant deadline');
     }
     return {date: date, source: source};
   }
+
+  /**
+   * Catalog-selected special date calculations. Each resolver may replace the
+   * ordinary milestone offset while leaving dependency relationships to the
+   * generic dependency graph.
+   */
+  var CALCULATED_DATE_RESOLVERS = {
+    fafsaAccess: function(base, config) {
+      if (!config.fafsaAvailabilityDate) return null;
+      return {
+        date: addDays(config.fafsaAvailabilityDate, -14),
+        source: 'FAFSA availability date',
+      };
+    },
+    fafsaSubmission: function(base, config) {
+      if (!config.fafsaAvailabilityDate) return null;
+      var earlySubmissionTarget = base.date ? addDays(base.date, -20) :
+        config.fafsaAvailabilityDate;
+      return {
+        date: earlySubmissionTarget < config.fafsaAvailabilityDate ?
+          config.fafsaAvailabilityDate : earlySubmissionTarget,
+        source: 'FAFSA availability and earliest aid-priority deadline',
+        infeasible: !!base.date && config.fafsaAvailabilityDate > base.date,
+      };
+    },
+    fafsaReview: function(base, config) {
+      if (!config.fafsaAvailabilityDate) return null;
+      var reviewTarget = addDays(config.fafsaAvailabilityDate, 7);
+      var aidReviewTarget = base.date ? addDays(base.date, -14) : reviewTarget;
+      return {
+        date: aidReviewTarget < reviewTarget ? reviewTarget : aidReviewTarget,
+        source: 'FAFSA submission window and earliest aid-priority deadline',
+      };
+    },
+  };
 
   /**
    * Resolves accountable ownership with professional fallback and custom names.
@@ -803,14 +918,12 @@ CollegeTools.TaskPlanner = (function() {
     if (!validation.ok) {
       return {ok: false, code: 'invalid_catalog', errors: validation.errors, tasks: []};
     }
-    if (!config.workingDeadline && !firstDeadline) {
-      return {
-        ok: false,
-        code: 'missing_deadline',
-        errors: ['Set a working first-application deadline or college deadline before generating tasks.'],
-        tasks: [],
-      };
+    if (!firstDeadline) {
+      config.suggestedDeadline = suggestedDeadline_(config, today);
+      firstDeadline = config.suggestedDeadline;
     }
+    var deadlineSource = fallbackDeadlineSource_(firstDeadline, config, 'Earliest relevant deadline');
+    var planningHorizon = planningHorizon_(today, firstDeadline);
 
     var templates = CollegeTools.TaskCatalog.getTemplates();
     var templateById = {};
@@ -830,22 +943,11 @@ CollegeTools.TaskPlanner = (function() {
           deadlineFor_(template, scope, config, context, firstDeadline);
         var calculatedDate = base.date ? addDays(base.date, template.offsetDays) : null;
         if (template.scope === 'recurring') calculatedDate = scope.data.weekDate;
-        if (config.fafsaAvailabilityDate && template.templateId === 'AID-02') {
-          calculatedDate = addDays(config.fafsaAvailabilityDate, -14);
-          base.source = 'FAFSA availability date';
-        }
-        if (config.fafsaAvailabilityDate && template.templateId === 'AID-06') {
-          var earlySubmissionTarget = base.date ? addDays(base.date, -20) :
-            config.fafsaAvailabilityDate;
-          calculatedDate = earlySubmissionTarget < config.fafsaAvailabilityDate ?
-            config.fafsaAvailabilityDate : earlySubmissionTarget;
-          base.source = 'FAFSA availability and earliest aid-priority deadline';
-        }
-        if (config.fafsaAvailabilityDate && template.templateId === 'AID-07') {
-          var reviewTarget = addDays(config.fafsaAvailabilityDate, 7);
-          var aidReviewTarget = base.date ? addDays(base.date, -14) : reviewTarget;
-          calculatedDate = aidReviewTarget < reviewTarget ? reviewTarget : aidReviewTarget;
-          base.source = 'FAFSA submission window and earliest aid-priority deadline';
+        var dateResolver = CALCULATED_DATE_RESOLVERS[template.dateResolver];
+        var resolvedDate = dateResolver ? dateResolver(base, config) : null;
+        if (resolvedDate) {
+          calculatedDate = resolvedDate.date;
+          base.source = resolvedDate.source;
         }
         var offsetWindow = template.offsetWindow;
         if (base.source === 'Recruiting next action') {
@@ -867,10 +969,17 @@ CollegeTools.TaskPlanner = (function() {
         var owner = ownerFor_(template, config);
         var effort = effortFor_(template, owner, config, id);
         var urgency = urgencyFor_(calculatedDate, today, template.templateId);
-        if (template.templateId === 'AID-06' && config.fafsaAvailabilityDate &&
-            base.date && config.fafsaAvailabilityDate > base.date) {
+        if (resolvedDate && resolvedDate.infeasible) {
           urgency.priority = 'Critical';
           urgency.scheduleFlag = 'Not feasible: availability follows aid deadline';
+        }
+        var templatePrefix = templateIdPrefix_(template.templateId);
+        if (planningHorizon.prefixes.indexOf(templatePrefix) !== -1) {
+          appendScheduleFlag_(urgency, 'Horizon emphasis: ' + planningHorizon.label);
+          if (calculatedDate && calculatedDate <= addDays(today, 90) &&
+              (urgency.priority === 'Normal' || urgency.priority === 'Low')) {
+            urgency.priority = 'High';
+          }
         }
         var title = template.task;
         if (scope.label && scope.id !== 'GLOBAL') title += ' — ' + scope.label;
@@ -994,6 +1103,8 @@ CollegeTools.TaskPlanner = (function() {
       applicableTemplateCount: applicableTemplateCount,
       excludedTemplateCount: validation.count - applicableTemplateCount,
       firstDeadline: firstDeadline,
+      deadlineSource: deadlineSource,
+      planningHorizon: planningHorizon,
       today: today,
       config: config,
     };
@@ -1413,6 +1524,25 @@ CollegeTools.TaskPlanner = (function() {
     var incomplete = active.filter(function(task) {
       return task.status !== 'Complete';
     });
+    var masterPlan = active.slice().sort(compareTasks_);
+    var ownerView = incomplete.slice().sort(function(left, right) {
+      var leftOwner = (left.owner || left.ownerRole || 'Unassigned').toString();
+      var rightOwner = (right.owner || right.ownerRole || 'Unassigned').toString();
+      if (leftOwner !== rightOwner) return leftOwner < rightOwner ? -1 : 1;
+      return compareTasks_(left, right);
+    });
+    var collegeView = incomplete.filter(function(task) {
+      return !!task.college;
+    }).sort(function(left, right) {
+      if (left.college !== right.college) return left.college < right.college ? -1 : 1;
+      return compareTasks_(left, right);
+    });
+    var applicationDeadline = earliest(active.filter(function(task) {
+      return task.templateId === 'SUB-03';
+    }).map(function(task) {
+      return task.anchorDate || task.dueDate;
+    })) || config.workingDeadline || suggestedDeadline_(config, today);
+    var planningHorizon = planningHorizon_(today, applicationDeadline);
     var rolling90 = incomplete.filter(function(task) {
       var due = toDate(task.dueDate);
       var plannedWeek = toDate(task.plannedWeek);
@@ -1555,6 +1685,10 @@ CollegeTools.TaskPlanner = (function() {
     });
     return {
       thisWeek: thisWeek,
+      masterPlan: masterPlan,
+      ownerView: ownerView,
+      collegeView: collegeView,
+      planningHorizon: planningHorizon,
       thisWeekCandidateCount: weeklyCandidates.length,
       thisWeekOmittedCount: Math.max(0, weeklyCandidates.length - thisWeek.length),
       thisWeekCategoryCounts: thisWeekCategoryCounts,

@@ -74,6 +74,12 @@ suite.test('Instructions explain adaptive task generation and preservation', () 
     'Instructions should explain conditional task modules');
   suite.assert(lines.includes('first plan is unconstrained'),
     'Instructions should explain that thresholds follow baseline effort');
+  suite.assert(lines.includes('Task Management > Repair'),
+    'Menu Guide should document the focused Repair Task Management command');
+  suite.assert(lines.includes('Master Plan'),
+    'Instructions should identify Tasks as the canonical Master Plan');
+  suite.assert(lines.includes('filter by Owner or College'),
+    'Instructions should explain how to use canonical owner and college filters');
 });
 
 const success = suite.summary();

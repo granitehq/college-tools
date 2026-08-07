@@ -55,6 +55,13 @@ suite.test('adaptive task-management sheet names and core headers are configured
       suite.assert(CollegeTools.Config.HEADERS.TASKS.includes(header),
         `Tasks should include ${header}`);
     });
+
+  const settingNames = CollegeTools.Config.TASK_MANAGEMENT_SETTINGS.map((setting) => setting[0]);
+  ['Student Owner Name', 'Parent/Guardian Owner Name', 'Testing Enabled',
+    'Athletic Recruiting Enabled', 'Parent Effort Multiplier'].forEach((setting) => {
+    suite.assert(settingNames.includes(setting),
+      `Central task-management configuration should define ${setting}`);
+  });
 });
 
 suite.test('critical Colleges headers snapshot stays stable', () => {

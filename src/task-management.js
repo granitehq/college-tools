@@ -12,33 +12,7 @@ var CollegeTools = CollegeTools || {};
 CollegeTools.TaskManagement = (function() {
   'use strict';
 
-  var SETTINGS = [
-    ['Planning Start Date', '', 'Date the family starts using the plan'],
-    ['Working First Application Deadline', '', 'Fallback until school-specific dates are entered'],
-    ['FAFSA Availability Date', '', 'Use the official date for the application cycle'],
-    ['Current Grade', '', 'For example: 11 or 12'],
-    ['Expected Graduation Year', '', 'Four-digit high-school graduation year'],
-    ['Application Cycle', '', 'Optional label such as 2026-27'],
-    ['Student Owner Name', '', 'Optional name replacing the Student role label'],
-    ['Parent/Guardian Owner Name', '', 'Optional name replacing the Parent/Guardian role label'],
-    ['Counselor/Professional Owner Name', '', 'One combined standard role; use custom owners if needed'],
-    ['Counselor/Professional Participating', 'No', 'Yes reassigns professional-owned work to this role'],
-    ['Custom Owners (comma separated)', '', 'Optional additional people such as School Counselor, Consultant'],
-    ['Parent Effort Multiplier', 1, 'Applied to parent-owned baseline effort; override individual tasks as needed'],
-    ['Testing Enabled', 'No', 'Generate testing tasks only when applicable'],
-    ['Athletic Recruiting Enabled', 'No', 'Generate recruiting tasks and create Recruiting Tracker'],
-    ['CSS Profile Enabled', 'No', 'Generate CSS Profile tasks only when applicable'],
-    ['Visits Enabled', 'No', 'Generate selected visit/event tasks'],
-    ['Interviews Enabled', 'No', 'Generate interview tasks only when applicable'],
-    ['Portfolio/Audition Enabled', 'No', 'Generate portfolio/audition tasks only when applicable'],
-    ['Professional Support Enabled', 'No', 'Records available support separately from accountable ownership'],
-    ['Student Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
-    ['Parent Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
-    ['Shared Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
-    ['Student Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
-    ['Parent Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
-    ['Shared Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
-  ];
+  var SETTINGS = CollegeTools.Config.TASK_MANAGEMENT_SETTINGS;
 
   var TASK_FIELDS = [
     ['Task ID', 'taskId'], ['Template ID', 'templateId'], ['Workstream', 'workstream'],
@@ -541,6 +515,14 @@ CollegeTools.TaskManagement = (function() {
     if (column['Effort Override (min)']) {
       sheet.getRange(1, column['Effort Override (min)']).setNote(
         'Optional task-specific effort; overrides the configured role multiplier.');
+    }
+    if (column['Priority Override']) {
+      sheet.getRange(1, column['Priority Override']).setNote(
+        'Optional family-selected priority; overrides the calculated deadline and dependency priority.');
+    }
+    if (column['Evidence Source']) {
+      sheet.getRange(1, column['Evidence Source']).setNote(
+        'Tracker-derived completion provenance. Correct the canonical tracker if this evidence is wrong.');
     }
     var desiredFilterRows = Math.max(2, sheet.getMaxRows());
     var filter = sheet.getFilter ? sheet.getFilter() : null;
@@ -1122,6 +1104,9 @@ CollegeTools.TaskManagement = (function() {
       }).join('; ') || 'None recorded';
     };
     var reportRows = [
+      ['Master Plan', 'Canonical Tasks sheet — ' + views.masterPlan.length + ' active tasks'],
+      ['Planning horizon', views.planningHorizon.label],
+      ['Horizon emphasis', views.planningHorizon.emphasis],
       ['Current actions shown / eligible',
         views.thisWeek.length + ' / ' + views.thisWeekCandidateCount],
       ['Current actions omitted', views.thisWeekOmittedCount],
@@ -1188,6 +1173,23 @@ CollegeTools.TaskManagement = (function() {
       sheet.getRange(row, 1, views.rolling90.length, headers.length)
         .setValues(views.rolling90.map(rowForTask));
     }
+    row += views.rolling90.length + 2;
+    var writeTaskList = function(title, tasks) {
+      sheet.getRange(row, 1).setValue(title).setFontWeight('bold').setBackground('#d9d2e9');
+      row++;
+      sheet.getRange(row, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+      row++;
+      if (tasks.length) {
+        sheet.getRange(row, 1, tasks.length, headers.length).setValues(tasks.map(rowForTask));
+        row += tasks.length;
+      } else {
+        sheet.getRange(row, 1).setValue('No matching open tasks.');
+        row++;
+      }
+      row += 2;
+    };
+    writeTaskList('Owner View — open tasks sorted by owner', views.ownerView);
+    writeTaskList('College View — open college-linked tasks', views.collegeView);
     var dueColumn = headers.indexOf('Due Date') + 1;
     sheet.getRange(2, dueColumn, Math.max(1, sheet.getLastRow() - 1), 1).setNumberFormat('yyyy-mm-dd');
     sheet.setFrozenRows(1);

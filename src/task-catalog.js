@@ -279,6 +279,15 @@ CollegeTools.TaskCatalog = (function() {
     'DEC-06': ['DEC-05'], 'DEC-07': ['DEC-06'],
   };
 
+  // Special date calculations are selected by catalog metadata and executed
+  // by TaskPlanner. This keeps per-template scheduling choices in the same
+  // source of truth as dependencies and other task contract fields.
+  var DATE_RESOLVERS = {
+    'AID-02': 'fafsaAccess',
+    'AID-06': 'fafsaSubmission',
+    'AID-07': 'fafsaReview',
+  };
+
   var RESOURCE_LINKS = {
     'AID-02': 'https://studentaid.gov/articles/key-facts-accounts/',
     'AID-06': 'https://studentaid.gov/articles/fafsa-student-steps/',
@@ -325,6 +334,21 @@ CollegeTools.TaskCatalog = (function() {
   }
 
   /**
+   * Classifies the scheduling mechanism represented by a template.
+   * @param {string} scope - Template scope
+   * @param {number} offsetDays - Days relative to the anchor
+   * @param {Array<string>} dependencies - Template dependencies
+   * @returns {string} Schedule-rule taxonomy label
+   */
+  function scheduleRule_(scope, offsetDays, dependencies) {
+    if (scope === 'recurring') return 'Recurrence';
+    if (dependencies.length) return 'Dependency';
+    if (offsetDays === 0) return 'Fixed date';
+    if (scope === 'global') return 'Suggested window';
+    return 'Milestone offset';
+  }
+
+  /**
    * Converts the compact catalog rows to immutable-style template objects.
    * @returns {Array<Object>} Task templates
    */
@@ -334,6 +358,7 @@ CollegeTools.TaskCatalog = (function() {
       var scope = SCOPES[row[0]] || 'global';
       var offsetDays = Object.prototype.hasOwnProperty.call(OFFSET_OVERRIDES, row[0]) ?
         OFFSET_OVERRIDES[row[0]] : DEFAULT_OFFSETS[prefix];
+      var dependencies = (DEPENDENCIES[row[0]] || []).slice();
       return {
         templateId: row[0],
         task: row[1],
@@ -346,13 +371,14 @@ CollegeTools.TaskCatalog = (function() {
         stage: STAGE_BY_PREFIX[prefix],
         module: OPTIONAL_MODULES[row[0]] || 'Core',
         scope: scope,
-        scheduleRule: scope === 'recurring' ? 'Weekly recurrence' : 'Milestone offset',
+        scheduleRule: scheduleRule_(scope, offsetDays, dependencies),
         scheduleAnchor: scheduleAnchor_(row[0], scope),
         offsetDays: offsetDays,
         offsetWindow: scope === 'recurring' ? 'Weekly inside rolling 90 days' :
           (offsetDays === 0 ? 'On anchor date' :
             Math.abs(offsetDays) + ' days ' + (offsetDays < 0 ? 'before' : 'after') + ' anchor'),
-        dependencies: (DEPENDENCIES[row[0]] || []).slice(),
+        dependencies: dependencies,
+        dateResolver: DATE_RESOLVERS[row[0]] || '',
         resourceLinks: RESOURCE_LINKS[row[0]] || '',
       };
     });

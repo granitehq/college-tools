@@ -214,6 +214,37 @@ CollegeTools.Config = (function() {
     ],
   };
 
+  // Canonical Task Settings definitions. Spreadsheet integration renders this
+  // data but does not own role/module defaults; keeping them here makes the
+  // configuration contract reusable and testable outside the sheet service.
+  var TASK_MANAGEMENT_SETTINGS = [
+    ['Planning Start Date', '', 'Date the family starts using the plan'],
+    ['Working First Application Deadline', '', 'Fallback until school-specific dates are entered'],
+    ['FAFSA Availability Date', '', 'Use the official date for the application cycle'],
+    ['Current Grade', '', 'For example: 11 or 12'],
+    ['Expected Graduation Year', '', 'Four-digit high-school graduation year'],
+    ['Application Cycle', '', 'Optional label such as 2026-27'],
+    ['Student Owner Name', '', 'Optional name replacing the Student role label'],
+    ['Parent/Guardian Owner Name', '', 'Optional name replacing the Parent/Guardian role label'],
+    ['Counselor/Professional Owner Name', '', 'One combined standard role; use custom owners if needed'],
+    ['Counselor/Professional Participating', 'No', 'Yes reassigns professional-owned work to this role'],
+    ['Custom Owners (comma separated)', '', 'Optional additional people such as School Counselor, Consultant'],
+    ['Parent Effort Multiplier', 1, 'Applied to parent-owned baseline effort; override individual tasks as needed'],
+    ['Testing Enabled', 'No', 'Generate testing tasks only when applicable'],
+    ['Athletic Recruiting Enabled', 'No', 'Generate recruiting tasks and create Recruiting Tracker'],
+    ['CSS Profile Enabled', 'No', 'Generate CSS Profile tasks only when applicable'],
+    ['Visits Enabled', 'No', 'Generate selected visit/event tasks'],
+    ['Interviews Enabled', 'No', 'Generate interview tasks only when applicable'],
+    ['Portfolio/Audition Enabled', 'No', 'Generate portfolio/audition tasks only when applicable'],
+    ['Professional Support Enabled', 'No', 'Records available support separately from accountable ownership'],
+    ['Student Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
+    ['Parent Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
+    ['Shared Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
+    ['Student Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+    ['Parent Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+    ['Shared Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+  ];
+
   // Default scoring weights
   // Weights only for college ratings — Campus Visit ratings use a plain
   // average (see CollegeTools.Scoring), so they carry no weight entries.
@@ -236,6 +267,7 @@ CollegeTools.Config = (function() {
     API_CONFIG: API_CONFIG,
     API_FIELDS: API_FIELDS,
     HEADERS: HEADERS,
+    TASK_MANAGEMENT_SETTINGS: TASK_MANAGEMENT_SETTINGS,
     DEFAULT_WEIGHTS: DEFAULT_WEIGHTS,
   };
 })();

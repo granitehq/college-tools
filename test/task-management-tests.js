@@ -99,6 +99,21 @@ suite.test('catalog contains uncapped, unique, validated implementation template
     suite.assertEqual(typeof template.offsetDays, 'number',
       `${template.templateId} should define a schedule`);
   });
+
+  const scheduleRules = new Set(templates.map((template) => template.scheduleRule));
+  ['Fixed date', 'Dependency', 'Suggested window', 'Milestone offset', 'Recurrence']
+    .forEach((rule) => {
+      suite.assert(scheduleRules.has(rule),
+        `Catalog schedule metadata should distinguish the ${rule} rule`);
+    });
+
+  const byId = Object.fromEntries(templates.map((template) => [template.templateId, template]));
+  suite.assertEqual(byId['AID-02'].dateResolver, 'fafsaAccess',
+    'FAFSA access scheduling should be selected by catalog metadata');
+  suite.assertEqual(byId['AID-06'].dateResolver, 'fafsaSubmission',
+    'FAFSA submission scheduling should be selected by catalog metadata');
+  suite.assertEqual(byId['AID-07'].dateResolver, 'fafsaReview',
+    'FAFSA review scheduling should be selected by catalog metadata');
 });
 
 suite.test('catalog covers the post-acceptance decision and enrollment phase', () => {
@@ -420,18 +435,47 @@ suite.test('parent effort multiplier of 0 is honored instead of falling back to 
     'An explicit 0 multiplier should zero out parent-owned effort, not fall back to 1x');
 });
 
-suite.test('generatePlan reports missing_deadline when no working or college deadline exists', () => {
+suite.test('generatePlan uses a labeled suggested window as the final deadline fallback', () => {
   const today = date(2026, 7, 30);
-  const result = CollegeTools.TaskPlanner.generatePlan(baseConfig(null), {colleges: []}, today);
+  const config = baseConfig(null);
+  config.fafsaAvailabilityDate = null;
+  config.graduationYear = 2028;
+  const result = CollegeTools.TaskPlanner.generatePlan(config, {colleges: []}, today);
 
-  suite.assertEqual(result.ok, false,
-    'A brand-new workbook with no deadline configured should fail, not throw or silently generate');
-  suite.assertEqual(result.code, 'missing_deadline',
-    'The failure should report the missing_deadline code');
-  suite.assert(result.errors && result.errors.length > 0 &&
-    result.errors[0].toLowerCase().includes('deadline'),
-  'The failure should explain that a deadline is needed');
-  suite.assertEqual(result.tasks.length, 0, 'No tasks should be generated on failure');
+  suite.assert(result.ok, 'A family profile should generate from a suggested window when dates are absent');
+  suite.assertEqual(result.firstDeadline.getTime(), date(2027, 11, 1).getTime(),
+    'The suggested first-application window should be November 1 before graduation');
+  suite.assertEqual(result.deadlineSource, 'Suggested first-application window; confirm manually',
+    'The final fallback should never masquerade as an authoritative or family-entered date');
+  suite.assert(result.tasks.every((task) => task.dateSource || task.scopeType === 'recurring'),
+    'Every non-recurring task should retain attributable date provenance');
+});
+
+suite.test('all four planning horizons expose distinct task emphasis without truncating the roadmap', () => {
+  const cases = [
+    {deadline: date(2028, 1, 1), key: 'more-than-one-year', phrase: 'Exploration', prefix: 'PRO-'},
+    {deadline: date(2027, 5, 1), key: 'six-to-twelve-months', phrase: 'Research', prefix: 'COL-'},
+    {deadline: date(2026, 12, 15), key: 'three-to-six-months', phrase: 'Final list', prefix: 'APP-'},
+    {deadline: date(2026, 10, 15), key: 'ninety-days-or-less', phrase: 'Applications', prefix: 'APP-'},
+  ];
+
+  cases.forEach((entry) => {
+    const result = CollegeTools.TaskPlanner.generatePlan(
+      baseConfig(entry.deadline),
+      {colleges: []},
+      date(2026, 7, 30),
+    );
+    suite.assertEqual(result.planningHorizon.key, entry.key,
+      `${entry.key} should be selected from days remaining`);
+    suite.assert(result.planningHorizon.emphasis.includes(entry.phrase),
+      `${entry.key} should expose its requirements-defined emphasis`);
+    suite.assert(result.tasks.length > 0,
+      `${entry.key} should retain a full applicable roadmap`);
+    suite.assert(result.tasks.some((task) =>
+      task.templateId.indexOf(entry.prefix) === 0 &&
+      task.scheduleFlag.indexOf('Horizon emphasis:') !== -1),
+    `${entry.key} should visibly emphasize its phase-appropriate task set`);
+  });
 });
 
 suite.test('generatePlan reports invalid_catalog when catalog validation fails', () => {
@@ -900,6 +944,42 @@ suite.test('views cap current actions, report rolling work, and apply week-speci
     'Shared effort should be counted once per task, not duplicated across roles');
 });
 
+suite.test('views expose the canonical master plan plus owner and college task lists', () => {
+  const today = date(2026, 8, 3);
+  const tasks = [
+    {
+      taskId: 'A', task: 'Parent application task', owner: 'Parent',
+      ownerRole: 'Parent/Guardian', college: 'Alpha University', status: 'Ready',
+      plannedWeek: today, dueDate: today, adjustedEffortMinutes: 30, priority: 'High',
+    },
+    {
+      taskId: 'B', task: 'Student shared task', owner: 'Avery',
+      ownerRole: 'Student', college: '', status: 'Ready', plannedWeek: today,
+      dueDate: today, adjustedEffortMinutes: 45, priority: 'Normal',
+    },
+    {
+      taskId: 'C', task: 'Completed college task', owner: 'Avery',
+      ownerRole: 'Student', college: 'Beta College', status: 'Complete',
+      plannedWeek: today, dueDate: today, adjustedEffortMinutes: 60, priority: 'Normal',
+    },
+  ];
+
+  const views = CollegeTools.TaskPlanner.buildViews(tasks, today, {
+    workingDeadline: date(2026, 10, 15),
+  });
+
+  suite.assertEqual(views.masterPlan.length, 3,
+    'Master Plan should represent every active canonical task');
+  suite.assertEqual(views.ownerView.length, 2,
+    'Owner view should list all incomplete work by configured owner');
+  suite.assertEqual(views.ownerView[0].owner, 'Avery',
+    'Owner view should have a stable owner-first ordering');
+  suite.assertEqual(views.collegeView.length, 1,
+    'College view should list incomplete college-linked work only');
+  suite.assertEqual(views.collegeView[0].college, 'Alpha University',
+    'College view should retain its canonical college link');
+});
+
 suite.test('This Week preserves every required category and reports truncation', () => {
   const today = date(2026, 8, 3);
   const tasks = [];
@@ -1108,6 +1188,25 @@ suite.test('previewTaskPlan reports setup required without creating Task Setting
     'A setup-required Preview result should still make no workbook mutations');
 });
 
+suite.test('preview reports template counts before the empty Tasks table has any rows', () => {
+  setupWorkbook({});
+  CollegeTools.TaskManagement.setupTaskManagement();
+  setSetting('Working First Application Deadline', date(2026, 10, 28));
+  setSetting('Planning Start Date', date(2026, 7, 30));
+  const tasks = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASKS);
+
+  suite.assertEqual(tasks.getLastRow(), 1, 'Precondition: Tasks should contain headers only');
+  const preview = CollegeTools.TaskManagement.previewTaskPlan();
+
+  suite.assert(preview.ok, 'Preview should succeed against a literally empty task table');
+  suite.assert(preview.generatedCount > 0, 'Preview should report the generated instance count');
+  suite.assertEqual(
+    preview.applicableTemplateCount + preview.excludedTemplateCount,
+    CollegeTools.TaskCatalog.validate().count,
+    'Preview should report the complete included/excluded template count before generation');
+  suite.assertEqual(tasks.getLastRow(), 1, 'Preview should leave the Tasks table empty');
+});
+
 suite.test('previewTaskPlan reports setup required without repairing malformed Task Settings', () => {
   setupWorkbook({});
   const settings = mockSpreadsheet.getSheetByName(
@@ -1150,6 +1249,14 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
   'Setup should safely expand a legacy narrow filter without reading out-of-range criteria');
   suite.assert(tasks.getRange(1, columnOf(tasks, 'Task ID')).getNote().includes('Stable identity'),
     'Task headers should explain preservation behavior');
+  suite.assert(tasks.getRange(1, columnOf(tasks, 'Priority Override')).getNote().includes('overrides'),
+    'Priority Override should explain how it affects calculated priority');
+  suite.assert(tasks.getRange(1, columnOf(tasks, 'Evidence Source')).getNote().includes('tracker'),
+    'Evidence Source should explain its tracker-derived provenance');
+  suite.assertEqual(
+    mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS).getLastRow(),
+    CollegeTools.Config.TASK_MANAGEMENT_SETTINGS.length + 1,
+    'Task Settings should render the centrally configured setting definitions');
   suite.assert(!mockSpreadsheet.getSheetByName(
     CollegeTools.Config.SHEET_NAMES.RECRUITING_TRACKER),
   'Recruiting Tracker should not exist while recruiting is disabled');
@@ -1194,6 +1301,14 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Weekly report should summarize canonical application statuses');
   suite.assert(weeklyText.includes('Accepted: 1'),
     'Weekly report should summarize canonical decision results');
+  suite.assert(weeklyText.includes('Master Plan'),
+    'Generated views should point to the canonical Master Plan');
+  suite.assert(weeklyText.includes('Owner View'),
+    'Generated views should include a read-only task list by owner');
+  suite.assert(weeklyText.includes('College View'),
+    'Generated views should include a read-only task list by college');
+  suite.assert(weeklyText.includes('Planning horizon'),
+    'Generated views should show the active planning horizon');
 
   const unchangedPreview = CollegeTools.TaskManagement.previewTaskPlan();
   suite.assertEqual(unchangedPreview.preview.add, 0,

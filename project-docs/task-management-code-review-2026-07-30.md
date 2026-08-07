@@ -12,6 +12,38 @@ scheduler & family config, SW-05/SW-06/SW-07 generation & sheet & views,
 SW-08–SW-12 recruiting/completion/effort/setup/integration), synthesized into
 one ordered list below.
 
+## Resolution Status
+
+**Status as of 2026-08-07:** All 17 findings are resolved in the current
+`feat/task-management-requirements` worktree. The detailed findings below are
+retained as the historical review record; their source line references describe
+the pre-fix implementation.
+
+| # | Status | Resolution |
+|---:|---|---|
+| 1 | Resolved | Any nonblank Tasks row receives stable manual identity before filtering, and tracker-edit preservation is covered by a regression test. |
+| 2 | Resolved | Scholarship tasks fall back to the earliest real deadline with accurate provenance. |
+| 3 | Resolved | `This Week` reserves distinct category representatives and reports eligible, shown, and omitted counts. |
+| 4 | Resolved | Effort projections and capacity warnings operate on incomplete tasks only. |
+| 5 | Resolved | Fixed-date dependency conflicts have focused regression coverage. |
+| 6 | Resolved | The weekly report reads canonical application-status and decision-result breakdowns. |
+| 7 | Resolved | `Tasks` is documented as the canonical Master Plan; `This Week` renders read-only Owner and College task lists, and Instructions explains canonical filters. |
+| 8 | Resolved | When no stronger date exists, generation computes a November 1 suggested first-application window and labels it `Suggested first-application window; confirm manually`. |
+| 9 | Resolved | All four horizon buckets now select explicit workstream emphasis, flag matching tasks, raise near-term emphasized work to at least High priority, and show the phase in the weekly report without truncating the roadmap. |
+| 10 | Resolved | Repair Entire Workbook reports the task-management repair result. |
+| 11 | Resolved | The in-sheet Menu Guide documents the focused Task Management Repair command. |
+| 12 | Resolved | `Priority Override` and `Evidence Source` have explanatory header notes. |
+| 13 | Resolved | Catalog metadata distinguishes `Fixed date`, `Dependency`, `Suggested window`, `Milestone offset`, and `Recurrence`. |
+| 14 | Resolved | FAFSA date behavior is selected by catalog `dateResolver` metadata and dispatched through planner resolver functions; dependencies remain in the generic dependency graph. |
+| 15 | Resolved | Task Settings definitions and role/module defaults live in `CollegeTools.Config.TASK_MANAGEMENT_SETTINGS`; sheet integration renders that central contract. |
+| 16 | Resolved | Schema row-convention tests cover `Task Templates`, `This Week`, and `Recruiting Tracker`. |
+| 17 | Resolved | Preview template counts are tested against a literally empty, headers-only Tasks table and Preview leaves it unchanged. |
+
+**Verification on 2026-08-07:** `npm run check` passed, including 45 focused
+task-management scenarios, and `git diff --check` passed. This is local
+automated evidence; no live Google Sheet, Apps Script push, or deployment was
+performed as part of this resolution pass.
+
 ## Findings
 
 ### Blocker
