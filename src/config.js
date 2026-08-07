@@ -37,6 +37,11 @@ CollegeTools.Config = (function() {
     SCHOLARSHIP_TRACKER: 'Scholarship Tracker',
     STATUS_TRACKER: 'Application Status Tracker',
     DASHBOARD: 'Dashboard',
+    TASK_SETTINGS: 'Task Settings',
+    TASKS: 'Tasks',
+    TASK_TEMPLATES: 'Task Templates',
+    THIS_WEEK: 'This Week',
+    RECRUITING_TRACKER: 'Recruiting Tracker',
   };
 
   // API configuration
@@ -137,6 +142,7 @@ CollegeTools.Config = (function() {
     // columns so they keep surfacing in Dashboard's What's Due Next.
     APPLICATION_TIMELINE: [
       'College Name', 'Application Type (ED/ED2/EA/REA/RD)', 'Application Opens', 'Application Deadline',
+      'Supplemental Essays Required (#)', 'Supplemental Prompts / Topics',
       'Test Score Deadline', 'Transcript Deadline', 'Counselor Rec Deadline', 'Teacher Rec Deadline',
       'FAFSA Opens', 'Merit Scholarship Deadline',
       'Other Deadline 1 Date', 'Other Deadline 2 Date', 'Mid-Year Report Due', 'Decision Release Date',
@@ -147,7 +153,8 @@ CollegeTools.Config = (function() {
     STATUS_TRACKER: [
       'College Name', 'Application Status', 'Decision Plan', 'App Portal', 'Submitted Date',
       'Transcript Sent', 'Test Scores Sent', 'Recommendations Complete', 'Essays Complete', 'Interview (Y/N)',
-      'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Portfolio Required (Y/N)',
+      'Interview Date', 'Campus Visit Date', 'Scholarship Offer ($)', 'Decision/Result', 'Enrollment Choice',
+      'Portfolio Required (Y/N)',
       'Portfolio Submitted (Date)', 'Documents Complete', 'Notes', 'College ID',
     ],
 
@@ -167,9 +174,76 @@ CollegeTools.Config = (function() {
       'Essay Topics', 'Word Count', 'Letters of Rec (#)', 'Recommender Types', 'Requirements Checklist',
       'Application Started Date',
       'Application Submitted Date', 'Decision Date', 'Award Status (Pending/Awarded/Declined)',
-      'Amount Awarded', 'Notes/Strategy',
+      'Amount Awarded', 'Notes/Strategy', 'Scholarship ID',
+    ],
+
+    TASK_SETTINGS: ['Setting', 'Value', 'Guidance'],
+
+    TASKS: [
+      'Task ID', 'Template ID', 'Workstream', 'Stage', 'Module', 'Scope Type',
+      'Scope ID', 'College', 'College ID', 'Task', 'Applicability Rule',
+      'Schedule Rule', 'Schedule Anchor', 'Anchor Date', 'Offset / Window',
+      'Owner', 'Owner Role',
+      'Owner Locked', 'Support Role', 'Calculated Date', 'Due Date',
+      'Effective Date', 'Date Source', 'Date Locked', 'Planned Week', 'Scheduled Block',
+      'Schedule Flag', 'Priority', 'Priority Override', 'Status', 'Dependencies', 'Blocked By',
+      'Normal Effort (min)', 'Adjusted Effort (min)', 'Effort Override (min)',
+      'Deliverable', 'Resource Links', 'Decision Needed', 'Evidence Source',
+      'Completion Date', 'Notes', 'Manually Selected', 'Generated',
+      'Archived Reason',
+    ],
+
+    TASK_TEMPLATES: [
+      'Template ID', 'Workstream', 'Stage', 'Module', 'Scope', 'Task',
+      'Owner Role', 'Support Role', 'Applicability', 'Schedule Rule', 'Anchor',
+      'Offset / Window',
+      'Dependencies', 'Effort (min)', 'Deliverable', 'Resource Links',
+    ],
+
+    THIS_WEEK: [
+      'Task ID', 'Due Date', 'Priority', 'Status', 'Owner', 'College', 'Task',
+      'Adjusted Effort (min)', 'Decision Needed', 'Schedule Flag',
+    ],
+
+    RECRUITING_TRACKER: [
+      'Recruiting Contact ID', 'College ID', 'College Name', 'Sport/Event',
+      'Coach/Contact Name', 'Title', 'Email', 'Phone',
+      'Recruiting Questionnaire Link', 'Questionnaire Submitted Date',
+      'Initial Outreach Date', 'Response/Interest', 'Last Contact',
+      'Next Follow-Up', 'Meeting/Visit', 'Student Next Action', 'Notes',
     ],
   };
+
+  // Canonical Task Settings definitions. Spreadsheet integration renders this
+  // data but does not own role/module defaults; keeping them here makes the
+  // configuration contract reusable and testable outside the sheet service.
+  var TASK_MANAGEMENT_SETTINGS = [
+    ['Planning Start Date', '', 'Date the family starts using the plan'],
+    ['Working First Application Deadline', '', 'Fallback until school-specific dates are entered'],
+    ['FAFSA Availability Date', '', 'Use the official date for the application cycle'],
+    ['Current Grade', '', 'For example: 11 or 12'],
+    ['Expected Graduation Year', '', 'Four-digit high-school graduation year'],
+    ['Application Cycle', '', 'Optional label such as 2026-27'],
+    ['Student Owner Name', '', 'Optional name replacing the Student role label'],
+    ['Parent/Guardian Owner Name', '', 'Optional name replacing the Parent/Guardian role label'],
+    ['Counselor/Professional Owner Name', '', 'One combined standard role; use custom owners if needed'],
+    ['Counselor/Professional Participating', 'No', 'Yes reassigns professional-owned work to this role'],
+    ['Custom Owners (comma separated)', '', 'Optional additional people such as School Counselor, Consultant'],
+    ['Parent Effort Multiplier', 1, 'Applied to parent-owned baseline effort; override individual tasks as needed'],
+    ['Testing Enabled', 'No', 'Generate testing tasks only when applicable'],
+    ['Athletic Recruiting Enabled', 'No', 'Generate recruiting tasks and create Recruiting Tracker'],
+    ['CSS Profile Enabled', 'No', 'Generate CSS Profile tasks only when applicable'],
+    ['Visits Enabled', 'No', 'Generate selected visit/event tasks'],
+    ['Interviews Enabled', 'No', 'Generate interview tasks only when applicable'],
+    ['Portfolio/Audition Enabled', 'No', 'Generate portfolio/audition tasks only when applicable'],
+    ['Professional Support Enabled', 'No', 'Records available support separately from accountable ownership'],
+    ['Student Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
+    ['Parent Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
+    ['Shared Weekly Threshold (hours)', '', 'Optional after reviewing the unconstrained baseline plan'],
+    ['Student Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+    ['Parent Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+    ['Shared Week Overrides', '', 'Optional: YYYY-MM-DD=hours; YYYY-MM-DD=hours'],
+  ];
 
   // Default scoring weights
   // Weights only for college ratings — Campus Visit ratings use a plain
@@ -193,6 +267,7 @@ CollegeTools.Config = (function() {
     API_CONFIG: API_CONFIG,
     API_FIELDS: API_FIELDS,
     HEADERS: HEADERS,
+    TASK_MANAGEMENT_SETTINGS: TASK_MANAGEMENT_SETTINGS,
     DEFAULT_WEIGHTS: DEFAULT_WEIGHTS,
   };
 })();

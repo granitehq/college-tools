@@ -60,6 +60,10 @@ suite.test('repair entire workbook adapter owns confirmation and final alert', (
     'Repair Entire Workbook adapter should call the service without nested alerts');
   suite.assert(repairBody.includes('Workbook Repair Complete'),
     'Repair Entire Workbook adapter should show the final completion alert');
+  suite.assert(repairBody.includes('Repairing Tasks and refreshing This Week'),
+    'Repair confirmation should disclose task-management repair');
+  suite.assert(repairBody.includes("detailById['task-management']"),
+    'Repair result should report the task-management step');
 });
 
 suite.test('repair menu item is present', () => {
@@ -79,6 +83,23 @@ suite.test('travel planner refresh menu item is present', () => {
     'Travel Planner refresh menu item should be exposed');
   suite.assert(menuSource.includes('function refreshTravelPlanner()'),
     'Travel Planner refresh adapter should exist');
+});
+
+suite.test('task-management menu exposes setup, safe preview, generation, refresh, sync, and repair', () => {
+  [
+    'Setup Task Management',
+    'Preview Task Plan Changes',
+    'Generate / Regenerate Task Plan',
+    'Refresh This Week',
+    'Sync Completion From Trackers',
+    'Repair Task Management',
+  ].forEach((label) => {
+    suite.assert(menuSource.includes(label), `Task menu should include ${label}`);
+  });
+  suite.assert(menuSource.includes('No workbook changes were made.'),
+    'Preview adapter should explicitly confirm that preview is non-mutating');
+  suite.assert(menuSource.includes('CollegeTools.TaskManagement.handleEdit'),
+    'The edit trigger should keep generated task views current where safe');
 });
 
 const success = suite.summary();

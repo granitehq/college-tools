@@ -8,9 +8,12 @@ const harness = createHarness([
   'config.js',
   'utils.js',
   'schema.js',
+  'task-catalog.js',
+  'task-planner.js',
   'formatting.js',
   'travel.js',
   'trackers.js',
+  'task-management.js',
   'colleges.js',
   'setup.js',
 ]);

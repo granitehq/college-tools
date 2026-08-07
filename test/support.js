@@ -47,6 +47,10 @@ class MockRange {
     }
   }
 
+  _recordMutation() {
+    this.sheet._recordMutation();
+  }
+
   getValue() {
     return this.sheet.getCellValue(this.row, this.col);
   }
@@ -56,8 +60,11 @@ class MockRange {
   getLastRow() { return this.row + this.numRows - 1; }
   getColumn() { return this.col; }
   getLastColumn() { return this.col + this.numCols - 1; }
+  getNumRows() { return this.numRows; }
+  getNumColumns() { return this.numCols; }
 
   setValue(value) {
+    this._recordMutation();
     this.sheet.callCounts.setValue++;
     this.sheet.setCellValue(this.row, this.col, value);
     this.sheet.setCellFormula(this.row, this.col, '');
@@ -77,6 +84,12 @@ class MockRange {
   }
 
   setValues(values) {
+    if (!Array.isArray(values) || values.length !== this.numRows ||
+        values.some((row) => !Array.isArray(row) || row.length !== this.numCols)) {
+      throw new Error(
+        `setValues dimensions must match ${this.numRows}x${this.numCols}`);
+    }
+    this._recordMutation();
     this.sheet.callCounts.setValues++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
@@ -111,12 +124,19 @@ class MockRange {
   }
 
   setFormula(formula) {
+    this._recordMutation();
     this.sheet.callCounts.setFormula++;
     this.sheet.setCellFormula(this.row, this.col, formula);
     return this;
   }
 
   setFormulas(formulas) {
+    if (!Array.isArray(formulas) || formulas.length !== this.numRows ||
+        formulas.some((row) => !Array.isArray(row) || row.length !== this.numCols)) {
+      throw new Error(
+        `setFormulas dimensions must match ${this.numRows}x${this.numCols}`);
+    }
+    this._recordMutation();
     this.sheet.callCounts.setFormulas++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
@@ -149,6 +169,7 @@ class MockRange {
   }
 
   clearContent() {
+    this._recordMutation();
     this._forEachCell((row, col) => {
       this.sheet.setCellValue(row, col, '');
       this.sheet.setCellFormula(row, col, '');
@@ -157,6 +178,7 @@ class MockRange {
   }
 
   setDataValidation(rule) {
+    this._recordMutation();
     this._forEachCell((row, col) => {
       this.sheet.setCellValidation(row, col, rule);
     });
@@ -168,6 +190,7 @@ class MockRange {
   }
 
   setDataValidations(grid) {
+    this._recordMutation();
     this.sheet.callCounts.setDataValidations++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
@@ -202,6 +225,7 @@ class MockRange {
   }
 
   setNumberFormats(grid) {
+    this._recordMutation();
     this.sheet.callCounts.setNumberFormats++;
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
@@ -211,13 +235,14 @@ class MockRange {
     return this;
   }
 
-  setFontWeight() { return this; }
-  setBackground() { return this; }
-  setFontSize() { return this; }
-  setFontColor() { return this; }
-  setFontStyle() { return this; }
-  setBorder() { return this; }
+  setFontWeight() { this._recordMutation(); return this; }
+  setBackground() { this._recordMutation(); return this; }
+  setFontSize() { this._recordMutation(); return this; }
+  setFontColor() { this._recordMutation(); return this; }
+  setFontStyle() { this._recordMutation(); return this; }
+  setBorder() { this._recordMutation(); return this; }
   setNote(note) {
+    this._recordMutation();
     this._forEachCell((row, col) => {
       this.sheet.setCellNote(row, col, note);
     });
@@ -227,15 +252,38 @@ class MockRange {
     return this.sheet.getCellNote(this.row, this.col);
   }
   setNumberFormat(pattern) {
+    this._recordMutation();
     this._forEachCell((row, col) => {
       this.sheet.setCellFormat(row, col, pattern);
     });
     return this;
   }
-  merge() { return this; }
-  setWrap() { return this; }
-  setVerticalAlignment() { return this; }
-  setHorizontalAlignment() { return this; }
+  merge() { this._recordMutation(); return this; }
+  setWrap() { this._recordMutation(); return this; }
+  setVerticalAlignment() { this._recordMutation(); return this; }
+  setHorizontalAlignment() { this._recordMutation(); return this; }
+  createFilter() {
+    this._recordMutation();
+    const criteria = {};
+    this.sheet.filter = {
+      range: this,
+      getRange: () => this,
+      getColumnFilterCriteria: (column) => {
+        if (column < 1 || column > this.numCols) {
+          throw new Error('Those columns are out of bounds.');
+        }
+        return criteria[column] || null;
+      },
+      setColumnFilterCriteria(column, value) {
+        criteria[column] = value;
+        return this;
+      },
+      remove: () => {
+        this.sheet.filter = null;
+      },
+    };
+    return this.sheet.filter;
+  }
 }
 
 class MockSheet {
@@ -247,8 +295,16 @@ class MockSheet {
     this.validations = {};
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     this.hiddenColumns = new Set();
+    this.hidden = false;
+    this.filter = null;
     this.activeRow = 3;
     this.maxRows = 1000;
+    this.mutationCount = 0;
+  }
+
+  _recordMutation() {
+    this.mutationCount++;
+    this.spreadsheet.mutationCount++;
   }
 
   _key(row, col) {
@@ -341,6 +397,10 @@ class MockSheet {
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
   }
 
+  resetMutationCount() {
+    this.mutationCount = 0;
+  }
+
   getActiveCell() {
     return {
       getRow: () => this.activeRow,
@@ -352,6 +412,7 @@ class MockSheet {
   }
 
   clear() {
+    this._recordMutation();
     this.values = {};
     this.formulas = {};
     this.validations = {};
@@ -359,12 +420,14 @@ class MockSheet {
     return this;
   }
 
-  setColumnWidth() { return this; }
-  setColumnWidths() { return this; }
-  setFrozenRows() { return this; }
-  autoResizeColumn() { return this; }
-  autoResizeColumns() { return this; }
+  setColumnWidth() { this._recordMutation(); return this; }
+  setColumnWidths() { this._recordMutation(); return this; }
+  setFrozenRows() { this._recordMutation(); return this; }
+  getFilter() { return this.filter; }
+  autoResizeColumn() { this._recordMutation(); return this; }
+  autoResizeColumns() { this._recordMutation(); return this; }
   hideColumns(column, numColumns) {
+    this._recordMutation();
     const count = numColumns || 1;
     for (let c = column; c < column + count; c++) this.hiddenColumns.add(c);
     return this;
@@ -373,6 +436,7 @@ class MockSheet {
     return this.hiddenColumns.has(column);
   }
   moveColumns(range, destinationIndex) {
+    this._recordMutation();
     if (range.numCols !== 1) throw new Error('Mock moveColumns currently supports one column');
     const sourceColumn = range.col;
     const lastColumn = this.getLastColumn();
@@ -403,6 +467,7 @@ class MockSheet {
     return this;
   }
   insertColumnBefore(column) {
+    this._recordMutation();
     const shiftMap = (source) => {
       const shifted = {};
       Object.keys(source).forEach((key) => {
@@ -421,6 +486,7 @@ class MockSheet {
     return this.deleteColumns(column, 1);
   }
   deleteColumns(startColumn, howMany) {
+    this._recordMutation();
     const endColumn = startColumn + howMany - 1;
     const shiftMap = (source) => {
       const shifted = {};
@@ -446,11 +512,13 @@ class MockSheet {
     return this;
   }
   insertRowsAfter(afterPosition, howMany) {
+    this._recordMutation();
     if (afterPosition > this.maxRows) throw new Error('Cannot insert after the sheet grid');
     this.maxRows += howMany;
     return this;
   }
   deleteRows(startRow, howMany) {
+    this._recordMutation();
     const endRow = startRow + howMany - 1;
     const shiftMap = (source) => {
       const shifted = {};
@@ -470,15 +538,20 @@ class MockSheet {
     this.maxRows -= howMany;
     return this;
   }
-  setConditionalFormatRules() { return this; }
+  setConditionalFormatRules() { this._recordMutation(); return this; }
   getConditionalFormatRules() { return []; }
-  clearConditionalFormatRules() { return this; }
+  clearConditionalFormatRules() { this._recordMutation(); return this; }
   protect() {
+    this._recordMutation();
     return {
       setDescription: () => {},
       setUnprotectedRanges: () => {},
+      setWarningOnly: () => {},
     };
   }
+  hideSheet() { this._recordMutation(); this.hidden = true; return this; }
+  showSheet() { this._recordMutation(); this.hidden = false; return this; }
+  isSheetHidden() { return this.hidden; }
 }
 
 class MockSpreadsheet {
@@ -488,6 +561,7 @@ class MockSpreadsheet {
     this.activeSheetName = null;
     this.namedRanges = {};
     this.toasts = [];
+    this.mutationCount = 0;
   }
 
   getSheetByName(name) {
@@ -495,6 +569,7 @@ class MockSpreadsheet {
   }
 
   insertSheet(name, sheetIndex) {
+    this.mutationCount++;
     const sheet = new MockSheet(name, this);
     this.sheets[name] = sheet;
     if (typeof sheetIndex === 'number') {
@@ -515,15 +590,22 @@ class MockSpreadsheet {
   }
 
   setActiveSheet(sheet) {
+    this.mutationCount++;
     this.activeSheetName = sheet.getName();
   }
 
-  moveActiveSheet() {}
+  moveActiveSheet() { this.mutationCount++; }
   setNamedRange(name, range) {
+    this.mutationCount++;
     this.namedRanges[name] = {row: range.row, col: range.col};
   }
   toast(message, title, duration) {
     this.toasts.push({message, title, duration});
+  }
+
+  resetMutationCount() {
+    this.mutationCount = 0;
+    this.getSheets().forEach((sheet) => sheet.resetMutationCount());
   }
 }
 
@@ -632,6 +714,7 @@ function createHarness(moduleFiles) {
     mockSpreadsheet.activeSheetName = null;
     mockSpreadsheet.namedRanges = {};
     mockSpreadsheet.toasts = [];
+    mockSpreadsheet.mutationCount = 0;
     mockUi.alerts = [];
   }
 
@@ -663,6 +746,14 @@ function createHarness(moduleFiles) {
       CollegeTools.Config.HEADERS.STATUS_TRACKER, 1);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER,
       CollegeTools.Config.HEADERS.SCHOLARSHIP_TRACKER, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TASK_SETTINGS,
+      CollegeTools.Config.HEADERS.TASK_SETTINGS, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TASKS,
+      CollegeTools.Config.HEADERS.TASKS, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.TASK_TEMPLATES,
+      CollegeTools.Config.HEADERS.TASK_TEMPLATES, 1);
+    ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.THIS_WEEK,
+      CollegeTools.Config.HEADERS.THIS_WEEK, 1);
     ensureSheetWithHeaders(CollegeTools.Config.SHEET_NAMES.LOOKUP, ['Official Name'], 1);
 
     mockSpreadsheet.setActiveSheet(colleges);

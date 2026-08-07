@@ -23,6 +23,7 @@ suite.test('complete setup and repair use stable registry step order', () => {
     [
       'instructions',
       'trackers',
+      'task-management',
       'dashboard',
       'formatting',
       'scoring',
@@ -40,6 +41,7 @@ suite.test('complete setup and repair use stable registry step order', () => {
       'travel-planner',
       'scoring',
       'timeline-formatting',
+      'task-management',
       'dashboard-refresh',
     ].join(','),
     'Repair Entire Workbook should use the expected registry order');

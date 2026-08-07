@@ -289,7 +289,8 @@ CollegeTools.Formatting = (function() {
   };
   STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE] = {
     range: [['College Name', CollegeTools.Config.SHEET_NAMES.COLLEGES, 'A3:A1000']],
-    date: ['Application Deadline', 'Decision Release Date'],
+    date: ['Application Deadline', 'Decision Release Date', 'Enrollment Deposit Deadline',
+      'Housing Deposit Due'],
     list: [
       ['Application Type (ED/ED2/EA/REA/RD)', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']],
       ['Priority Level', ['High', 'Medium', 'Low', 'Other']],
@@ -308,6 +309,7 @@ CollegeTools.Formatting = (function() {
       ['Application Status', ['Not Started', 'In Progress', 'Submitted', 'Under Review', 'Decision Received', 'Other']],
       ['Decision Plan', ['ED', 'ED2', 'EA', 'REA', 'RD', 'Other']],
       ['Decision/Result', ['Pending', 'Accepted', 'Deferred', 'Waitlisted', 'Rejected', 'Other']],
+      ['Enrollment Choice', ['Undecided', 'Enroll', 'Decline']],
     ],
   };
   STANDARD_VALIDATIONS[CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER] = {

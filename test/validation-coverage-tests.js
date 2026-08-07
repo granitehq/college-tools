@@ -100,6 +100,7 @@ suite.test('tracker setup and formatting repair apply the same audited dropdown 
     [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Application Status'],
     [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Decision Plan'],
     [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Decision/Result'],
+    [CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER, 'Enrollment Choice'],
     [CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 'Type (Merit/Need/Field/Local/National)'],
     [CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 'Award Type (One-time/Renewable)'],
     [CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER, 'Award Status (Pending/Awarded/Declined)'],
@@ -136,6 +137,11 @@ suite.test('select audited dropdowns include flexible Other options where intend
     'Application Type should include Other');
   suite.assert(st.getRange(2, CollegeTools.Utils.colIndex(st, 'Decision/Result')).getDataValidation().options.includes('Other'),
     'Decision/Result should include Other');
+  suite.assertEqual(
+    JSON.stringify(st.getRange(2, CollegeTools.Utils.colIndex(st, 'Enrollment Choice'))
+      .getDataValidation().options),
+    JSON.stringify(['Undecided', 'Enroll', 'Decline']),
+    'Enrollment Choice should use the canonical explicit decision options');
   suite.assert(sc.getRange(2, CollegeTools.Utils.colIndex(sc, 'Type (Merit/Need/Field/Local/National)')).getDataValidation().options.includes('Other'),
     'Scholarship type should include Other');
 });

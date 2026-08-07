@@ -195,6 +195,43 @@ suite.test('Financial Aid Tracker migration derives status columns and folds App
     'Aid Requirements Complete formula should check the new status columns for Not Required/Submitted');
 });
 
+suite.test('Application Status migration adds Enrollment Choice without disturbing existing data', () => {
+  setupWorkbook({});
+  const status = mockSpreadsheet.getSheetByName(C.SHEET_NAMES.STATUS_TRACKER);
+  const oldHeaders = C.HEADERS.STATUS_TRACKER.filter((header) => header !== 'Enrollment Choice');
+  const submittedDate = new Date('2027-01-03T00:00:00');
+  const oldValues = oldHeaders.map((header) => {
+    if (header === 'College Name') return 'Preserved University';
+    if (header === 'Application Status') return 'Decision Received';
+    if (header === 'Submitted Date') return submittedDate;
+    if (header === 'Decision/Result') return 'Accepted';
+    if (header === 'Notes') return 'Keep this family note';
+    if (header === 'College ID') return 'COL-preserved';
+    return '';
+  });
+  writeOldHeadersAndRow(status, oldHeaders, oldValues);
+
+  CollegeTools.Trackers.setupAllTrackers();
+
+  suite.assertEqual(
+    status.getRange(1, 1, 1, C.HEADERS.STATUS_TRACKER.length).getValues()[0].join('|'),
+    C.HEADERS.STATUS_TRACKER.join('|'),
+    'Application Status headers should migrate to the new canonical layout');
+  suite.assertEqual(status.getRange(2, colOf(status, 'College Name', 1)).getValue(),
+    'Preserved University', 'College Name should survive the new-column migration');
+  suite.assertEqual(status.getRange(2, colOf(status, 'Decision/Result', 1)).getValue(),
+    'Accepted', 'Decision/Result should survive the new-column migration');
+  suite.assertEqual(status.getRange(2, colOf(status, 'Enrollment Choice', 1)).getValue(), '',
+    'Existing rows should receive a blank Enrollment Choice');
+  suite.assertEqual(status.getRange(2, colOf(status, 'Notes', 1)).getValue(),
+    'Keep this family note', 'Notes should survive the new-column migration');
+  suite.assertEqual(status.getRange(2, colOf(status, 'College ID', 1)).getValue(),
+    'COL-preserved', 'College ID should survive and remain linked');
+  suite.assertEqual(
+    status.getRange(2, colOf(status, 'Submitted Date', 1)).getValue().getTime(),
+    submittedDate.getTime(), 'Existing dates should survive the new-column migration');
+});
+
 suite.test('Application Timeline migration is a no-op once headers already match', () => {
   setupWorkbook({});
   const at = mockSpreadsheet.getSheetByName(C.SHEET_NAMES.APPLICATION_TIMELINE);
