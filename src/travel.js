@@ -1,6 +1,6 @@
 /**
  * Offline travel estimates and Travel Planner sheet maintenance.
- * @version 3.0.1
+ * @version 3.0.2
  * @author College Tools
  * @description Approximate home-to-college travel estimates without external APIs
  */

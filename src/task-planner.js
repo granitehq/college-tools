@@ -1,6 +1,6 @@
 /**
  * Adaptive task scheduling, generation, reconciliation, evidence, and views
- * @version 3.0.1
+ * @version 3.0.2
  * @author College Tools
  * @description Pure planning engine for college application task management
  */

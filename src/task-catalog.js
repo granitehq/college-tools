@@ -1,6 +1,6 @@
 /**
  * Adaptive college task template catalog
- * @version 3.0.1
+ * @version 3.0.2
  * @author College Tools
  * @description Source-controlled task definitions for adaptive application planning
  */
