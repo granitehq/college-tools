@@ -317,6 +317,16 @@ CollegeTools.Setup = (function() {
           return result_(true, 'dashboard_refresh_skipped', 'Dashboard sheet not present');
         },
       },
+      {
+        id: 'sheet-order',
+        label: 'Workflow tab order',
+        required: true,
+        includeInCompleteSetup: true,
+        includeInRepair: true,
+        run: function() {
+          return CollegeTools.Utils.applyCanonicalSheetOrder();
+        },
+      },
     ];
   }
 
@@ -357,6 +367,7 @@ CollegeTools.Setup = (function() {
       'Complete College Tools Setup',
       'This will set up all features in one optimized operation:\n\n' +
       '• All tracker sheets with headers and validation\n' +
+      '• Task Settings, adaptive Tasks, and This Week views\n' +
       '• Dashboard with key metrics\n' +
       '• Weighted Score formulas\n' +
       '• Admission Fit (Reach/Match/Likely) calculator\n' +
@@ -390,8 +401,9 @@ CollegeTools.Setup = (function() {
         'Next steps:\n' +
         '1. Read the Instructions sheet (first tab)\n' +
         '2. Get your API key (see Instructions)\n' +
-        '3. Fill out your Personal Profile\n' +
-        '4. Start adding colleges!\n\n' +
+        '3. Fill out Personal Profile and the yellow Task Settings values\n' +
+        '4. Add colleges and known deadlines\n' +
+        '5. Preview, then Generate / Regenerate Task Plan\n\n' +
         'Everything you need to know is in Instructions!\n\n' +
         'Elapsed: ' + (setupResult.details.durationMs / 1000).toFixed(1) + ' seconds';
 

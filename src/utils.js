@@ -314,6 +314,41 @@ CollegeTools.Utils = (function() {
   }
 
   /**
+   * Applies the workflow-first order for known tabs without deleting or
+   * renaming custom sheets. Hidden sheets are skipped while visible tabs are
+   * moved, which naturally leaves internal sheets after the visible workflow.
+   * @param {Spreadsheet=} spreadsheet - Workbook, defaults to the active one
+   * @returns {Object} Ordering summary
+   */
+  function applyCanonicalSheetOrder(spreadsheet) {
+    var ss = spreadsheet || SpreadsheetApp.getActive();
+    var activeSheet = ss.getActiveSheet ? ss.getActiveSheet() : null;
+    var nextPosition = 1;
+    var moved = 0;
+
+    (CollegeTools.Config.SHEET_ORDER || []).forEach(function(sheetName) {
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet || (sheet.isSheetHidden && sheet.isSheetHidden())) return;
+      if (!sheet.getIndex || sheet.getIndex() !== nextPosition) {
+        ss.setActiveSheet(sheet);
+        ss.moveActiveSheet(nextPosition);
+        moved++;
+      }
+      nextPosition++;
+    });
+
+    if (activeSheet && ss.getSheetByName(activeSheet.getName())) {
+      ss.setActiveSheet(activeSheet);
+    }
+    return {
+      ok: true,
+      code: 'canonical_sheet_order_applied',
+      message: 'Workbook tabs arranged in workflow order',
+      moved: moved,
+    };
+  }
+
+  /**
    * Sanitizes college name input to prevent injection and abuse.
    * @param {string} collegeName - Raw college name from user input
    * @returns {string} Sanitized college name
@@ -355,6 +390,7 @@ CollegeTools.Utils = (function() {
     addr: addr,
     colIndex2: colIndex2,
     trimAllSheets: trimAllSheets,
+    applyCanonicalSheetOrder: applyCanonicalSheetOrder,
     sanitizeCollegeName: sanitizeCollegeName,
   };
 })();

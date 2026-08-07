@@ -32,6 +32,9 @@ entry points live as globals in `src/menu.js`.
 - `Region` is not part of the Colleges model; use `State`.
 - New `Travel Planner` sheets are inserted immediately after
   `Scholarship Tracker`.
+- Complete Setup and Repair enforce the workflow-first known-tab order in
+  `CollegeTools.Config.SHEET_ORDER`; preserve custom tabs and keep generated
+  `Task Templates` hidden.
 - `CollegeTools.Utils.colIndex()` reads row 1 only; do not use it for
   `Colleges`.
 - Prefer `CollegeTools.Schema` helpers for new sheet-aware code.
