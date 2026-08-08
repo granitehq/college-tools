@@ -19,8 +19,8 @@ immediately after Campus Visit Tracker, hides internal Dependencies and Blocked
 By Task IDs, bounds Tasks rows to a readable two-line height, and gives
 context-dependent task titles standalone wording for `This Week`. Regression
 coverage includes all four behaviors; 47 task-management scenarios and the full
-local gate pass. These follow-ups have not yet been pushed to clasp or verified
-in a copied Google Sheet.
+local gate pass. These follow-ups are included in the v3.0.3 clasp release;
+verification in a copied Google Sheet remains pending.
 
 **Update (2026-08-07):** the first post-release copied-template review exposed
 live-only presentation defects: `This Week` applied its Due Date format to
