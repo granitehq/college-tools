@@ -300,6 +300,7 @@ class MockSheet {
     this.filter = null;
     this.activeRow = 3;
     this.maxRows = 1000;
+    this.maxColumns = 0;
     this.mutationCount = 0;
   }
 
@@ -384,6 +385,10 @@ class MockSheet {
 
   getMaxRows() {
     return this.maxRows;
+  }
+
+  getMaxColumns() {
+    return Math.max(this.maxColumns, this.getLastColumn());
   }
 
   getName() {
@@ -472,6 +477,11 @@ class MockSheet {
   moveColumns(range, destinationIndex) {
     this._recordMutation();
     if (range.numCols !== 1) throw new Error('Mock moveColumns currently supports one column');
+    if (destinationIndex > this.getMaxColumns()) {
+      // Mirrors live Sheets: moveColumns needs the destination already within
+      // the grid's column count; it does not auto-expand like setValue does.
+      throw new Error('Those columns are out of bounds.');
+    }
     const sourceColumn = range.col;
     const lastColumn = this.getLastColumn();
     const targetColumn = destinationIndex > sourceColumn ? destinationIndex - 1 : destinationIndex;
@@ -498,6 +508,11 @@ class MockSheet {
     this.hiddenColumns.forEach((column) => hidden.add(remap(column)));
     this.hiddenColumns = hidden;
     if (targetColumn > lastColumn) throw new Error('Invalid mock move destination');
+    return this;
+  }
+  insertColumnAfter(afterPosition) {
+    this._recordMutation();
+    this.maxColumns = Math.max(this.getMaxColumns(), afterPosition) + 1;
     return this;
   }
   insertColumnBefore(column) {

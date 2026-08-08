@@ -186,6 +186,13 @@ CollegeTools.Utils = (function() {
       column = lastCol + 1;
       sh.getRange(headerRow, column).setValue(header);
     } else if (column < lastCol) {
+      // moveColumns requires the destination to already be within the sheet's
+      // grid width; unlike setValue it does not auto-expand. Sheets with no
+      // spare columns past the last used one throw "Those columns are out of
+      // bounds" without this guard.
+      if (sh.getMaxColumns() < lastCol + 1) {
+        sh.insertColumnAfter(lastCol);
+      }
       sh.moveColumns(sh.getRange(1, column, sh.getMaxRows(), 1), lastCol + 1);
       column = lastCol;
     }
