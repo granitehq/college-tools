@@ -179,7 +179,7 @@ active-work estimate before role multipliers.
 |---|---|---|---|---:|---|
 | `STR-01` | Set grade, graduation year, cycle, start date, and working deadline | Shared | Initial setup | 30m | Planning horizon saved |
 | `STR-02` | Configure family, professional, custom-owner, and external roles | P | Initial setup | 30m | Owners and fallbacks saved |
-| `STR-03` | Enable applicable task modules | Shared | Initial setup | 20m | Module configuration approved |
+| `STR-03` | Choose applicable planning modules in Task Settings | Shared | Initial setup | 20m | Module configuration approved |
 | `STR-04` | Define academic interests and possible majors | S | Before college research | 60m | Written academic criteria |
 | `STR-05` | Define geography, setting, size, culture, and other constraints | Shared | Before college research | 60m | Fit criteria approved |
 | `STR-06` | Set annual contribution and borrowing limits | P | Before affordability review | 90m | Written financial limits |
@@ -239,7 +239,7 @@ active-work estimate before role multipliers.
 | `SCH-02` | Identify competitive institutional awards and deadlines | P, assistant support | Per college | 30m | Opportunities in Scholarship Tracker |
 | `SCH-03` | Identify honors-college requirements and deadlines | S, assistant support | Per applicable college | 30m | Honors requirements recorded |
 | `SCH-04` | Identify high-value state, regional, employer, and local awards | Shared, assistant support | Scholarship module | 120m | Shortlist created |
-| `SCH-05` | Triage opportunities by value, probability, and effort | Shared | After SCH-01–04 | 60m | Apply/defer/skip decisions |
+| `SCH-05` | Triage scholarship opportunities by value, probability, and effort | Shared | After SCH-01–04 | 60m | Apply/defer/skip decisions |
 | `SCH-06` | Complete required merit/honors/scholarship submission | S/P | Per selected opportunity | 180m default | Submission confirmed |
 | `SCH-07` | Record result, amount, conditions, and next action | P/S | Per submitted opportunity | 15m | Tracker updated |
 
@@ -250,7 +250,7 @@ active-work estimate before role multipliers.
 | `TST-01` | Gather existing scores or complete SAT/ACT diagnostic | S | Testing enabled | 180m | Comparable baseline available |
 | `TST-02` | Choose SAT, ACT, both, or no further testing | Shared/C | After TST-01 | 60m | Written testing decision |
 | `TST-03` | Register tests and request accommodations if needed | S/P | Before registration deadline | 45m | Registration confirmed |
-| `TST-04` | Create and execute preparation/checkpoint plan | S, tutor support | Before test | 600m default | Planned checkpoints completed |
+| `TST-04` | Create and execute SAT/ACT preparation and checkpoint plan | S, tutor support | Before test | 600m default | Planned checkpoints completed |
 | `TST-05` | Decide test-submit/test-optional strategy | Shared/C | Per college, after scores | 20m | Decision recorded |
 | `TST-06` | Send required official scores and verify receipt | S/P | Per college deadline | 20m | Portal/agency confirmation |
 | `TST-07` | Designate free AP/IB score recipients or send official scores to the enrolling college | S | If AP/IB scores are required | 20m | Scores sent before the free-send deadline |
@@ -272,13 +272,13 @@ active-work estimate before role multipliers.
 | ID | Task | Owner | Applies / anchor | Effort | Complete when |
 |---|---|---|---|---:|---|
 | `APP-01` | Create or roll over Common App account | S | Application phase | 30m | Correct cycle/account active |
-| `APP-02` | Complete profile, contact, and family sections | S/P | After APP-01 | 75m | Sections validated |
-| `APP-03` | Complete education and current-course sections | S | After PRO-01 | 60m | Education data verified |
-| `APP-04` | Complete testing section | S | After testing decision | 30m | Testing data consistent |
-| `APP-05` | Draft and order activities entries | S, C support | After PRO-03 | 180m | Ten entries or final set complete |
-| `APP-06` | Complete honors section | S | After PRO-04 | 60m | Final honors entered |
-| `APP-07` | Draft additional-information response if justified | S/C | Conditional | 90m | Necessary context stated concisely |
-| `APP-08` | Audit and lock reusable application data | S/P/C | Before first submission | 90m | Base application fact-checked |
+| `APP-02` | Complete Common App profile, contact, and family sections | S/P | After APP-01 | 75m | Sections validated |
+| `APP-03` | Complete Common App education and current-course sections | S | After PRO-01 | 60m | Education data verified |
+| `APP-04` | Complete Common App testing section | S | After testing decision | 30m | Testing data consistent |
+| `APP-05` | Draft and order Common App activities entries | S, C support | After PRO-03 | 180m | Ten entries or final set complete |
+| `APP-06` | Complete Common App honors section | S | After PRO-04 | 60m | Final honors entered |
+| `APP-07` | Draft Common App additional-information response if justified | S/C | Conditional | 90m | Necessary context stated concisely |
+| `APP-08` | Audit and lock reusable Common App data | S/P/C | Before first submission | 90m | Base application fact-checked |
 
 ### Essays (10)
 
@@ -289,7 +289,7 @@ active-work estimate before role multipliers.
 | `ESS-03` | Select personal-statement topic and outline | S/C | After ESS-02 | 90m | Student-approved outline |
 | `ESS-04` | Draft personal statement | S | After ESS-03 | 300m | Complete first draft |
 | `ESS-05` | Revise personal statement for structure and specificity | S | After ESS-04 | 180m | Strong student-owned revision |
-| `ESS-06` | Obtain bounded outside review | C/Professional | After ESS-05 | 60m | Actionable feedback returned |
+| `ESS-06` | Obtain bounded outside review of the personal statement | C/Professional | After ESS-05 | 60m | Actionable feedback returned |
 | `ESS-07` | Finalize and proof personal statement | S | Before earliest use | 120m | Final word-count-compliant essay |
 | `ESS-08` | Outline and draft one supplemental response | S | Per prompt | 120m | Complete draft |
 | `ESS-09` | Revise and proof one supplemental response | S/C | After ESS-08 | 90m | Final student-owned response |

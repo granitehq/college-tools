@@ -116,6 +116,29 @@ suite.test('catalog contains uncapped, unique, validated implementation template
     'FAFSA review scheduling should be selected by catalog metadata');
 });
 
+suite.test('catalog titles retain enough context when shown outside their workstream', () => {
+  const templates = CollegeTools.TaskCatalog.getTemplates();
+  const byId = Object.fromEntries(templates.map((template) => [template.templateId, template]));
+  const expectedTitles = {
+    'STR-03': 'Choose applicable planning modules in Task Settings',
+    'SCH-05': 'Triage scholarship opportunities by value, probability, and effort',
+    'TST-04': 'Create and execute SAT/ACT preparation and checkpoint plan',
+    'APP-02': 'Complete Common App profile, contact, and family sections',
+    'APP-03': 'Complete Common App education and current-course sections',
+    'APP-04': 'Complete Common App testing section',
+    'APP-05': 'Draft and order Common App activities entries',
+    'APP-06': 'Complete Common App honors section',
+    'APP-07': 'Draft Common App additional-information response if justified',
+    'APP-08': 'Audit and lock reusable Common App data',
+    'ESS-06': 'Obtain bounded outside review of the personal statement',
+  };
+
+  Object.entries(expectedTitles).forEach(([templateId, expectedTitle]) => {
+    suite.assertEqual(byId[templateId].task, expectedTitle,
+      `${templateId} should retain its work context when shown in This Week`);
+  });
+});
+
 suite.test('catalog covers the post-acceptance decision and enrollment phase', () => {
   const templates = CollegeTools.TaskCatalog.getTemplates();
   const byId = {};
@@ -1271,12 +1294,16 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     'Task ID', 'Template ID', 'Scope Type', 'Scope ID', 'College ID',
     'Applicability Rule', 'Schedule Rule', 'Schedule Anchor', 'Anchor Date',
     'Offset / Window', 'Owner Role', 'Calculated Date', 'Effective Date',
-    'Date Source', 'Normal Effort (min)', 'Manually Selected', 'Generated',
-    'Archived Reason',
+    'Date Source', 'Dependencies', 'Blocked By', 'Normal Effort (min)',
+    'Manually Selected', 'Generated', 'Archived Reason',
   ].forEach((header) => {
     suite.assert(tasks.isColumnHiddenByUser(columnOf(tasks, header)),
       `${header} should be hidden as advanced task metadata`);
   });
+  suite.assertEqual(tasks.getRowHeight(1), 36,
+    'Tasks should use a compact readable header height');
+  suite.assertEqual(tasks.getRowHeight(2), 42,
+    'Tasks should use a bounded two-line working row height');
   [
     'Task', 'Owner', 'Owner Locked', 'Due Date', 'Date Locked',
     'Priority Override', 'Status', 'Effort Override (min)', 'Notes',
@@ -1316,6 +1343,9 @@ suite.test('sheet setup and generation create conditional, hidden, canonical, an
     CollegeTools.TaskCatalog.validate().count,
     'Generation should report included and excluded catalog counts');
   suite.assert(recruiting, 'Recruiting Tracker should be created when enabled');
+  suite.assertEqual(recruiting.getIndex(),
+    mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT).getIndex() + 1,
+  'Conditional Recruiting Tracker should be placed immediately after Campus Visit Tracker');
   suite.assert(generatedTasks.some((task) => task.templateId === 'ATH-01'),
     'Enabled recruiting tasks should be written to canonical Tasks');
   suite.assert(generatedTasks.some((task) => task.templateId === 'DEC-06'),

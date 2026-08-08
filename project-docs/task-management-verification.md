@@ -7,9 +7,20 @@
 ## Verification Status
 
 The implementation, automated acceptance scenarios, and the original two live
-copied-sheet scenarios are complete. The clasp-bound template has since received
-the v3.0.1 release candidate; public template promotion remains blocked on the
-follow-up presentation fixes and copied-sheet verification below.
+copied-sheet scenarios are complete. Version 3.0.2 is deployed to the clasp-bound
+template, where copied-sheet review is in progress. Public template promotion
+remains blocked on completion of that review and verification of the follow-up
+presentation fixes below.
+
+**Update (2026-08-08):** the v3.0.2 copied-sheet review confirmed the main task
+workflow is functional and exposed four additional presentation issues. The
+local follow-up branch now reorders a conditionally created Recruiting Tracker
+immediately after Campus Visit Tracker, hides internal Dependencies and Blocked
+By Task IDs, bounds Tasks rows to a readable two-line height, and gives
+context-dependent task titles standalone wording for `This Week`. Regression
+coverage includes all four behaviors; 47 task-management scenarios and the full
+local gate pass. These follow-ups have not yet been pushed to clasp or verified
+in a copied Google Sheet.
 
 **Update (2026-08-07):** the first post-release copied-template review exposed
 live-only presentation defects: `This Week` applied its Due Date format to
@@ -67,7 +78,7 @@ use row 1 headers and row 2 data.
 
 ## Automated Commands
 
-The current local gate includes 41 task-management scenarios. Run all commands
+The current local gate includes 47 task-management scenarios. Run all commands
 below from the feature worktree before recording a new live result.
 
 ```bash
