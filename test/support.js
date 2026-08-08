@@ -295,6 +295,7 @@ class MockSheet {
     this.validations = {};
     this.callCounts = {getFormula: 0, getFormulas: 0, setValue: 0, setValues: 0, setFormula: 0, setFormulas: 0, setDataValidations: 0, setNumberFormats: 0};
     this.hiddenColumns = new Set();
+    this.rowHeights = {};
     this.hidden = false;
     this.filter = null;
     this.activeRow = 3;
@@ -439,6 +440,21 @@ class MockSheet {
   getColumnWidth(column) {
     this.columnWidths = this.columnWidths || {};
     return this.columnWidths[column] || 100;
+  }
+  setRowHeight(row, height) {
+    this._recordMutation();
+    this.rowHeights[row] = height;
+    return this;
+  }
+  setRowHeights(startRow, numRows, height) {
+    this._recordMutation();
+    for (let row = startRow; row < startRow + numRows; row++) {
+      this.rowHeights[row] = height;
+    }
+    return this;
+  }
+  getRowHeight(row) {
+    return this.rowHeights[row] || 21;
   }
   setFrozenRows() { this._recordMutation(); return this; }
   getFilter() { return this.filter; }
