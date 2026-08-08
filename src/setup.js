@@ -555,7 +555,8 @@ CollegeTools.Setup = (function() {
         message += '🎯 You\'re all set! Next steps:\n';
         message += '• Read Instructions (📖 menu)\n';
         message += '• Fill out Personal Profile\n';
-        message += '• Start adding colleges!\n\n';
+        message += '• Start adding colleges!\n';
+        message += '• Set up Task Management (✅ menu) for a deadline-aware task plan\n\n';
         message += '💡 Use "Fill current row" to get college data';
       } else {
         message += '⚠️ API Key: Missing\n';
