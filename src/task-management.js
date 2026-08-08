@@ -55,6 +55,8 @@ CollegeTools.TaskManagement = (function() {
   };
   var TASK_MIN_ROWS = 200;
   var TASK_ROW_BUFFER = 50;
+  var TASK_HEADER_HEIGHT = 36;
+  var TASK_ROW_HEIGHT = 42;
 
   /**
    * Normalizes yes/no values for sheet persistence.
@@ -495,6 +497,10 @@ CollegeTools.TaskManagement = (function() {
       column[header] = index + 1;
     });
     sheet.setFrozenRows(1);
+    sheet.setRowHeight(1, TASK_HEADER_HEIGHT);
+    if (sheet.getMaxRows() > 1) {
+      sheet.setRowHeights(2, sheet.getMaxRows() - 1, TASK_ROW_HEIGHT);
+    }
     sheet.getRange(1, 1, 1, headers.length)
       .setBackground('#1f4e78').setFontColor('#ffffff').setFontWeight('bold')
       .setWrap(true);
@@ -529,8 +535,8 @@ CollegeTools.TaskManagement = (function() {
       'Task ID', 'Template ID', 'Scope Type', 'Scope ID', 'College ID',
       'Applicability Rule', 'Schedule Rule', 'Schedule Anchor', 'Anchor Date',
       'Offset / Window', 'Owner Role', 'Calculated Date', 'Effective Date',
-      'Date Source', 'Normal Effort (min)', 'Manually Selected', 'Generated',
-      'Archived Reason',
+      'Date Source', 'Dependencies', 'Blocked By', 'Normal Effort (min)',
+      'Manually Selected', 'Generated', 'Archived Reason',
     ].forEach(function(header) {
       if (column[header] &&
           (!sheet.isColumnHiddenByUser || !sheet.isColumnHiddenByUser(column[header]))) {
@@ -567,6 +573,16 @@ CollegeTools.TaskManagement = (function() {
     if (column['Evidence Source']) {
       sheet.getRange(1, column['Evidence Source']).setNote(
         'Tracker-derived completion provenance. Correct the canonical tracker if this evidence is wrong.');
+    }
+    if (column.Dependencies) {
+      sheet.getRange(1, column.Dependencies).setNote(
+        'Internal prerequisite Task IDs used by the planner. Hidden by default; ' +
+        'unhide only when troubleshooting task relationships.');
+    }
+    if (column['Blocked By']) {
+      sheet.getRange(1, column['Blocked By']).setNote(
+        'Incomplete prerequisite Task IDs calculated by the planner. Hidden by default; ' +
+        'use Status for normal day-to-day work.');
     }
     var desiredFilterRows = Math.max(2, sheet.getMaxRows());
     var filter = sheet.getFilter ? sheet.getFilter() : null;
@@ -1315,6 +1331,7 @@ CollegeTools.TaskManagement = (function() {
     applyTaskValidations_(tasksSheet, config);
     formatTasksSheet_(tasksSheet);
     setupRecruitingTracker_(spreadsheet, config.modules['Athletic Recruiting']);
+    CollegeTools.Utils.applyCanonicalSheetOrder(spreadsheet);
     var views = CollegeTools.TaskPlanner.buildViews(readTasks(spreadsheet), null, config);
     writeThisWeek_(spreadsheet, views);
     return {
