@@ -1,6 +1,6 @@
 /**
  * Shared execution budget helper
- * @version 3.0.2
+ * @version 3.0.3
  * @author College Tools
  * @description Keeps long-running workflows under Apps Script execution limits
  */

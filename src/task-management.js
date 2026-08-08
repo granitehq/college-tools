@@ -1,6 +1,6 @@
 /**
  * Spreadsheet integration for adaptive college task management
- * @version 3.0.2
+ * @version 3.0.3
  * @author College Tools
  * @description Creates, updates, and safely reconciles task-management sheets
  */

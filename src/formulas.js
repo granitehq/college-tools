@@ -1,6 +1,6 @@
 /**
  * Pure formula builders
- * @version 3.0.2
+ * @version 3.0.3
  * @author College Tools
  * @description Testable formula builders shared by workbook modules
  */
