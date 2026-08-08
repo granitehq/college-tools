@@ -82,5 +82,20 @@ suite.test('Instructions explain adaptive task generation and preservation', () 
     'Instructions should explain how to use canonical owner and college filters');
 });
 
+suite.test('Quick Start directs new users to set up Task Management', () => {
+  const lines = renderedLines();
+  const quickStartIndex = lines.findIndex((line) => line.indexOf('Quick Start (New User Setup)') !== -1);
+  suite.assert(quickStartIndex !== -1, 'Quick Start section should be present');
+  const nextSectionIndex = lines.findIndex((line, i) =>
+    i > quickStartIndex && line.indexOf('College Scorecard API Setup') !== -1);
+  suite.assert(nextSectionIndex !== -1, 'Section following Quick Start should be present');
+
+  const quickStartLines = lines.slice(quickStartIndex, nextSectionIndex).join('\n');
+  suite.assert(/Setup Task Management/.test(quickStartLines),
+    'Quick Start should tell new users to run Setup Task Management');
+  suite.assert(/Task Settings/.test(quickStartLines),
+    'Quick Start should tell new users to complete the Task Settings sheet');
+});
+
 const success = suite.summary();
 process.exit(success ? 0 : 1);
