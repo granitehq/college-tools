@@ -1,6 +1,6 @@
 /**
  * Financial Intelligence Suite
- * @version 3.0.5
+ * @version 3.0.6
  * @author College Tools
  * @description Personal Profile sheet and financial analysis features
  */
