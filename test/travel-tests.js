@@ -137,6 +137,22 @@ suite.test('new Travel Planner is inserted immediately after Scholarship Tracker
     'Travel Planner should be immediately after Scholarship Tracker');
 });
 
+suite.test('refresh repositions an existing Travel Planner into the canonical tab order', () => {
+  setupWorkbook();
+  const before = mockSpreadsheet.getSheets().map((sheet) => sheet.getName());
+  suite.assert(before.indexOf(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER) <
+    before.indexOf(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER),
+  'Fixture should begin with Travel Planner misplaced before Scholarship Tracker');
+
+  CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+
+  const after = mockSpreadsheet.getSheets().map((sheet) => sheet.getName());
+  const scholarshipIndex = after.indexOf(CollegeTools.Config.SHEET_NAMES.SCHOLARSHIP_TRACKER);
+  const travelIndex = after.indexOf(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+  suite.assertEqual(travelIndex, scholarshipIndex + 1,
+    'Refreshing Travel Planner should repair an existing misplaced tab');
+});
+
 suite.test('createOrUpdateTravelPlanner keeps estimates blank when profile home city is blank', () => {
   const {colleges} = setupWorkbook();
   const cityCol = getCollegeColumn('City', colleges);
