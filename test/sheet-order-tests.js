@@ -43,12 +43,34 @@ suite.test('canonical ordering prioritizes workflow tabs and preserves custom an
   const visibleNames = mockSpreadsheet.getSheets()
     .filter((sheet) => !sheet.isSheetHidden())
     .map((sheet) => sheet.getName());
-  const expectedKnown = CollegeTools.Config.SHEET_ORDER
-    .filter((name) => name !== names.TASK_TEMPLATES);
+  const expectedKnown = [
+    names.INSTRUCTIONS,
+    names.THIS_WEEK,
+    names.COLLEGES,
+    names.TASKS,
+    names.DASHBOARD,
+    names.APPLICATION_TIMELINE,
+    names.STATUS_TRACKER,
+    names.FINANCIAL_AID,
+    names.SCHOLARSHIP_TRACKER,
+    names.TRAVEL_PLANNER,
+    names.CAMPUS_VISIT,
+    names.RECRUITING_TRACKER,
+    names.PERSONAL_PROFILE,
+    names.TASK_SETTINGS,
+    names.WEIGHTS,
+    names.LOOKUP,
+    names.API_KEY,
+  ];
 
   suite.assert(result.ok, 'Canonical ordering should return a successful result');
   suite.assertEqual(visibleNames.slice(0, expectedKnown.length).join(','), expectedKnown.join(','),
     'Known visible sheets should follow the workflow-first canonical order');
+  suite.assertEqual(
+    visibleNames.indexOf(names.TRAVEL_PLANNER),
+    visibleNames.indexOf(names.SCHOLARSHIP_TRACKER) + 1,
+    'Travel Planner should remain immediately after Scholarship Tracker',
+  );
   suite.assert(visibleNames.includes('Family Notes'), 'Custom sheets should be preserved');
   suite.assertEqual(mockSpreadsheet.getActiveSheet().getName(), 'Family Notes',
     'Reordering should restore the previously active sheet');
