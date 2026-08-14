@@ -27,7 +27,8 @@ function colOf(sh, header, headerRow) {
 }
 
 suite.test('Application Timeline migration moves Honors/Portfolio dates into Other Deadline slots', () => {
-  setupWorkbook({});
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Alpha University');
   const at = mockSpreadsheet.getSheetByName(C.SHEET_NAMES.APPLICATION_TIMELINE);
 
   const oldHeaders = [
@@ -116,7 +117,10 @@ suite.test('Scholarship Tracker migration folds Y requirement flags into Require
 });
 
 suite.test('Financial Aid Tracker migration derives status columns and folds Appeal Status into Notes', () => {
-  setupWorkbook({});
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Alpha University');
+  colleges.getRange(4, 1).setValue('Beta College');
+  colleges.getRange(3, colOf(colleges, 'Total Cost of Attendance', 2)).setValue(50000);
   const fa = mockSpreadsheet.getSheetByName(C.SHEET_NAMES.FINANCIAL_AID);
 
   const oldHeaders = [
@@ -196,7 +200,9 @@ suite.test('Financial Aid Tracker migration derives status columns and folds App
 });
 
 suite.test('Application Status migration adds Enrollment Choice without disturbing existing data', () => {
-  setupWorkbook({});
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Preserved University');
+  colleges.getRange(3, colOf(colleges, 'College ID', 2)).setValue('COL-preserved');
   const status = mockSpreadsheet.getSheetByName(C.SHEET_NAMES.STATUS_TRACKER);
   const oldHeaders = C.HEADERS.STATUS_TRACKER.filter((header) => header !== 'Enrollment Choice');
   const submittedDate = new Date('2027-01-03T00:00:00');
@@ -233,7 +239,8 @@ suite.test('Application Status migration adds Enrollment Choice without disturbi
 });
 
 suite.test('Application Timeline migration is a no-op once headers already match', () => {
-  setupWorkbook({});
+  const {colleges} = setupWorkbook({});
+  colleges.getRange(3, 1).setValue('Beta College');
   const at = mockSpreadsheet.getSheetByName(C.SHEET_NAMES.APPLICATION_TIMELINE);
   const nameCol = colOf(at, 'College Name', 1);
   at.getRange(2, nameCol).setValue('Beta College');

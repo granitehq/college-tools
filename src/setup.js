@@ -215,7 +215,9 @@ CollegeTools.Setup = (function() {
       {
         id: 'trim-sheets',
         label: 'Row trimming',
-        required: true,
+        // Optimization is useful but not required for a functional workbook.
+        // Treat transient Spreadsheet-service failures as visible warnings.
+        required: false,
         includeInCompleteSetup: true,
         includeInRepair: false,
         run: function() {
@@ -343,6 +345,50 @@ CollegeTools.Setup = (function() {
   }
 
   /**
+   * Builds an honest completion summary from the actual step results.
+   * @param {Object} setupResult - Aggregate result from runSetupSteps_
+   * @returns {string} User-facing setup summary
+   * @private
+   */
+  function buildSetupMessage_(setupResult) {
+    var lines = [setupResult.ok ? 'College Tools setup finished:' : 'College Tools setup is incomplete:', ''];
+    var steps = setupResult.details.steps || [];
+
+    steps.forEach(function(step) {
+      var icon = step.ok ? '✅' : (step.required ? '❌' : '⚠️');
+      var line = icon + ' ' + step.label;
+      if (!step.ok && step.message) line += ': ' + step.message;
+      lines.push(line);
+      (step.warnings || []).forEach(function(warning) {
+        var warningText = typeof warning === 'string' ? warning : JSON.stringify(warning);
+        lines.push('   ⚠️ ' + warningText);
+      });
+    });
+
+    lines.push('');
+    if (setupResult.ok) {
+      lines.push(
+        'Next steps:',
+        '1. Read the Instructions sheet (first tab)',
+        '2. Get your API key (see Instructions)',
+        '3. Fill out Personal Profile and the yellow Task Settings values',
+        '4. Add colleges and known deadlines',
+        '5. Preview, then Generate / Regenerate Task Plan',
+        '',
+        'Everything you need to know is in Instructions!',
+      );
+    } else {
+      lines.push(
+        'Resolve the failed required steps above, then rerun Complete Setup.',
+        'Successful setup steps are safe to run again.',
+      );
+    }
+
+    lines.push('', 'Elapsed: ' + (setupResult.details.durationMs / 1000).toFixed(1) + ' seconds');
+    return lines.join('\n');
+  }
+
+  /**
    * Performs complete College Tools setup in one optimized operation.
    * This replaces running individual setup functions multiple times.
    * Only needs to be run once per spreadsheet.
@@ -390,29 +436,13 @@ CollegeTools.Setup = (function() {
         CollegeTools.Utils.recordDuration('complete-setup', setupResult.details.durationMs);
       }
 
-      var setupMessage = 'College Tools is fully configured:\n\n' +
-        '✅ Instructions sheet created (first tab)\n' +
-        '✅ All tracker sheets created\n' +
-        '✅ Dashboard with key metrics\n' +
-        '✅ Scoring formulas active\n' +
-        '✅ Financial intelligence suite ready\n' +
-        '✅ Enhanced formatting applied\n' +
-        '✅ Performance optimized\n\n' +
-        'Next steps:\n' +
-        '1. Read the Instructions sheet (first tab)\n' +
-        '2. Get your API key (see Instructions)\n' +
-        '3. Fill out Personal Profile and the yellow Task Settings values\n' +
-        '4. Add colleges and known deadlines\n' +
-        '5. Preview, then Generate / Regenerate Task Plan\n\n' +
-        'Everything you need to know is in Instructions!\n\n' +
-        'Elapsed: ' + (setupResult.details.durationMs / 1000).toFixed(1) + ' seconds';
-
-      if (setupResult.warnings.length) {
-        setupMessage += '\n\nRegistration warning: ' + setupResult.warnings.join('\n');
-      }
+      var setupMessage = buildSetupMessage_(setupResult);
+      var setupTitle = setupResult.ok ?
+        (setupResult.warnings.length ? 'Setup Complete with Warnings' : 'Setup Complete! ✅') :
+        'Setup Incomplete';
 
       ui.alert(
-        setupResult.ok ? 'Setup Complete! ✅' : 'Setup Error',
+        setupTitle,
         setupMessage,
         ui.ButtonSet.OK,
       );
