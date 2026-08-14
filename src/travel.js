@@ -338,6 +338,12 @@ CollegeTools.Travel = (function() {
     if (rows.length) {
       travel.getRange(2, 1, rows.length, CollegeTools.Config.HEADERS.TRAVEL_PLANNER.length).setValues(rows);
     }
+    // A refresh can encounter an existing tab created by an older version or
+    // manually moved by a user. Reapply the established workflow order so the
+    // Travel Planner consistently remains immediately after Scholarship Tracker.
+    if (CollegeTools.Utils.applyCanonicalSheetOrder) {
+      CollegeTools.Utils.applyCanonicalSheetOrder(ss);
+    }
     if (!opts.suppressAlert) SpreadsheetApp.getUi().alert('Travel Planner refreshed for ' + rows.length + ' college(s).');
     return {ok: true, count: rows.length};
   }
