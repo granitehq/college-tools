@@ -1,6 +1,6 @@
 /**
  * College data operations
- * @version 3.0.4
+ * @version 3.0.5
  * @author College Tools
  * @description Core college data management and filling
  */
