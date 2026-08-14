@@ -120,6 +120,47 @@ CollegeTools.Trackers = (function() {
   }
 
   /**
+   * Clears the college-owned identity fields from every linked tracker after
+   * the final active Colleges row. User-entered tracker details remain in
+   * place so a repair never silently destroys notes, dates, or decisions.
+   * @param {Object} sheets - Linked tracker sheets
+   * @param {number} startRow - First tracker row to clear
+   * @private
+   */
+  function clearLinkedTrackerRows_(sheets, startRow) {
+    clearTrackerRows_(sheets.financialAid, startRow,
+      ['College Name', 'College ID', 'Total Cost of Attendance']);
+    clearTrackerRows_(sheets.campusVisit, startRow, ['College Name', 'College ID']);
+    clearTrackerRows_(sheets.applicationTimeline, startRow, ['College Name', 'College ID']);
+    clearTrackerRows_(sheets.statusTracker, startRow, ['College Name', 'College ID']);
+  }
+
+  /**
+   * Optionally refreshes the derived Travel Planner for the direct menu flow.
+   * Travel is nonessential to the core tracker sync, so failures are returned
+   * as warnings rather than undoing an otherwise successful repair.
+   * @param {Object} opts - Repair options
+   * @param {Array<Object>} warnings - Repair warning accumulator
+   * @returns {Object|null} Travel refresh result when requested
+   * @private
+   */
+  function refreshTravelPlannerForSync_(opts, warnings) {
+    if (!opts.refreshTravel || !CollegeTools.Travel ||
+        !CollegeTools.Travel.createOrUpdateTravelPlanner) return null;
+    try {
+      return CollegeTools.Travel.createOrUpdateTravelPlanner({suppressAlert: true});
+    } catch (error) {
+      var message = error.toString();
+      warnings.push({
+        code: 'travel_planner_refresh_failed',
+        sheetName: CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER,
+        message: message,
+      });
+      return {ok: false, count: 0, message: message};
+    }
+  }
+
+  /**
    * Reads a tracker sheet once and captures an ID-keyed snapshot map (the
    * steady-state join key), a name-keyed snapshot map (used only to bridge
    * rows that predate stable college identity), and the raw formula-aware
@@ -930,24 +971,38 @@ CollegeTools.Trackers = (function() {
       return {ok: false, count: 0, warnings: warnings};
     }
 
+    var linkedSheets = {
+      financialAid: ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID),
+      campusVisit: ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT),
+      applicationTimeline: ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE),
+      statusTracker: ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER),
+    };
     var lastRow = collegesSheet.getLastRow();
     var processed = 0;
 
     if (lastRow < 3) {
+      clearLinkedTrackerRows_(linkedSheets, 2);
+      var emptyTravelResult = refreshTravelPlannerForSync_(opts, warnings);
       if (!opts.suppressAlert) {
         SpreadsheetApp.getUi().alert(
           'Tracker Sync Repaired',
-          'No data rows found in the Colleges sheet.',
+          'No data rows found in the Colleges sheet.' +
+            (emptyTravelResult ? '\nTravel rows refreshed: ' + (emptyTravelResult.count || 0) : ''),
           SpreadsheetApp.getUi().ButtonSet.OK,
         );
       }
-      return {ok: true, count: 0, warnings: warnings};
+      return {
+        ok: true,
+        count: 0,
+        travelRows: emptyTravelResult && emptyTravelResult.count || 0,
+        warnings: warnings,
+      };
     }
 
-    var faSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
-    var cvSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
-    var atSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
-    var stSheet = ss.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+    var faSheet = linkedSheets.financialAid;
+    var cvSheet = linkedSheets.campusVisit;
+    var atSheet = linkedSheets.applicationTimeline;
+    var stSheet = linkedSheets.statusTracker;
     // Read each tracker once, capturing the ID-keyed and name-bridge snapshots
     // and the raw data block reused as the rebuild base.
     var trackerCaptures = {
@@ -983,6 +1038,7 @@ CollegeTools.Trackers = (function() {
     // added by typing (not via Fill Row) still gets stable IDs.
     var idWrites = [];
     var assignments = [];
+    var lastActiveCollegeRow = 2;
     for (var i = 0; i < data.length; i++) {
       var collegeName = (data[i][0] || '').toString().trim();
       if (!collegeName) continue;
@@ -997,6 +1053,7 @@ CollegeTools.Trackers = (function() {
         id: collegeId,
         coa: coaIdx >= 0 ? data[i][coaIdx] : '',
       });
+      lastActiveCollegeRow = i + 3;
       processed++;
     }
     idWrites.forEach(function(w) {
@@ -1013,22 +1070,30 @@ CollegeTools.Trackers = (function() {
     rebuildTrackerFromSnapshots_(atSheet, trackerCaptures.applicationTimeline, assignments);
     rebuildTrackerFromSnapshots_(stSheet, trackerCaptures.statusTracker, assignments);
 
-    var firstClearRow = getTrackerRowForCollegeRow_(lastRow + 1);
-    clearTrackerRows_(faSheet, firstClearRow, ['College Name', 'Total Cost of Attendance']);
-    clearTrackerRows_(cvSheet, firstClearRow, ['College Name']);
-    clearTrackerRows_(atSheet, firstClearRow, ['College Name']);
-    clearTrackerRows_(stSheet, firstClearRow, ['College Name']);
+    // Base cleanup on the final nonblank College Name, not getLastRow(). Hidden
+    // College IDs can keep getLastRow() high after users delete every visible
+    // college, which previously left stale tracker identities untouched.
+    var firstClearRow = getTrackerRowForCollegeRow_(lastActiveCollegeRow + 1);
+    clearLinkedTrackerRows_(linkedSheets, firstClearRow);
+    var travelResult = refreshTravelPlannerForSync_(opts, warnings);
 
     if (!opts.suppressAlert) {
       SpreadsheetApp.getUi().alert(
         'Tracker Sync Repaired',
         'Re-synced tracker college lists from the Colleges sheet.\n\n' +
-        'Updated rows: ' + processed,
+        'Updated rows: ' + processed +
+          (travelResult ? '\nTravel rows refreshed: ' + (travelResult.count || 0) : '') +
+          (travelResult && !travelResult.ok ? '\nTravel Planner warning: ' + travelResult.message : ''),
         SpreadsheetApp.getUi().ButtonSet.OK,
       );
     }
 
-    return {ok: true, count: processed, warnings: warnings};
+    return {
+      ok: true,
+      count: processed,
+      travelRows: travelResult && travelResult.count || 0,
+      warnings: warnings,
+    };
   }
 
   /**

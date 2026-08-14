@@ -77,6 +77,11 @@ suite.test('repair menu item is present', () => {
     'Repair Validations & Dropdowns menu item should be exposed');
 });
 
+suite.test('direct college-sync menu action requests a Travel Planner refresh', () => {
+  suite.assert(menuSource.includes('repairCollegeSync({refreshTravel: true})'),
+    'Direct college sync should refresh Travel Planner along with the canonical trackers');
+});
+
 
 suite.test('travel planner refresh menu item is present', () => {
   suite.assert(menuSource.includes('Refresh Travel Planner'),

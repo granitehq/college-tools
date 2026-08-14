@@ -145,7 +145,7 @@ suite.test('complete setup surfaces a registration warning when copy registratio
   CollegeTools.Setup.completeSetup();
 
   const lastAlert = mockUi.alerts[mockUi.alerts.length - 1];
-  suite.assert(lastAlert.message.includes('Registration warning'),
+  suite.assert(lastAlert.message.includes('⚠️ Copy registration'),
     'Complete Setup should include a visible registration warning when registration fails');
   suite.assert(lastAlert.message.includes('registry returned status rejected'),
     'Complete Setup should include the registration failure reason');

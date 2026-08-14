@@ -8,7 +8,7 @@ const harness = createHarness([
   'config.js',
   'setup.js',
 ]);
-const {CollegeTools, mockSpreadsheet} = harness;
+const {CollegeTools, mockSpreadsheet, mockUi} = harness;
 const suite = new TestSuite();
 
 suite.test('complete setup and repair use stable registry step order', () => {
@@ -95,6 +95,33 @@ suite.test('optional setup step failure reports a warning while required failure
     'Every setup step should report elapsed milliseconds');
   suite.assertEqual(mockSpreadsheet.toasts.length, 3,
     'Step runner should provide one progress toast per step');
+});
+
+suite.test('complete setup reports an optional row-trimming failure without false success text', () => {
+  CollegeTools.Instructions = {createInstructionsSheet() {}};
+  CollegeTools.Trackers = {setupAllTrackers() {}};
+  CollegeTools.TaskManagement = {setupTaskManagement() {}};
+  CollegeTools.Dashboard = {setupDashboard() {}};
+  CollegeTools.Formatting = {enhanceFormatsDropdowns() {}};
+  CollegeTools.Scoring = {ensureScoring() {}};
+  CollegeTools.Financial = {runFinancialSetup_() {}};
+  CollegeTools.Utils = {
+    trimAllSheets() {
+      throw new Error('Service unavailable: Spreadsheets');
+    },
+    applyCanonicalSheetOrder() {},
+  };
+
+  const result = CollegeTools.Setup.completeSetup();
+  const lastAlert = mockUi.alerts[mockUi.alerts.length - 1];
+
+  suite.assert(result.ok, 'A nonessential optimization failure should not fail functional setup');
+  suite.assertEqual(lastAlert.title, 'Setup Complete with Warnings',
+    'Optional setup failures should produce a warning title');
+  suite.assert(lastAlert.message.includes('⚠️ Row trimming: Error: Service unavailable: Spreadsheets'),
+    'The completion message should identify the failed step and its error');
+  suite.assert(!lastAlert.message.includes('✅ Row trimming'),
+    'The completion message must not claim failed optimization succeeded');
 });
 
 const success = suite.summary();

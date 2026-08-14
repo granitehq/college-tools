@@ -10,6 +10,7 @@ const harness = createHarness([
   'schema.js',
   'formatting.js',
   'formulas.js',
+  'travel.js',
   'trackers.js',
   'colleges.js',
 ]);
@@ -265,6 +266,76 @@ suite.test('repairCollegeSync replaces stale tracker names and clears trailing r
     'Repair should propagate linked cost fields');
   suite.assertEqual(cv.getRange(4, 1).getValue(), '',
     'Trailing stale names should be cleared on every tracker');
+});
+
+suite.test('repairCollegeSync clears linked tracker identities when Colleges has no data rows', () => {
+  setupWorkbook();
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  const cv = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.CAMPUS_VISIT);
+  const at = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.APPLICATION_TIMELINE);
+  const st = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.STATUS_TRACKER);
+  const deadlineCol = CollegeTools.Utils.colIndex(fa, 'FAFSA Deadline');
+  const coaCol = CollegeTools.Utils.colIndex(fa, 'Total Cost of Attendance');
+
+  [fa, cv, at, st].forEach((sheet) => {
+    sheet.getRange(2, CollegeTools.Utils.colIndex(sheet, 'College Name')).setValue('Old Personal College');
+    sheet.getRange(2, CollegeTools.Utils.colIndex(sheet, 'College ID')).setValue('old-college-id');
+  });
+  fa.getRange(2, coaCol).setValue(54321);
+  fa.getRange(2, deadlineCol).setValue('Preserve this user detail');
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(result.ok, true, 'Empty-source repair should succeed');
+  suite.assertEqual(result.count, 0, 'Empty-source repair should report zero active colleges');
+  [fa, cv, at, st].forEach((sheet) => {
+    suite.assertEqual(sheet.getRange(2, CollegeTools.Utils.colIndex(sheet, 'College Name')).getValue(), '',
+      `${sheet.getName()} should clear stale college names`);
+    suite.assertEqual(sheet.getRange(2, CollegeTools.Utils.colIndex(sheet, 'College ID')).getValue(), '',
+      `${sheet.getName()} should clear stale linked College IDs`);
+  });
+  suite.assertEqual(fa.getRange(2, coaCol).getValue(), '',
+    'Empty-source repair should clear stale linked cost data');
+  suite.assertEqual(fa.getRange(2, deadlineCol).getValue(), 'Preserve this user detail',
+    'Empty-source repair should preserve non-linked tracker details');
+});
+
+suite.test('repairCollegeSync treats hidden source IDs without college names as an empty college list', () => {
+  const {colleges} = setupWorkbook();
+  const collegeIdCol = getCollegeColumn('College ID', colleges);
+  colleges.getRange(3, collegeIdCol).setValue('orphaned-hidden-id');
+
+  const fa = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.FINANCIAL_AID);
+  fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'College Name')).setValue('Old Personal College');
+  fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'College ID')).setValue('old-college-id');
+
+  const result = CollegeTools.Trackers.repairCollegeSync({suppressAlert: true});
+
+  suite.assertEqual(result.count, 0, 'An orphaned hidden ID should not count as an active college');
+  suite.assertEqual(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'College Name')).getValue(), '',
+    'A hidden source ID should not prevent stale tracker names from being cleared');
+  suite.assertEqual(fa.getRange(2, CollegeTools.Utils.colIndex(fa, 'College ID')).getValue(), '',
+    'A hidden source ID should not prevent stale tracker IDs from being cleared');
+});
+
+suite.test('repairCollegeSync refreshes Travel Planner when requested by the direct menu flow', () => {
+  const {colleges} = setupWorkbook();
+  colleges.getRange(3, 1).setValue('Travel College');
+  colleges.getRange(3, getCollegeColumn('City', colleges)).setValue('Boston');
+  colleges.getRange(3, getCollegeColumn('State', colleges)).setValue('MA');
+
+  const travel = mockSpreadsheet.getSheetByName(CollegeTools.Config.SHEET_NAMES.TRAVEL_PLANNER);
+  travel.getRange(2, 1).setValue('Stale Travel College');
+
+  const result = CollegeTools.Trackers.repairCollegeSync({
+    suppressAlert: true,
+    refreshTravel: true,
+  });
+
+  suite.assertEqual(result.travelRows, 1, 'Direct sync should report one refreshed travel row');
+  suite.assertEqual(travel.getRange(2, 1).getValue(), 'Travel College',
+    'Travel Planner should mirror the canonical Colleges list after direct sync');
 });
 
 suite.test('repairCollegeSync preserves tracker user data when Colleges rows are reordered', () => {

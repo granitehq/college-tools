@@ -199,7 +199,7 @@ function repairTaskManagement() {
   return result;
 }
 function repairCollegeSync() {
-  return CollegeTools.Trackers.repairCollegeSync();
+  return CollegeTools.Trackers.repairCollegeSync({refreshTravel: true});
 }
 function repairEntireWorkbook() {
   var ui = SpreadsheetApp.getUi();
