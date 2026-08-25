@@ -64,6 +64,16 @@ namespaced modules.
 - `src/instructions.js`: generated in-sheet user guide.
 - `src/registration.js`: optional copy registration/phone-home for direct-push
   updates.
+- `src/travel.js`: `Travel Planner` distance, mode, and travel-cost estimates,
+  including the `onEdit` profile refresh.
+- `src/execution-budget.js`: shared clock-backed budget guard that keeps long
+  batches under Apps Script execution limits.
+- `src/task-catalog.js`: source-controlled task template catalog (109 templates
+  across 15 workstreams) plus optional-module and scope maps.
+- `src/task-planner.js`: pure planning engine - applicability, deadline
+  anchoring, dependency alignment, reconciliation, evidence, and view building.
+- `src/task-management.js`: sheet integration for `Task Settings`, `Tasks`,
+  `This Week`, `Recruiting Tracker`, generation, preview, sync, and repair.
 
 ## Sheet Model
 
@@ -79,17 +89,21 @@ target sheet's header row before changing formulas or writes.
 
 Sheet names are centralized in `CollegeTools.Config.SHEET_NAMES`:
 `Instructions`, `Colleges`, `ScorecardAPIKey`, `Weights`, `Personal Profile`,
-`Lookup`, `Financial Aid Tracker`, `Campus Visit Tracker`,
+`Travel Planner`, `Lookup`, `Financial Aid Tracker`, `Campus Visit Tracker`,
 `Application Timeline`, `Scholarship Tracker`, `Application Status Tracker`,
-and `Dashboard`.
+`Dashboard`, `Task Settings`, `Tasks`, `Task Templates`, `This Week`, and
+`Recruiting Tracker`.
+
+`CollegeTools.Config.SHEET_ORDER` holds the workflow-first tab order applied by
+Complete Setup and Repair. `Task Templates` is generated and stays hidden;
+`Recruiting Tracker` is created only when Athletic Recruiting is enabled.
 
 ## Main User Flows
 
 ### Fill College Data
 
 1. User types a college name into column A of `Colleges`.
-2. User runs `Fill current row`, `Fill current row (fast)`, or
-   `Fill selected rows`.
+2. User runs `Fill current row` or `Fill selected rows`.
 3. `src/colleges.js` sanitizes the name and calls `src/scorecard.js`.
 4. Scorecard API data is written back into the row.
 5. Tracker sheets are synced with the typed/matched college name, including the
@@ -104,6 +118,27 @@ defaults; this path protects user-entered ratings, formulas, and user notes.
 
 `Search College Names` prompts for query text, optionally accepts `, ST`, and
 writes results to the `Lookup` sheet.
+
+### Adaptive Task Management
+
+1. `Setup Task Management` creates `Task Settings`, `Tasks`, `This Week`, and
+   the hidden `Task Templates` catalog.
+2. The family completes `Task Settings` - working deadline, roles, optional
+   modules, parent effort multiplier, and optional weekly thresholds.
+3. Authoritative deadlines stay in the existing tracker sheets; the planner
+   reads them rather than owning them.
+4. `Preview Task Plan Changes` is read-only and reports adds, updates,
+   reassignments, reschedules, dependency/effort changes, and archives.
+5. `Generate / Regenerate Task Plan` writes the canonical `Tasks` sheet.
+6. `Refresh This Week` rebuilds current actions plus owner/college views;
+   `Sync Completion From Trackers` applies tracker evidence.
+
+`src/task-planner.js` is pure and testable; keep scheduling, applicability, and
+reconciliation logic there rather than in `src/task-management.js`. Regeneration
+must preserve completed tasks, notes, locked dates, locked owners, manual
+selections, and hand-authored custom task rows. Reliable tracker evidence may
+auto-complete a task; ambiguous evidence must require manual confirmation and
+must never silently overwrite a manual correction.
 
 ### Setup, Repair, And Formatting
 
@@ -187,7 +222,7 @@ From `package.json`:
 
 Notes:
 
-- Node requirement is `>=24.0.0`.
+- Node requirement is `>=24.19.0`.
 - `npm run build` only stamps git hashes into static website footer files.
 - `npm run dev` runs the static website locally from `website/`.
 - `scripts/update-version.js` updates `package.json`, source `@version`
@@ -233,6 +268,7 @@ Useful focused commands:
 - `npm run test:repair`
 - `npm run test:schema`
 - `npm run test:menu`
+- `npm run test:tasks`
 - `npm run test:validation`
 - `npm run test:syntax`
 
@@ -253,7 +289,7 @@ manual testing in a copied Google Sheet.
 - Complete Setup and Repair enforce the workflow-first known-tab order in
   `CollegeTools.Config.SHEET_ORDER`; preserve custom tabs and keep generated
   `Task Templates` hidden.
-- `project-docs/backlog.md` is the consolidated roadmap/backlog. Older planning
+- `project-docs/plans/backlog.md` is the consolidated roadmap/backlog. Older planning
   and review docs are archived under `project-docs/archive/`.
 - `README.md`, `project-docs/version-management.md`, and release docs describe
   template promotion and release mechanics.
@@ -297,4 +333,4 @@ manual testing in a copied Google Sheet.
 - `src/scorecard.js`
 - `src/trackers.js`
 - `src/formatting.js`
-- `project-docs/backlog.md`
+- `project-docs/plans/backlog.md`

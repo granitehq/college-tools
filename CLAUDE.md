@@ -51,14 +51,30 @@ entire data path.
 
 ## Current Modules To Know
 
-- `config`, `schema`, `formulas`, `menu`, `utils`
-- `scorecard`, `colleges`, `trackers`, `formatting`
-- `scoring`, `lookup`, `setup`, `financial`, `admissions`, `dashboard`
-- `instructions`, `registration`
+- Core: `config`, `schema`, `formulas`, `menu`, `utils`, `execution-budget`
+- Data: `scorecard`, `colleges`, `lookup`
+- Sheets: `trackers`, `formatting`, `scoring`, `setup`, `instructions`
+- Analysis: `financial`, `admissions`, `dashboard`, `travel`
+- Tasks: `task-catalog`, `task-planner`, `task-management`
+- Updates: `registration`
 
 `src/registration.js`, `scripts/registry-webapp.js`, and
 `scripts/push-updates.js` support optional direct-push updates. The registry is
 low-trust telemetry, not a strong security boundary.
+
+## Task Management Rules
+
+`task-catalog.js` holds 109 templates across 15 workstreams. `task-planner.js`
+is the pure planning engine (applicability, deadline anchoring, dependencies,
+reconciliation, evidence, views); `task-management.js` is the sheet layer. Keep
+planning logic in the planner.
+
+Regeneration must preserve completed tasks, notes, locked dates, locked owners,
+manual selections, and hand-authored custom rows. Reliable tracker evidence may
+auto-complete a task; ambiguous evidence requires manual confirmation and must
+never silently overwrite a manual correction. Optional modules (Testing, CSS
+Profile, Athletic Recruiting, Visits, Interviews, Portfolio/Audition) only emit
+tasks when enabled in `Task Settings`.
 
 ## Preservation Rules
 
@@ -74,6 +90,7 @@ changes.
 ## Commands
 
 - `npm test` - run the Node regression harness.
+- `npm run test:tasks` - focused task management/planner suite.
 - `npm run check` - lint with zero warnings, then run tests.
 - `npm run push` - run checks, then `npx clasp push`.
 - `npm run build` - stamp website git hashes only; no compilation.
@@ -83,7 +100,7 @@ changes.
 - `npm run release:promote -- <sheet-id>` - update website template link.
 - `npm run push:updates` - direct-push update utility.
 
-Node requirement is `>=24.0.0`.
+Node requirement is `>=24.19.0`.
 
 ## Testing Limits
 
@@ -108,7 +125,7 @@ specific change. Reconcile any approved hotfix back to `development`.
 
 ## Current Docs
 
-- Canonical backlog: `project-docs/backlog.md`.
+- Canonical backlog: `project-docs/plans/backlog.md`.
 - Release/versioning: `project-docs/version-management.md`.
 - Direct-push runbooks:
   - `project-docs/direct-push-registry-provisioning.md`

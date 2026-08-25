@@ -1,7 +1,7 @@
 {
   "name": "college-tools",
   "version": "3.0.6",
-  "description": "Google Apps Script project for college selection and tracking",
+  "description": "Google Sheets college research, application tracking, and adaptive task planning powered by the College Scorecard API",
   "main": "src/menu.js",
   "scripts": {
     "build": "node scripts/build-website.js",
@@ -40,6 +40,8 @@
   "keywords": [
     "google-apps-script",
     "college-scorecard",
+    "college-admissions",
+    "task-management",
     "education",
     "spreadsheet"
   ],
@@ -53,12 +55,16 @@
     "globals": "^17.7.0"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.19.0"
   },
   "repository": {
     "type": "git",
-    "url": "."
+    "url": "git+https://github.com/granitehq/college-tools.git"
   },
+  "bugs": {
+    "url": "https://github.com/granitehq/college-tools/issues"
+  },
+  "homepage": "https://college-tools.granite-hq.com",
   "overrides": {
     "uuid": "11.1.1"
   },
