@@ -25,7 +25,7 @@ entry points live as globals in `src/menu.js`.
 ## Core Architecture Rules
 
 - Runtime: Google Apps Script V8.
-- Node requirement for local tooling: `>=24.0.0`.
+- Node requirement for local tooling: `>=24.19.0`.
 - `Colleges` headers are on row 2 and data starts on row 3.
 - Tracker/helper sheets use row-1 headers and row-2 data.
 - The master template contains no sample colleges or student/profile values.
@@ -43,10 +43,12 @@ entry points live as globals in `src/menu.js`.
 
 ## Current Module Map
 
-- `config`, `schema`, `formulas`, `menu`, `utils`
-- `scorecard`, `colleges`, `trackers`, `formatting`
-- `scoring`, `lookup`, `setup`, `financial`, `admissions`, `dashboard`
-- `instructions`, `registration`
+- Core: `config`, `schema`, `formulas`, `menu`, `utils`, `execution-budget`
+- Data: `scorecard`, `colleges`, `lookup`
+- Sheets: `trackers`, `formatting`, `scoring`, `setup`, `instructions`
+- Analysis: `financial`, `admissions`, `dashboard`, `travel`
+- Tasks: `task-catalog`, `task-planner`, `task-management`
+- Updates: `registration`
 
 `src/registration.js`, `scripts/registry-webapp.js`, and
 `scripts/push-updates.js` implement optional direct-push registration/update
@@ -91,7 +93,7 @@ change. Approved direct hotfixes must be reconciled back into `development`.
 
 ## Current Docs
 
-- Canonical backlog: `project-docs/backlog.md`.
+- Canonical backlog: `project-docs/plans/backlog.md`.
 - Version/release process: `project-docs/version-management.md`.
 - Direct-push runbooks:
   - `project-docs/direct-push-registry-provisioning.md`
