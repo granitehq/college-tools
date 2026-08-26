@@ -46,6 +46,20 @@ for (const file of htmlFiles) {
   );
 }
 
+// Every page must have a clean-URL mapping in the Pages Function. Without one
+// the page 404s in production even though the file deploys fine.
+const pagesFunction = text('functions/[[path]].js');
+const mappedCleanUrls = [...pagesFunction.matchAll(/'([^']+)':\s*'([^']+\.html)'/g)].map(
+  (match) => match[2].replace(/^\//, '')
+);
+for (const file of htmlFiles) {
+  if (file === 'index.html') continue;
+  assert(
+    mappedCleanUrls.includes(file),
+    `${file} has no clean-URL mapping in functions/[[path]].js, so /${file.replace(/\.html$/, '')} will 404 in production.`
+  );
+}
+
 const home = text('index.html');
 assert(
   !home.includes('"@type": "AggregateRating"'),
