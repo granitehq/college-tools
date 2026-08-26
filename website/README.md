@@ -14,7 +14,7 @@ node website/validate-website.mjs
 
 Then visit http://localhost:8080.
 
-`npm run build` stamps the current git hash into website footer text. The website itself is plain HTML, CSS, assets, Cloudflare Pages metadata, and a small Pages Function for clean URLs.
+`npm run build` stamps the current git hash into website footer text. `npm run dev` then serves the site through `scripts/dev-server.js`, which mirrors the Pages Function so clean URLs like `/features` resolve locally exactly as they do in production. The website itself is plain HTML, CSS, assets, Cloudflare Pages metadata, and a small Pages Function for clean URLs.
 
 ## Structure
 
@@ -55,6 +55,10 @@ Canonical public URLs are clean URLs:
 
 The HTML files remain in the folder as Cloudflare Pages assets. `functions/[[path]].js` rewrites clean URLs to the matching `.html` files without changing the browser URL. Navigation should link to clean URLs to avoid duplicate public paths.
 
+**Adding a page requires two edits.** Create the `.html` file *and* add its clean URL to the `cleanUrls` map in `functions/[[path]].js`. Without the second edit the page deploys but 404s on its clean URL. `validate-website.mjs` fails the build if a page is missing its mapping.
+
+For local preview, `scripts/dev-server.js` parses that same `cleanUrls` map straight out of the Pages Function, so the dev server and production cannot drift apart.
+
 ## Validation
 
 Run the website-specific validation before deploying:
@@ -63,7 +67,7 @@ Run the website-specific validation before deploying:
 node website/validate-website.mjs
 ```
 
-The validation checks deploy-sensitive issues: third-party-compatible headers, manifest icon references, clean internal URLs, safe new-tab links, supported structured data, and stale maintenance notes.
+The validation checks deploy-sensitive issues: third-party-compatible headers, manifest icon references, clean internal URLs, clean-URL mappings for every page, safe new-tab links, supported structured data, and stale maintenance notes.
 
 ## Deployment
 
