@@ -46,7 +46,24 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Structured Data -->
+    <!-- Structured Data
+
+         SoftwareApplication deliberately omits aggregateRating.
+
+         Google's Rich Results Test reports "Missing field 'aggregateRating'
+         (optional)" for this block. That warning is expected and should not be
+         "fixed". A rich result needs aggregateRating or review, but Google's
+         review snippet policy requires ratings to come from genuine users and
+         be visible on the page. College Tools collects no ratings and displays
+         none, so any value here would be fabricated - a manual action risk far
+         more costly than a missing star rating.
+
+         validate-website.mjs fails the build if AggregateRating appears here.
+
+         If real user ratings are ever collected AND displayed on this page,
+         add aggregateRating sourced from them. Visible data first, markup
+         second - never the reverse.
+    -->
     <script type="application/ld+json">
     [
       {
