@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="See College Tools in action. Screenshots and features including college data import, financial aid tracking, campus visit planner, application timeline, and weighted scoring system for Google Sheets.">
+    <meta name="description" content="See College Tools in action: adaptive task planning from your own deadlines, college data import, financial aid and travel cost comparison, campus visit planner, application timeline, dashboard, and weighted scoring for Google Sheets.">
     <title>Features & Screenshots - College Tools for Google Sheets</title>
     
     <!-- Open Graph Tags -->
     <meta property="og:title" content="College Tools Features & Screenshots">
-    <meta property="og:description" content="Explore College Tools features: automated data import, financial aid tracking, campus visit planning, and comprehensive application management.">
+    <meta property="og:description" content="Explore College Tools features: adaptive task planning, automated college data import, financial aid and travel cost comparison, campus visit planning, and a generated dashboard.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://college-tools.granite-hq.com/features">
     <meta property="og:image" content="https://college-tools.granite-hq.com/assets/images/screenshots/college-data.png">
@@ -35,6 +35,30 @@
     <link rel="preload" href="assets/css/style.css" as="style">
     <link rel="preload" href="assets/images/logo.svg" as="image">
     <link rel="dns-prefetch" href="https://static.cloudflareinsights.com">
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://college-tools.granite-hq.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Features",
+            "item": "https://college-tools.granite-hq.com/features"
+          }
+        ]
+      }
+    ]
+    </script>
+
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="icon" href="assets/favicon/favicon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
@@ -67,29 +91,52 @@
         <div class="container">
             <div class="screenshots-content">
                 <h1>Features & Screenshots</h1>
-                <p>See College Tools in action with these feature highlights. Ready to start? <a href="/getting-started">Follow our setup guide</a></p>
+                <p>See what College Tools does with the colleges and deadlines you put into it. Ready to start? <a href="/getting-started">Follow our setup guide</a></p>
                 
+                <div class="screenshot-section">
+                    <h2>Adaptive Task Management</h2>
+                    <p>The plan builds itself from the colleges and deadlines already in your workbook — 109 task templates across 15 workstreams, filtered down to only what your family actually needs.</p>
+                    <ul>
+                        <li><strong>Anchored to real deadlines.</strong> Tasks schedule backward from each college's own dates, resolve their dependencies, and adjust when you start late.</li>
+                        <li><strong>Everyone knows their job.</strong> Each task carries an owner — student, parent, shared, or counselor — with effort estimates and optional weekly hour limits.</li>
+                        <li><strong>Only what applies.</strong> Testing, CSS Profile, athletic recruiting, visits, interviews, and portfolio tasks appear only when you turn them on.</li>
+                        <li><strong>Preview before anything changes.</strong> See every addition, reschedule, and reassignment before it's written to the sheet.</li>
+                        <li><strong>Your work is never lost.</strong> Completed tasks, notes, locked dates, and tasks you wrote yourself survive every regeneration.</li>
+                        <li><strong>This Week.</strong> A focused view of what's due now, with owner and college breakdowns and a rolling 90-day horizon.</li>
+                    </ul>
+                </div>
+
                 <div class="screenshot-section">
                     <h2>College Data Import</h2>
                     <p>Automatically populate college information from official sources</p>
-                    <img src="assets/images/screenshots/college-data.png" alt="College data import" class="screenshot">
+                    <img src="assets/images/screenshots/college-data.png" alt="Colleges sheet with imported College Scorecard data including acceptance rate, cost of attendance, net price, and SAT and ACT ranges" class="screenshot">
                 </div>
 
                 <div class="screenshot-section">
                     <h2>Application Timeline Tracker</h2>
                     <p>Never miss a deadline with comprehensive application tracking</p>
-                    <img src="assets/images/screenshots/timeline.png" alt="Application timeline" class="screenshot">
+                    <img src="assets/images/screenshots/timeline.png" alt="Application Timeline sheet tracking application type, deadlines, and document due dates for each college" class="screenshot">
                 </div>
 
                 <div class="screenshot-section">
                     <h2>Financial Comparison</h2>
                     <p>Compare costs and financial aid across all your target schools</p>
-                    <img src="assets/images/screenshots/financial.png" alt="Financial comparison" class="screenshot">
+                    <img src="assets/images/screenshots/financial.png" alt="Financial aid comparison showing net price, applicable tuition, and four-year cost burden across colleges" class="screenshot">
+                </div>
+
+                <div class="screenshot-section">
+                    <h2>Travel Planner</h2>
+                    <p>Distance from home, whether the trip is a drive or a flight, and the annual travel cost of each school — the number most college comparisons leave out entirely.</p>
                 </div>
 
                 <div class="screenshot-section">
                     <h2>Campus Visit Planner</h2>
                     <p>Plan and track campus visits with integrated scheduling</p>
+                </div>
+
+                <div class="screenshot-section">
+                    <h2>Dashboard</h2>
+                    <p>A generated command center: key statistics, cost analysis, top-scoring schools, scholarship totals, application list balance, decision outcomes, and a What's Due Next feed that flags overdue and upcoming items.</p>
                 </div>
                 
                 <div class="cta-section" style="text-align: center; margin-top: 3rem; padding: 2rem; background-color: #f8fafc; border-radius: 12px;">
@@ -128,7 +175,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Granite HQ, LLC. • v2f6dfd9</p>
+                <p>&copy; 2025 Granite HQ, LLC. • v47f10ef</p>
             </div>
         </div>
     </footer>
